@@ -25,3 +25,17 @@ export type CobrancaDoRateio = {
   valor_principal_pago_usd: number;
   valor_juros_pago_usd: number;
 };
+
+export type UnidadeCobrancaDoMes = {
+  unidade_id: string;
+  unidade_identificacao: string;
+  cobranca: {
+    id: string;
+    valor_usd: number;
+    valor_credito_abatido_usd: number;
+    data_vencimento: string;
+    status: CobrancaStatus;
+    valor_principal_pago_usd: number;
+    valor_juros_pago_usd: number;
+  } | null;
+};

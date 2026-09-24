@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -138,7 +139,11 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
               <TableBody>
                 {taxasList.map((taxa) => (
                   <TableRow key={taxa.id}>
-                    <TableCell className="font-medium">{taxa.titulo}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/taxas-condominio/${taxa.id}`} className="hover:underline">
+                        {taxa.titulo}
+                      </Link>
+                    </TableCell>
                     <TableCell>{currencyFormatter.format(taxa.valor_usd)}</TableCell>
                     <TableCell>Dia {taxa.dia_vencimento}</TableCell>
                     <TableCell>{taxa.pct_multa_atraso}%</TableCell>
@@ -159,6 +164,9 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
                           <MoreHorizontalIcon />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem render={<Link href={`/taxas-condominio/${taxa.id}`} />}>
+                            Ver detalhes
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditDialog(taxa)}>
                             Editar
                           </DropdownMenuItem>
