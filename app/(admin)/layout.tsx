@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { AppSidebar } from "@/components/admin/app-sidebar";
 import { createClient } from "@/lib/supabase/server";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -29,6 +30,9 @@ export default async function AdminLayout({
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
           <span className="text-sm font-medium">Painel</span>
+          <div className="ml-auto">
+            <ModeToggle />
+          </div>
         </header>
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
