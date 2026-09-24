@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -131,7 +132,11 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
               <TableBody>
                 {unidadesList.map((unidade) => (
                   <TableRow key={unidade.id}>
-                    <TableCell className="font-medium">{unidade.identificacao}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/unidades/${unidade.id}`} className="hover:underline">
+                        {unidade.identificacao}
+                      </Link>
+                    </TableCell>
                     <TableCell>{unidade.proprietario?.nome ?? "—"}</TableCell>
                     <TableCell>
                       <Badge variant={unidade.gera_cobranca ? "default" : "outline"}>
@@ -148,6 +153,9 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
                           <MoreHorizontalIcon />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem render={<Link href={`/unidades/${unidade.id}`} />}>
+                            Ver detalhes
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditDialog(unidade)}>
                             Editar
                           </DropdownMenuItem>

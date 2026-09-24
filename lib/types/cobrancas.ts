@@ -1,4 +1,16 @@
+export type CobrancaTipo = "ordinaria" | "extraordinaria";
 export type CobrancaStatus = "pendente" | "pago" | "cancelado";
+
+export type CobrancaDaUnidade = {
+  id: string;
+  tipo: CobrancaTipo;
+  descricao: string;
+  competencia: string;
+  valor_usd: number;
+  valor_credito_abatido_usd: number;
+  data_vencimento: string;
+  status: CobrancaStatus;
+};
 
 export type CobrancaDoRateio = {
   id: string;

@@ -1,0 +1,207 @@
+import type { Proprietario, Unidade } from "@/lib/types/unidades";
+import type { CobrancaDaUnidade, CobrancaStatus, CobrancaTipo } from "@/lib/types/cobrancas";
+import type { CreditoMovimentacao, MovimentacaoTipo } from "@/lib/types/creditos";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "USD",
+});
+
+const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
+const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
+
+const cobrancaTipoLabel: Record<CobrancaTipo, string> = {
+  ordinaria: "Ordinária",
+  extraordinaria: "Extraordinária",
+};
+
+const cobrancaStatusLabel: Record<CobrancaStatus, string> = {
+  pendente: "Pendente",
+  pago: "Pago",
+  cancelado: "Cancelado",
+};
+
+const cobrancaStatusVariant: Record<CobrancaStatus, "default" | "outline" | "destructive"> = {
+  pendente: "outline",
+  pago: "default",
+  cancelado: "destructive",
+};
+
+const movimentacaoTipoLabel: Record<MovimentacaoTipo, string> = {
+  ENTRADA: "Entrada",
+  SAIDA: "Saída",
+};
+
+const movimentacaoTipoVariant: Record<MovimentacaoTipo, "default" | "secondary"> = {
+  ENTRADA: "default",
+  SAIDA: "secondary",
+};
+
+type UnidadeDetailTabsProps = {
+  unidade: Omit<Unidade, "proprietario"> & { proprietario: Proprietario | null };
+  cobrancas: CobrancaDaUnidade[];
+  creditos: CreditoMovimentacao[];
+};
+
+export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetailTabsProps) {
+  const saldoUsd = creditos.reduce(
+    (acc, c) => acc + (c.tipo === "ENTRADA" ? c.valor_equivalente_usd : -c.valor_equivalente_usd),
+    0,
+  );
+
+  return (
+    <Tabs defaultValue="geral">
+      <TabsList>
+        <TabsTrigger value="geral">Visão geral</TabsTrigger>
+        <TabsTrigger value="cobrancas">Cobranças</TabsTrigger>
+        <TabsTrigger value="creditos">Extrato de crédito</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="geral">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dados cadastrais</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <div>
+                <dt className="text-xs text-muted-foreground">Identificação</dt>
+                <dd className="font-medium">{unidade.identificacao}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Proprietário</dt>
+                <dd className="font-medium">{unidade.proprietario?.nome ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Documento</dt>
+                <dd className="font-medium">
+                  {unidade.proprietario?.documento_identidad ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Telefone (WhatsApp)</dt>
+                <dd className="font-medium">
+                  {unidade.proprietario?.telefone_whatsapp ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Email</dt>
+                <dd className="font-medium">{unidade.proprietario?.email ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Saldo a favor (USD)</dt>
+                <dd className="font-medium">{currencyFormatter.format(saldoUsd)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Criada em</dt>
+                <dd className="font-medium">{dateTimeFormatter.format(new Date(unidade.created_at))}</dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="cobrancas">
+        <Card>
+          <CardHeader>
+            <CardTitle>Cobranças</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {cobrancas.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma cobrança para esta unidade.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Competência</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cobrancas.map((cobranca) => (
+                    <TableRow key={cobranca.id}>
+                      <TableCell>{formatDate(cobranca.competencia)}</TableCell>
+                      <TableCell>{cobrancaTipoLabel[cobranca.tipo]}</TableCell>
+                      <TableCell>{cobranca.descricao}</TableCell>
+                      <TableCell>{currencyFormatter.format(cobranca.valor_usd)}</TableCell>
+                      <TableCell>{formatDate(cobranca.data_vencimento)}</TableCell>
+                      <TableCell>
+                        <Badge variant={cobrancaStatusVariant[cobranca.status]}>
+                          {cobrancaStatusLabel[cobranca.status]}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="creditos">
+        <Card>
+          <CardHeader>
+            <CardTitle>Extrato de crédito</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {creditos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma movimentação de crédito para esta unidade.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Moeda</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Equivalente USD</TableHead>
+                    <TableHead>Descrição</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {creditos.map((credito) => (
+                    <TableRow key={credito.id}>
+                      <TableCell>{dateTimeFormatter.format(new Date(credito.created_at))}</TableCell>
+                      <TableCell>
+                        <Badge variant={movimentacaoTipoVariant[credito.tipo]}>
+                          {movimentacaoTipoLabel[credito.tipo]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{credito.moeda}</TableCell>
+                      <TableCell>{credito.valor}</TableCell>
+                      <TableCell>{currencyFormatter.format(credito.valor_equivalente_usd)}</TableCell>
+                      <TableCell>{credito.descricao ?? "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  );
+}
