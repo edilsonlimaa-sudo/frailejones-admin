@@ -1,37 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ArrowLeftIcon } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
 import type { UnidadeCobrancaDoMes } from "@/lib/types/cobrancas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { EmitirCobrancasDoMesButton } from "@/components/admin/taxas-condominio/emitir-cobrancas-do-mes-button";
+import { TaxaCondominioDetailTabs } from "@/components/admin/taxas-condominio/taxa-condominio-detail-tabs";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "USD",
 });
-
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
-const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
 
 const mesLabelFormatter = new Intl.DateTimeFormat("pt-BR", {
   month: "long",
@@ -60,13 +41,6 @@ function mesAdjacente(ano: number, mes: number, delta: number) {
 function ultimoDiaDoMes(ano: number, mes: number) {
   return new Date(Date.UTC(ano, mes, 0)).getUTCDate();
 }
-
-const statusLabel = { pendente: "Pendente", pago: "Pago", cancelado: "Cancelado" } as const;
-const statusVariant = {
-  pendente: "outline",
-  pago: "default",
-  cancelado: "destructive",
-} as const;
 
 type CobrancaRow = {
   id: string;
@@ -114,35 +88,67 @@ export default async function TaxaCondominioDetalhePage({
   const mesLabel = mesLabelFormatter.format(new Date(`${competencia}T00:00:00Z`));
   const mesLabelCapitalizado = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
 
-  const [{ data: unidades, error: unidadesError }, { data: cobrancasRaw, error: cobrancasError }] =
-    await Promise.all([
-      supabase
-        .from("unidades")
-        .select("id, identificacao")
-        .eq("gera_cobranca", true)
-        .order("identificacao", { ascending: true })
-        .returns<{ id: string; identificacao: string }[]>(),
-      supabase
-        .from("cobrancas")
-        .select(
-          "id, valor_usd, valor_credito_abatido_usd, data_vencimento, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
-        )
-        .eq("taxa_condominio_id", id)
-        .eq("competencia", competencia)
-        .returns<CobrancaRow[]>(),
-    ]);
+  const [
+    { data: todasUnidades, error: todasUnidadesError },
+    { data: vinculosRaw, error: vinculosError },
+    { data: cobrancasRaw, error: cobrancasError },
+    { data: faturamento, error: faturamentoError },
+  ] = await Promise.all([
+    supabase
+      .from("unidades")
+      .select("id, identificacao, proprietario:proprietarios(id, nome)")
+      .order("identificacao", { ascending: true })
+      .returns<
+        { id: string; identificacao: string; proprietario: { id: string; nome: string } | null }[]
+      >(),
+    supabase
+      .from("taxa_condominio_unidades")
+      .select("unidade:unidades(id, identificacao)")
+      .eq("taxa_condominio_id", id)
+      .returns<{ unidade: { id: string; identificacao: string } | null }[]>(),
+    supabase
+      .from("cobrancas")
+      .select(
+        "id, valor_usd, valor_credito_abatido_usd, data_vencimento, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
+      )
+      .eq("taxa_condominio_id", id)
+      .eq("competencia", competencia)
+      .returns<CobrancaRow[]>(),
+    supabase
+      .from("faturamentos_competencia")
+      .select("id, data_processamento")
+      .eq("taxa_condominio_id", id)
+      .eq("competencia", competencia)
+      .maybeSingle<{ id: string; data_processamento: string }>(),
+  ]);
 
-  if (unidadesError || cobrancasError) {
+  if (todasUnidadesError || vinculosError || cobrancasError || faturamentoError) {
     return (
       <p className="text-sm text-destructive">
-        Erro ao carregar dados: {unidadesError?.message ?? cobrancasError?.message}
+        Erro ao carregar dados:{" "}
+        {todasUnidadesError?.message ?? vinculosError?.message ?? cobrancasError?.message ?? faturamentoError?.message}
       </p>
     );
   }
 
+  const unidadesVinculadas = (vinculosRaw ?? [])
+    .map((v) => v.unidade)
+    .filter((u): u is { id: string; identificacao: string } => u !== null)
+    .sort((a, b) => a.identificacao.localeCompare(b.identificacao));
+
   const cobrancasPorUnidade = new Map((cobrancasRaw ?? []).map((c) => [c.unidade?.id, c]));
 
-  const unidadesDoMes: UnidadeCobrancaDoMes[] = (unidades ?? []).map((unidade) => {
+  // competência já processada: o escopo trava em quem foi de fato faturado naquele
+  // momento (via cobrancasRaw), pra unidades vinculadas depois não aparecerem como pendentes
+  const competenciaFaturada = faturamento != null;
+  const unidadesEscopo = competenciaFaturada
+    ? (cobrancasRaw ?? [])
+        .map((c) => c.unidade)
+        .filter((u): u is { id: string; identificacao: string } => u !== null)
+        .sort((a, b) => a.identificacao.localeCompare(b.identificacao))
+    : unidadesVinculadas;
+
+  const unidadesDoMes: UnidadeCobrancaDoMes[] = unidadesEscopo.map((unidade) => {
     const cobranca = cobrancasPorUnidade.get(unidade.id);
     return {
       unidade_id: unidade.id,
@@ -167,20 +173,6 @@ export default async function TaxaCondominioDetalhePage({
     };
   });
 
-  const emitidas = unidadesDoMes.filter((u) => u.cobranca !== null);
-  const naoEmitidas = unidadesDoMes.filter((u) => u.cobranca === null);
-  const emitidasAtivas = emitidas.filter((u) => u.cobranca!.status !== "cancelado");
-  const pagas = emitidas.filter((u) => u.cobranca!.status === "pago").length;
-  const pendentes = emitidas.filter((u) => u.cobranca!.status === "pendente").length;
-
-  const valorEmitido = emitidasAtivas.reduce((acc, u) => acc + u.cobranca!.valor_usd, 0);
-  const valorArrecadado = emitidasAtivas.reduce(
-    (acc, u) =>
-      acc + u.cobranca!.valor_credito_abatido_usd + u.cobranca!.valor_principal_pago_usd,
-    0,
-  );
-  const progresso = valorEmitido > 0 ? Math.min(100, (valorArrecadado / valorEmitido) * 100) : 0;
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -204,143 +196,23 @@ export default async function TaxaCondominioDetalhePage({
         </Badge>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>{mesLabelCapitalizado}</CardTitle>
-            <CardDescription>
-              {emitidas.length} de {unidadesDoMes.length} unidades com cobrança emitida neste mês
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Mês anterior"
-              nativeButton={false}
-              render={
-                <Link
-                  href={`/taxas-condominio/${id}?mes=${formatMes(mesAnterior.ano, mesAnterior.mes)}`}
-                />
-              }
-            >
-              <ChevronLeftIcon />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Próximo mês"
-              nativeButton={false}
-              render={
-                <Link
-                  href={`/taxas-condominio/${id}?mes=${formatMes(mesSeguinte.ano, mesSeguinte.mes)}`}
-                />
-              }
-            >
-              <ChevronRightIcon />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Progress value={progresso} />
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-            <div>
-              <p className="text-xs text-muted-foreground">Arrecadado</p>
-              <p className="font-medium">{currencyFormatter.format(valorArrecadado)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Emitido</p>
-              <p className="font-medium">{currencyFormatter.format(valorEmitido)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Pagas</p>
-              <p className="font-medium">{pagas}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Pendentes</p>
-              <p className="font-medium">{pendentes}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Não emitidas</p>
-              <p className="font-medium">{naoEmitidas.length}</p>
-            </div>
-          </div>
-
-          {naoEmitidas.length > 0 && (
-            <EmitirCobrancasDoMesButton
-              taxaId={taxa.id}
-              competencia={competencia}
-              dataVencimento={dataVencimento}
-              valorUsd={taxa.valor_usd}
-              pctMultaAtraso={taxa.pct_multa_atraso}
-              pctJurosDiario={taxa.pct_juros_diario}
-              diasGraca={taxa.dias_graca}
-              unidades={naoEmitidas.map((u) => ({
-                id: u.unidade_id,
-                identificacao: u.unidade_identificacao,
-              }))}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Unidades — {mesLabelCapitalizado}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {unidadesDoMes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma unidade gera cobrança ordinária no momento.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Unidade</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Pago</TableHead>
-                  <TableHead>Saldo</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {unidadesDoMes.map((item) => {
-                  const cobranca = item.cobranca;
-                  const totalAbatido = cobranca
-                    ? cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd
-                    : 0;
-                  const saldo = cobranca ? Math.max(cobranca.valor_usd - totalAbatido, 0) : 0;
-
-                  return (
-                    <TableRow key={item.unidade_id}>
-                      <TableCell className="font-medium">{item.unidade_identificacao}</TableCell>
-                      <TableCell>
-                        {cobranca ? currencyFormatter.format(cobranca.valor_usd) : "—"}
-                      </TableCell>
-                      <TableCell>{cobranca ? currencyFormatter.format(totalAbatido) : "—"}</TableCell>
-                      <TableCell>{cobranca ? currencyFormatter.format(saldo) : "—"}</TableCell>
-                      <TableCell>
-                        {cobranca ? formatDate(cobranca.data_vencimento) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {cobranca ? (
-                          <Badge variant={statusVariant[cobranca.status]}>
-                            {statusLabel[cobranca.status]}
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">Não emitida</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <TaxaCondominioDetailTabs
+        taxaId={taxa.id}
+        valorUsd={taxa.valor_usd}
+        pctMultaAtraso={taxa.pct_multa_atraso}
+        pctJurosDiario={taxa.pct_juros_diario}
+        diasGraca={taxa.dias_graca}
+        competencia={competencia}
+        dataVencimento={dataVencimento}
+        mesLabelCapitalizado={mesLabelCapitalizado}
+        mesAnteriorHref={`/taxas-condominio/${id}?mes=${formatMes(mesAnterior.ano, mesAnterior.mes)}`}
+        mesSeguinteHref={`/taxas-condominio/${id}?mes=${formatMes(mesSeguinte.ano, mesSeguinte.mes)}`}
+        unidadesDoMes={unidadesDoMes}
+        todasUnidades={todasUnidades ?? []}
+        unidadesVinculadasIds={unidadesVinculadas.map((u) => u.id)}
+        competenciaFaturada={competenciaFaturada}
+        dataProcessamento={faturamento?.data_processamento ?? null}
+      />
     </div>
   );
 }
