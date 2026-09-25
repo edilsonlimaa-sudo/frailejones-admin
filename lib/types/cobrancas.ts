@@ -8,7 +8,11 @@ export type CobrancaDaUnidade = {
   competencia: string;
   valor_usd: number;
   valor_credito_abatido_usd: number;
+  valor_principal_pago_usd: number;
   data_vencimento: string;
+  dias_graca: number;
+  pct_multa_atraso: number;
+  pct_juros_diario: number;
   status: CobrancaStatus;
 };
 
@@ -20,6 +24,9 @@ export type CobrancaDoRateio = {
   valor_credito_abatido_usd: number;
   data_emissao: string;
   data_vencimento: string;
+  dias_graca: number;
+  pct_multa_atraso: number;
+  pct_juros_diario: number;
   status: CobrancaStatus;
   unidade: { id: string; identificacao: string } | null;
   valor_principal_pago_usd: number;
@@ -34,6 +41,9 @@ export type UnidadeCobrancaDoMes = {
     valor_usd: number;
     valor_credito_abatido_usd: number;
     data_vencimento: string;
+    dias_graca: number;
+    pct_multa_atraso: number;
+    pct_juros_diario: number;
     status: CobrancaStatus;
     valor_principal_pago_usd: number;
     valor_juros_pago_usd: number;
