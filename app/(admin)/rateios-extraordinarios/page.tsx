@@ -21,7 +21,7 @@ export default async function RateiosExtraordinariosPage() {
         .returns<DespesaExtraordinariaRow[]>(),
       supabase
         .from("unidades")
-        .select("id, identificacao, proprietario_id, gera_cobranca, created_at")
+        .select("id, identificacao, proprietario_id, created_at, proprietario:proprietarios(id, nome)")
         .order("identificacao", { ascending: true })
         .returns<Unidade[]>(),
     ]);
