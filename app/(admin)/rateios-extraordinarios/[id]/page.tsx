@@ -111,6 +111,11 @@ export default async function RateioExtraordinarioDetalhePage({
       ? Math.min(100, (valorTotalArrecadado / valorTotalEsperado) * 100)
       : 0;
 
+  const linhasCobranca = cobrancas.map((cobranca) => {
+    const totalAbatido = cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd;
+    return { cobranca, totalAbatido, saldo: Math.max(cobranca.valor_usd - totalAbatido, 0) };
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -212,24 +217,53 @@ export default async function RateioExtraordinarioDetalhePage({
               Nenhuma cobrança foi gerada para este rateio.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Unidade</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Pago</TableHead>
-                  <TableHead>Saldo</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cobrancas.map((cobranca) => {
-                  const totalAbatido =
-                    cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd;
-                  const saldo = Math.max(cobranca.valor_usd - totalAbatido, 0);
+            <>
+              {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                {linhasCobranca.map(({ cobranca, totalAbatido, saldo }) => (
+                  <div key={cobranca.id} className="rounded-lg border border-input p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{cobranca.unidade?.identificacao ?? "—"}</span>
+                      <Badge variant={statusVariant[cobranca.status]}>
+                        {statusLabel[cobranca.status]}
+                      </Badge>
+                    </div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Valor</dt>
+                        <dd>{currencyFormatter.format(cobranca.valor_usd)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Pago</dt>
+                        <dd>{currencyFormatter.format(totalAbatido)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Saldo</dt>
+                        <dd>{currencyFormatter.format(saldo)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Vencimento</dt>
+                        <dd>{formatDate(cobranca.data_vencimento)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ))}
+              </div>
 
-                  return (
+              {/* sm+: tabela */}
+              <Table className="hidden sm:table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Unidade</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Pago</TableHead>
+                    <TableHead>Saldo</TableHead>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {linhasCobranca.map(({ cobranca, totalAbatido, saldo }) => (
                     <TableRow key={cobranca.id}>
                       <TableCell className="font-medium">
                         {cobranca.unidade?.identificacao ?? "—"}
@@ -244,10 +278,10 @@ export default async function RateioExtraordinarioDetalhePage({
                         </Badge>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
           )}
         </CardContent>
       </Card>

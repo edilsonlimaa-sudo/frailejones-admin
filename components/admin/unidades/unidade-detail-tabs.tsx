@@ -126,34 +126,69 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
             {cobrancas.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhuma cobrança para esta unidade.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Competência</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
+                <div className="flex flex-col gap-3 sm:hidden">
                   {cobrancas.map((cobranca) => (
-                    <TableRow key={cobranca.id}>
-                      <TableCell>{formatDate(cobranca.competencia)}</TableCell>
-                      <TableCell>{cobrancaTipoLabel[cobranca.tipo]}</TableCell>
-                      <TableCell>{cobranca.descricao}</TableCell>
-                      <TableCell>{currencyFormatter.format(cobranca.valor_usd)}</TableCell>
-                      <TableCell>{formatDate(cobranca.data_vencimento)}</TableCell>
-                      <TableCell>
+                    <div key={cobranca.id} className="rounded-lg border border-input p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{cobranca.descricao}</span>
                         <Badge variant={cobrancaStatusVariant[cobranca.status]}>
                           {cobrancaStatusLabel[cobranca.status]}
                         </Badge>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Competência</dt>
+                          <dd>{formatDate(cobranca.competencia)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Tipo</dt>
+                          <dd>{cobrancaTipoLabel[cobranca.tipo]}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Valor</dt>
+                          <dd>{currencyFormatter.format(cobranca.valor_usd)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Vencimento</dt>
+                          <dd>{formatDate(cobranca.data_vencimento)}</dd>
+                        </div>
+                      </dl>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* sm+: tabela */}
+                <Table className="hidden sm:table">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Competência</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Vencimento</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cobrancas.map((cobranca) => (
+                      <TableRow key={cobranca.id}>
+                        <TableCell>{formatDate(cobranca.competencia)}</TableCell>
+                        <TableCell>{cobrancaTipoLabel[cobranca.tipo]}</TableCell>
+                        <TableCell>{cobranca.descricao}</TableCell>
+                        <TableCell>{currencyFormatter.format(cobranca.valor_usd)}</TableCell>
+                        <TableCell>{formatDate(cobranca.data_vencimento)}</TableCell>
+                        <TableCell>
+                          <Badge variant={cobrancaStatusVariant[cobranca.status]}>
+                            {cobrancaStatusLabel[cobranca.status]}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
             )}
           </CardContent>
         </Card>
@@ -170,34 +205,71 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
                 Nenhuma movimentação de crédito para esta unidade.
               </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Moeda</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Equivalente USD</TableHead>
-                    <TableHead>Descrição</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
+                <div className="flex flex-col gap-3 sm:hidden">
                   {creditos.map((credito) => (
-                    <TableRow key={credito.id}>
-                      <TableCell>{dateTimeFormatter.format(new Date(credito.created_at))}</TableCell>
-                      <TableCell>
+                    <div key={credito.id} className="rounded-lg border border-input p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">
+                          {dateTimeFormatter.format(new Date(credito.created_at))}
+                        </span>
                         <Badge variant={movimentacaoTipoVariant[credito.tipo]}>
                           {movimentacaoTipoLabel[credito.tipo]}
                         </Badge>
-                      </TableCell>
-                      <TableCell>{credito.moeda}</TableCell>
-                      <TableCell>{credito.valor}</TableCell>
-                      <TableCell>{currencyFormatter.format(credito.valor_equivalente_usd)}</TableCell>
-                      <TableCell>{credito.descricao ?? "—"}</TableCell>
-                    </TableRow>
+                      </div>
+                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Moeda</dt>
+                          <dd>{credito.moeda}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Valor</dt>
+                          <dd>{credito.valor}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Equivalente USD</dt>
+                          <dd>{currencyFormatter.format(credito.valor_equivalente_usd)}</dd>
+                        </div>
+                        <div className="col-span-2">
+                          <dt className="text-xs text-muted-foreground">Descrição</dt>
+                          <dd>{credito.descricao ?? "—"}</dd>
+                        </div>
+                      </dl>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* sm+: tabela */}
+                <Table className="hidden sm:table">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Moeda</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Equivalente USD</TableHead>
+                      <TableHead>Descrição</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {creditos.map((credito) => (
+                      <TableRow key={credito.id}>
+                        <TableCell>{dateTimeFormatter.format(new Date(credito.created_at))}</TableCell>
+                        <TableCell>
+                          <Badge variant={movimentacaoTipoVariant[credito.tipo]}>
+                            {movimentacaoTipoLabel[credito.tipo]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{credito.moeda}</TableCell>
+                        <TableCell>{credito.valor}</TableCell>
+                        <TableCell>{currencyFormatter.format(credito.valor_equivalente_usd)}</TableCell>
+                        <TableCell>{credito.descricao ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
             )}
           </CardContent>
         </Card>
