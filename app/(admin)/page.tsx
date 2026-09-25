@@ -9,6 +9,7 @@ import {
 
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
+import { calcularEncargos } from "@/lib/encargos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,6 +69,9 @@ type CobrancaDoMes = {
   valor_usd: number;
   valor_credito_abatido_usd: number;
   data_vencimento: string;
+  dias_graca: number;
+  pct_multa_atraso: number;
+  pct_juros_diario: number;
   status: CobrancaStatus;
   unidade: { id: string; identificacao: string } | null;
   pagamento_cobrancas: { valor_principal_abatido_usd: number; valor_juros_pago_usd: number }[];
@@ -99,7 +103,7 @@ export default async function Home({
       supabase
         .from("cobrancas")
         .select(
-          "id, valor_usd, valor_credito_abatido_usd, data_vencimento, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
+          "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
         )
         .gte("competencia", inicioMes)
         .lt("competencia", inicioMesSeguinte)
@@ -130,7 +134,20 @@ export default async function Home({
     0,
   );
   const pendentes = ativas.filter((c) => c.status === "pendente");
-  const emAtraso = pendentes.filter((c) => c.data_vencimento < hojeIso);
+  const linhasPendentes = pendentes.map((c) => ({
+    cobranca: c,
+    encargos: calcularEncargos(
+      {
+        ...c,
+        valor_principal_pago_usd: c.pagamento_cobrancas.reduce(
+          (acc, p) => acc + p.valor_principal_abatido_usd,
+          0,
+        ),
+      },
+      hojeIso,
+    ),
+  }));
+  const emAtraso = linhasPendentes.filter((l) => l.encargos.diasAtraso > 0);
   const progresso = valorEmitido > 0 ? Math.min(100, (valorArrecadado / valorEmitido) * 100) : 0;
 
   return (
@@ -219,7 +236,7 @@ export default async function Home({
             <p className="text-sm text-muted-foreground">Nenhuma cobrança pendente neste mês.</p>
           ) : (
             <ul className="flex flex-col gap-3">
-              {pendentes.slice(0, 6).map((c) => (
+              {linhasPendentes.slice(0, 6).map(({ cobranca: c, encargos }) => (
                 <li key={c.id} className="flex items-center justify-between gap-2 text-sm">
                   <div className="min-w-0">
                     <p className="truncate font-medium">
@@ -227,10 +244,20 @@ export default async function Home({
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Vence em {formatDate(c.data_vencimento)}
+                      {encargos.diasAtraso > 0 && (
+                        <span className="text-destructive">
+                          {" "}
+                          · {encargos.diasAtraso} dia(s) em atraso
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="font-medium">{currencyFormatter.format(c.valor_usd)}</span>
+                    <span className="font-medium">
+                      {currencyFormatter.format(
+                        encargos.diasAtraso > 0 ? encargos.valorTotalComEncargos : c.valor_usd,
+                      )}
+                    </span>
                     <Badge variant={statusVariant[c.status]}>{statusLabel[c.status]}</Badge>
                   </div>
                 </li>
