@@ -9,6 +9,10 @@ import type { CreditoMovimentacao } from "@/lib/types/creditos";
 import { Button } from "@/components/ui/button";
 import { UnidadeDetailTabs } from "@/components/admin/unidades/unidade-detail-tabs";
 
+type CobrancaRow = Omit<CobrancaDaUnidade, "valor_principal_pago_usd"> & {
+  pagamento_cobrancas: { valor_principal_abatido_usd: number }[];
+};
+
 export default async function UnidadeDetailPage({
   params,
 }: {
@@ -43,14 +47,16 @@ export default async function UnidadeDetailPage({
     notFound();
   }
 
-  const [{ data: cobrancas, error: cobrancasError }, { data: creditos, error: creditosError }] =
+  const [{ data: cobrancasRaw, error: cobrancasError }, { data: creditos, error: creditosError }] =
     await Promise.all([
       supabase
         .from("cobrancas")
-        .select("id, tipo, descricao, competencia, valor_usd, valor_credito_abatido_usd, data_vencimento, status")
+        .select(
+          "id, tipo, descricao, competencia, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, pagamento_cobrancas(valor_principal_abatido_usd)",
+        )
         .eq("unidade_id", id)
         .order("data_vencimento", { ascending: false })
-        .returns<CobrancaDaUnidade[]>(),
+        .returns<CobrancaRow[]>(),
       supabase
         .from("creditos_movimentacoes")
         .select("id, tipo, moeda, valor, valor_equivalente_usd, descricao, created_at")
@@ -66,6 +72,16 @@ export default async function UnidadeDetailPage({
       </p>
     );
   }
+
+  const cobrancas: CobrancaDaUnidade[] = (cobrancasRaw ?? []).map(
+    ({ pagamento_cobrancas, ...cobranca }) => ({
+      ...cobranca,
+      valor_principal_pago_usd: pagamento_cobrancas.reduce(
+        (acc, p) => acc + p.valor_principal_abatido_usd,
+        0,
+      ),
+    }),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -89,7 +105,7 @@ export default async function UnidadeDetailPage({
 
       <UnidadeDetailTabs
         unidade={unidade}
-        cobrancas={cobrancas ?? []}
+        cobrancas={cobrancas}
         creditos={creditos ?? []}
       />
     </div>

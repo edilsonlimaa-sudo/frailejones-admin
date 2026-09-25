@@ -1,6 +1,7 @@
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
 import type { CobrancaDaUnidade, CobrancaStatus, CobrancaTipo } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao, MovimentacaoTipo } from "@/lib/types/creditos";
+import { calcularEncargos } from "@/lib/encargos";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -64,6 +65,12 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
     (acc, c) => acc + (c.tipo === "ENTRADA" ? c.valor_equivalente_usd : -c.valor_equivalente_usd),
     0,
   );
+
+  const hojeIso = new Date().toISOString().slice(0, 10);
+  const linhasCobranca = cobrancas.map((cobranca) => ({
+    cobranca,
+    encargos: calcularEncargos(cobranca, hojeIso),
+  }));
 
   return (
     <Tabs defaultValue="geral">
@@ -129,7 +136,7 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
               <>
                 {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
                 <div className="flex flex-col gap-3 sm:hidden">
-                  {cobrancas.map((cobranca) => (
+                  {linhasCobranca.map(({ cobranca, encargos }) => (
                     <div key={cobranca.id} className="rounded-lg border border-input p-3">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{cobranca.descricao}</span>
@@ -152,8 +159,29 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
                         </div>
                         <div>
                           <dt className="text-xs text-muted-foreground">Vencimento</dt>
-                          <dd>{formatDate(cobranca.data_vencimento)}</dd>
+                          <dd>
+                            {formatDate(cobranca.data_vencimento)}
+                            {encargos.diasAtraso > 0 && (
+                              <span className="block text-xs text-destructive">
+                                {encargos.diasAtraso} dia(s) em atraso
+                              </span>
+                            )}
+                          </dd>
                         </div>
+                        {encargos.diasAtraso > 0 && (
+                          <>
+                            <div>
+                              <dt className="text-xs text-muted-foreground">Multa + juros</dt>
+                              <dd>{currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs text-muted-foreground">Total atualizado</dt>
+                              <dd className="font-medium">
+                                {currencyFormatter.format(encargos.valorTotalComEncargos)}
+                              </dd>
+                            </div>
+                          </>
+                        )}
                       </dl>
                     </div>
                   ))}
@@ -168,17 +196,36 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
                       <TableHead>Descrição</TableHead>
                       <TableHead>Valor</TableHead>
                       <TableHead>Vencimento</TableHead>
+                      <TableHead>Multa + juros</TableHead>
+                      <TableHead>Total atualizado</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {cobrancas.map((cobranca) => (
+                    {linhasCobranca.map(({ cobranca, encargos }) => (
                       <TableRow key={cobranca.id}>
                         <TableCell>{formatDate(cobranca.competencia)}</TableCell>
                         <TableCell>{cobrancaTipoLabel[cobranca.tipo]}</TableCell>
                         <TableCell>{cobranca.descricao}</TableCell>
                         <TableCell>{currencyFormatter.format(cobranca.valor_usd)}</TableCell>
-                        <TableCell>{formatDate(cobranca.data_vencimento)}</TableCell>
+                        <TableCell>
+                          {formatDate(cobranca.data_vencimento)}
+                          {encargos.diasAtraso > 0 && (
+                            <span className="block text-xs text-destructive">
+                              {encargos.diasAtraso} dia(s) em atraso
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {encargos.diasAtraso > 0
+                            ? currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {encargos.diasAtraso > 0
+                            ? currencyFormatter.format(encargos.valorTotalComEncargos)
+                            : currencyFormatter.format(encargos.saldoDevedor)}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={cobrancaStatusVariant[cobranca.status]}>
                             {cobrancaStatusLabel[cobranca.status]}
