@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaDoRateio, CobrancaStatus } from "@/lib/types/cobrancas";
+import { calcularEncargos } from "@/lib/encargos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,7 +76,7 @@ export default async function RateioExtraordinarioDetalhePage({
   const { data: cobrancasRaw, error: cobrancasError } = await supabase
     .from("cobrancas")
     .select(
-      "id, descricao, competencia, valor_usd, valor_credito_abatido_usd, data_emissao, data_vencimento, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
+      "id, descricao, competencia, valor_usd, valor_credito_abatido_usd, data_emissao, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
     )
     .eq("despesa_extraordinaria_id", id)
     .order("data_vencimento", { ascending: true })
@@ -111,9 +112,10 @@ export default async function RateioExtraordinarioDetalhePage({
       ? Math.min(100, (valorTotalArrecadado / valorTotalEsperado) * 100)
       : 0;
 
+  const hojeIso = new Date().toISOString().slice(0, 10);
   const linhasCobranca = cobrancas.map((cobranca) => {
     const totalAbatido = cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd;
-    return { cobranca, totalAbatido, saldo: Math.max(cobranca.valor_usd - totalAbatido, 0) };
+    return { cobranca, totalAbatido, encargos: calcularEncargos(cobranca, hojeIso) };
   });
 
   return (
@@ -220,7 +222,7 @@ export default async function RateioExtraordinarioDetalhePage({
             <>
               {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
               <div className="flex flex-col gap-3 sm:hidden">
-                {linhasCobranca.map(({ cobranca, totalAbatido, saldo }) => (
+                {linhasCobranca.map(({ cobranca, totalAbatido, encargos }) => (
                   <div key={cobranca.id} className="rounded-lg border border-input p-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{cobranca.unidade?.identificacao ?? "—"}</span>
@@ -239,12 +241,33 @@ export default async function RateioExtraordinarioDetalhePage({
                       </div>
                       <div>
                         <dt className="text-xs text-muted-foreground">Saldo</dt>
-                        <dd>{currencyFormatter.format(saldo)}</dd>
+                        <dd>{currencyFormatter.format(encargos.saldoDevedor)}</dd>
                       </div>
                       <div>
                         <dt className="text-xs text-muted-foreground">Vencimento</dt>
-                        <dd>{formatDate(cobranca.data_vencimento)}</dd>
+                        <dd>
+                          {formatDate(cobranca.data_vencimento)}
+                          {encargos.diasAtraso > 0 && (
+                            <span className="block text-xs text-destructive">
+                              {encargos.diasAtraso} dia(s) em atraso
+                            </span>
+                          )}
+                        </dd>
                       </div>
+                      {encargos.diasAtraso > 0 && (
+                        <>
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Multa + juros</dt>
+                            <dd>{currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Total atualizado</dt>
+                            <dd className="font-medium">
+                              {currencyFormatter.format(encargos.valorTotalComEncargos)}
+                            </dd>
+                          </div>
+                        </>
+                      )}
                     </dl>
                   </div>
                 ))}
@@ -259,19 +282,38 @@ export default async function RateioExtraordinarioDetalhePage({
                     <TableHead>Pago</TableHead>
                     <TableHead>Saldo</TableHead>
                     <TableHead>Vencimento</TableHead>
+                    <TableHead>Multa + juros</TableHead>
+                    <TableHead>Total atualizado</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {linhasCobranca.map(({ cobranca, totalAbatido, saldo }) => (
+                  {linhasCobranca.map(({ cobranca, totalAbatido, encargos }) => (
                     <TableRow key={cobranca.id}>
                       <TableCell className="font-medium">
                         {cobranca.unidade?.identificacao ?? "—"}
                       </TableCell>
                       <TableCell>{currencyFormatter.format(cobranca.valor_usd)}</TableCell>
                       <TableCell>{currencyFormatter.format(totalAbatido)}</TableCell>
-                      <TableCell>{currencyFormatter.format(saldo)}</TableCell>
-                      <TableCell>{formatDate(cobranca.data_vencimento)}</TableCell>
+                      <TableCell>{currencyFormatter.format(encargos.saldoDevedor)}</TableCell>
+                      <TableCell>
+                        {formatDate(cobranca.data_vencimento)}
+                        {encargos.diasAtraso > 0 && (
+                          <span className="block text-xs text-destructive">
+                            {encargos.diasAtraso} dia(s) em atraso
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {encargos.diasAtraso > 0
+                          ? currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {encargos.diasAtraso > 0
+                          ? currencyFormatter.format(encargos.valorTotalComEncargos)
+                          : currencyFormatter.format(encargos.saldoDevedor)}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant[cobranca.status]}>
                           {statusLabel[cobranca.status]}
