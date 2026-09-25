@@ -9,7 +9,7 @@ export default async function UnidadesPage() {
     await Promise.all([
       supabase
         .from("unidades")
-        .select("id, identificacao, proprietario_id, gera_cobranca, created_at, proprietario:proprietarios(id, nome)")
+        .select("id, identificacao, proprietario_id, created_at, proprietario:proprietarios(id, nome)")
         .order("identificacao", { ascending: true })
         .returns<Unidade[]>(),
       supabase

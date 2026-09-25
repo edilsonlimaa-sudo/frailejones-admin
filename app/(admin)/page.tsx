@@ -94,7 +94,7 @@ export default async function Home({
 
   const supabase = await createClient();
 
-  const [{ data: cobrancasRaw, error: cobrancasError }, { count: unidadesAtivas }] =
+  const [{ data: cobrancasRaw, error: cobrancasError }, { data: taxaVinculosRaw, error: taxaVinculosError }] =
     await Promise.all([
       supabase
         .from("cobrancas")
@@ -105,12 +105,19 @@ export default async function Home({
         .lt("competencia", inicioMesSeguinte)
         .order("data_vencimento", { ascending: true })
         .returns<CobrancaDoMes[]>(),
-      supabase.from("unidades").select("id", { count: "exact", head: true }).eq("gera_cobranca", true),
+      supabase.from("taxa_condominio_unidades").select("unidade_id").returns<{ unidade_id: string }[]>(),
     ]);
 
-  if (cobrancasError) {
-    return <p className="text-sm text-destructive">Erro ao carregar dados: {cobrancasError.message}</p>;
+  if (cobrancasError || taxaVinculosError) {
+    return (
+      <p className="text-sm text-destructive">
+        Erro ao carregar dados: {cobrancasError?.message ?? taxaVinculosError?.message}
+      </p>
+    );
   }
+
+  // conta unidades distintas vinculadas a alguma taxa (uma unidade pode estar em N taxas)
+  const unidadesAtivas = new Set((taxaVinculosRaw ?? []).map((v) => v.unidade_id)).size;
 
   const cobrancas = cobrancasRaw ?? [];
   const ativas = cobrancas.filter((c) => c.status !== "cancelado");
@@ -191,7 +198,7 @@ export default async function Home({
         <CardHeader>
           <CardTitle>Arrecadação do mês</CardTitle>
           <CardDescription>
-            {unidadesAtivas ?? 0} unidade(s) ativa(s) na emissão de cobranças
+            {unidadesAtivas} unidade(s) ativa(s) na emissão de cobranças
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -7,7 +7,6 @@ import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -125,7 +124,6 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
                 <TableRow>
                   <TableHead>Identificação</TableHead>
                   <TableHead>Proprietário</TableHead>
-                  <TableHead>Gera cobrança</TableHead>
                   <TableHead className="w-9" />
                 </TableRow>
               </TableHeader>
@@ -138,11 +136,6 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
                       </Link>
                     </TableCell>
                     <TableCell>{unidade.proprietario?.nome ?? "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={unidade.gera_cobranca ? "default" : "outline"}>
-                        {unidade.gera_cobranca ? "Sim" : "Não"}
-                      </Badge>
-                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger

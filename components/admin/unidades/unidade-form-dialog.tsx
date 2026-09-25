@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 
 type UnidadeFormDialogProps = {
   open: boolean;
@@ -81,7 +80,6 @@ function UnidadeFormFields({
   const [proprietarioId, setProprietarioId] = useState<string | null>(
     unidade?.proprietario_id ?? null,
   );
-  const [geraCobranca, setGeraCobranca] = useState(unidade?.gera_cobranca ?? true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -102,7 +100,6 @@ function UnidadeFormFields({
       const payload = {
         identificacao: identificacao.trim(),
         proprietario_id: proprietarioId,
-        gera_cobranca: geraCobranca,
       };
 
       const query = isEditing
@@ -110,7 +107,7 @@ function UnidadeFormFields({
         : supabase.from("unidades").insert(payload);
 
       const { data, error: saveError } = await query
-        .select("id, identificacao, proprietario_id, gera_cobranca, created_at")
+        .select("id, identificacao, proprietario_id, created_at")
         .single();
 
       if (saveError) throw saveError;
@@ -180,16 +177,6 @@ function UnidadeFormFields({
               <PlusIcon />
             </Button>
           </div>
-        </div>
-
-        <div className="flex items-center justify-between rounded-2xl border border-input bg-input/30 px-3 py-2.5">
-          <div className="flex flex-col">
-            <Label htmlFor="gera_cobranca">Gera cobrança</Label>
-            <span className="text-xs text-muted-foreground">
-              Unidade participa da emissão de cobranças ordinárias/extraordinárias.
-            </span>
-          </div>
-          <Switch id="gera_cobranca" checked={geraCobranca} onCheckedChange={setGeraCobranca} />
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}

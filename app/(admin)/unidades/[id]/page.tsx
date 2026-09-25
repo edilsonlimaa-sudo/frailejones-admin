@@ -20,7 +20,7 @@ export default async function UnidadeDetailPage({
   const { data: unidade, error: unidadeError } = await supabase
     .from("unidades")
     .select(
-      "id, identificacao, proprietario_id, gera_cobranca, created_at, proprietario:proprietarios(id, nome, documento_identidad, telefone_whatsapp, email)",
+      "id, identificacao, proprietario_id, created_at, proprietario:proprietarios(id, nome, documento_identidad, telefone_whatsapp, email)",
     )
     .eq("id", id)
     .maybeSingle<
