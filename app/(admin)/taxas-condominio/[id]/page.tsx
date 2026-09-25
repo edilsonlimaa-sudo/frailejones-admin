@@ -47,6 +47,9 @@ type CobrancaRow = {
   valor_usd: number;
   valor_credito_abatido_usd: number;
   data_vencimento: string;
+  dias_graca: number;
+  pct_multa_atraso: number;
+  pct_juros_diario: number;
   status: "pendente" | "pago" | "cancelado";
   unidade: { id: string; identificacao: string } | null;
   pagamento_cobrancas: { valor_principal_abatido_usd: number; valor_juros_pago_usd: number }[];
@@ -109,7 +112,7 @@ export default async function TaxaCondominioDetalhePage({
     supabase
       .from("cobrancas")
       .select(
-        "id, valor_usd, valor_credito_abatido_usd, data_vencimento, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
+        "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
       )
       .eq("taxa_condominio_id", id)
       .eq("competencia", competencia)
@@ -159,6 +162,9 @@ export default async function TaxaCondominioDetalhePage({
             valor_usd: cobranca.valor_usd,
             valor_credito_abatido_usd: cobranca.valor_credito_abatido_usd,
             data_vencimento: cobranca.data_vencimento,
+            dias_graca: cobranca.dias_graca,
+            pct_multa_atraso: cobranca.pct_multa_atraso,
+            pct_juros_diario: cobranca.pct_juros_diario,
             status: cobranca.status,
             valor_principal_pago_usd: cobranca.pagamento_cobrancas.reduce(
               (acc, p) => acc + p.valor_principal_abatido_usd,

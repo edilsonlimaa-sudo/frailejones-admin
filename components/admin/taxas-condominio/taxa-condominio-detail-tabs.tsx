@@ -2,6 +2,7 @@ import { ChevronLeftIcon, ChevronRightIcon, Receipt } from "lucide-react";
 import Link from "next/link";
 
 import type { UnidadeCobrancaDoMes } from "@/lib/types/cobrancas";
+import { calcularEncargos } from "@/lib/encargos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,6 +81,12 @@ export function TaxaCondominioDetailTabs({
   const emitidasAtivas = emitidas.filter((u) => u.cobranca!.status !== "cancelado");
   const pagas = emitidas.filter((u) => u.cobranca!.status === "pago").length;
   const pendentes = emitidas.filter((u) => u.cobranca!.status === "pendente").length;
+
+  const hojeIso = new Date().toISOString().slice(0, 10);
+  const linhasEmitidas = emitidas.map((item) => ({
+    item,
+    encargos: calcularEncargos(item.cobranca!, hojeIso),
+  }));
 
   const valorEmitido = emitidasAtivas.reduce((acc, u) => acc + u.cobranca!.valor_usd, 0);
   const valorArrecadado = emitidasAtivas.reduce(
@@ -193,11 +200,10 @@ export function TaxaCondominioDetailTabs({
               <div className="flex flex-col gap-4">
                 {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
                 <div className="flex flex-col gap-3 sm:hidden">
-                  {emitidas.map((item) => {
+                  {linhasEmitidas.map(({ item, encargos }) => {
                     const cobranca = item.cobranca!;
                     const totalAbatido =
                       cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd;
-                    const saldo = Math.max(cobranca.valor_usd - totalAbatido, 0);
 
                     return (
                       <div key={cobranca.id} className="rounded-lg border border-input p-3">
@@ -218,12 +224,35 @@ export function TaxaCondominioDetailTabs({
                           </div>
                           <div>
                             <dt className="text-xs text-muted-foreground">Saldo</dt>
-                            <dd>{currencyFormatter.format(saldo)}</dd>
+                            <dd>{currencyFormatter.format(encargos.saldoDevedor)}</dd>
                           </div>
                           <div>
                             <dt className="text-xs text-muted-foreground">Vencimento</dt>
-                            <dd>{formatDate(cobranca.data_vencimento)}</dd>
+                            <dd>
+                              {formatDate(cobranca.data_vencimento)}
+                              {encargos.diasAtraso > 0 && (
+                                <span className="block text-xs text-destructive">
+                                  {encargos.diasAtraso} dia(s) em atraso
+                                </span>
+                              )}
+                            </dd>
                           </div>
+                          {encargos.diasAtraso > 0 && (
+                            <>
+                              <div>
+                                <dt className="text-xs text-muted-foreground">Multa + juros</dt>
+                                <dd>
+                                  {currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt className="text-xs text-muted-foreground">Total atualizado</dt>
+                                <dd className="font-medium">
+                                  {currencyFormatter.format(encargos.valorTotalComEncargos)}
+                                </dd>
+                              </div>
+                            </>
+                          )}
                         </dl>
                       </div>
                     );
@@ -239,23 +268,41 @@ export function TaxaCondominioDetailTabs({
                       <TableHead>Pago</TableHead>
                       <TableHead>Saldo</TableHead>
                       <TableHead>Vencimento</TableHead>
+                      <TableHead>Multa + juros</TableHead>
+                      <TableHead>Total atualizado</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {emitidas.map((item) => {
+                    {linhasEmitidas.map(({ item, encargos }) => {
                       const cobranca = item.cobranca!;
                       const totalAbatido =
                         cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd;
-                      const saldo = Math.max(cobranca.valor_usd - totalAbatido, 0);
 
                       return (
                         <TableRow key={cobranca.id}>
                           <TableCell className="font-medium">{item.unidade_identificacao}</TableCell>
                           <TableCell>{currencyFormatter.format(cobranca.valor_usd)}</TableCell>
                           <TableCell>{currencyFormatter.format(totalAbatido)}</TableCell>
-                          <TableCell>{currencyFormatter.format(saldo)}</TableCell>
-                          <TableCell>{formatDate(cobranca.data_vencimento)}</TableCell>
+                          <TableCell>{currencyFormatter.format(encargos.saldoDevedor)}</TableCell>
+                          <TableCell>
+                            {formatDate(cobranca.data_vencimento)}
+                            {encargos.diasAtraso > 0 && (
+                              <span className="block text-xs text-destructive">
+                                {encargos.diasAtraso} dia(s) em atraso
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {encargos.diasAtraso > 0
+                              ? currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {encargos.diasAtraso > 0
+                              ? currencyFormatter.format(encargos.valorTotalComEncargos)
+                              : currencyFormatter.format(encargos.saldoDevedor)}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={statusVariant[cobranca.status]}>
                               {statusLabel[cobranca.status]}
