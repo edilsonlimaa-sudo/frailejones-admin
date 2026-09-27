@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
+import { aplicarSaldoAFavor } from "@/lib/creditos";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
 import type { Unidade } from "@/lib/types/unidades";
 import { Button } from "@/components/ui/button";
@@ -163,22 +164,37 @@ function RateioExtraordinarioFormFields({
       if (!isEditing) {
         // diferente da taxa de condomínio, o rateio extraordinário já emite as cobranças no cadastro,
         // uma para cada unidade participante selecionada
-        const { error: cobrancasError } = await supabase.from("cobrancas").insert(
-          unidadeIds.map((unidadeId) => ({
-            unidade_id: unidadeId,
-            tipo: "extraordinaria" as const,
-            descricao: data.titulo,
-            competencia: data.data_vencimento,
-            valor_usd: data.valor_por_unidade_usd,
-            data_vencimento: data.data_vencimento,
-            pct_multa_atraso: data.pct_multa_atraso,
-            pct_juros_diario: data.pct_juros_diario,
-            dias_graca: data.dias_graca,
-            despesa_extraordinaria_id: data.id,
-          })),
-        );
+        const { data: cobrancasCriadas, error: cobrancasError } = await supabase
+          .from("cobrancas")
+          .insert(
+            unidadeIds.map((unidadeId) => ({
+              unidade_id: unidadeId,
+              tipo: "extraordinaria" as const,
+              descricao: data.titulo,
+              competencia: data.data_vencimento,
+              valor_usd: data.valor_por_unidade_usd,
+              data_vencimento: data.data_vencimento,
+              pct_multa_atraso: data.pct_multa_atraso,
+              pct_juros_diario: data.pct_juros_diario,
+              dias_graca: data.dias_graca,
+              despesa_extraordinaria_id: data.id,
+            })),
+          )
+          .select("id, unidade_id");
         if (cobrancasError) throw cobrancasError;
         cobrancasGeradas = unidadeIds.length;
+
+        // aplica saldo a favor disponível (se houver) direto na emissão de cada cobrança
+        await Promise.all(
+          (cobrancasCriadas ?? []).map((cobranca) =>
+            aplicarSaldoAFavor(supabase, {
+              unidadeId: cobranca.unidade_id,
+              cobrancaId: cobranca.id,
+              valorCobrancaUsd: data.valor_por_unidade_usd,
+              descricaoCobranca: data.titulo,
+            }),
+          ),
+        );
       }
 
       onSaved({ ...data, unidade_ids: unidadeIds });
