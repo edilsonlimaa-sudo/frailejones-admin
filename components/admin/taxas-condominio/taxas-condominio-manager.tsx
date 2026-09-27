@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
+import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,16 +45,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { TaxaCondominioFormDialog } from "@/components/admin/taxas-condominio/taxa-condominio-form-dialog";
 
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "USD",
-});
-
 type TaxasCondominioManagerProps = {
   taxas: TaxaCondominio[];
 };
 
 export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
+  const t = useTranslations("taxasCondominio");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const currencyFormatter = new Intl.NumberFormat(INTL_LOCALE[locale as keyof typeof INTL_LOCALE], {
+    style: "currency",
+    currency: "USD",
+  });
   const [taxasList, setTaxasList] = useState(taxas);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -95,10 +99,10 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
       if (error) throw error;
 
       setTaxasList((prev) => prev.filter((t) => t.id !== deleteTarget.id));
-      toast.success("Taxa de condomínio excluída.");
+      toast.success(t("deleteSuccess"));
       setDeleteTarget(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao excluir taxa de condomínio.");
+      toast.error(err instanceof Error ? err.message : t("deleteError"));
     } finally {
       setIsDeleting(false);
     }
@@ -108,31 +112,29 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Taxas de Condomínio</CardTitle>
-          <CardDescription>
-            Regras de valor, vencimento, multa e juros usadas na emissão das cobranças ordinárias.
-          </CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
           <CardAction>
             <Button onClick={openCreateDialog}>
               <PlusIcon />
-              Nova taxa
+              {t("newFee")}
             </Button>
           </CardAction>
         </CardHeader>
         <CardContent>
           {taxasList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma taxa de condomínio cadastrada.</p>
+            <p className="text-sm text-muted-foreground">{t("noFees")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Multa</TableHead>
-                  <TableHead>Juros/dia</TableHead>
-                  <TableHead>Carência</TableHead>
-                  <TableHead>Ativo</TableHead>
+                  <TableHead>{t("titleColumn")}</TableHead>
+                  <TableHead>{t("value")}</TableHead>
+                  <TableHead>{t("dueDate")}</TableHead>
+                  <TableHead>{t("penalty")}</TableHead>
+                  <TableHead>{t("dailyInterest")}</TableHead>
+                  <TableHead>{t("gracePeriod")}</TableHead>
+                  <TableHead>{tCommon("active")}</TableHead>
                   <TableHead className="w-9" />
                 </TableRow>
               </TableHeader>
@@ -145,36 +147,36 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
                       </Link>
                     </TableCell>
                     <TableCell>{currencyFormatter.format(taxa.valor_usd)}</TableCell>
-                    <TableCell>Dia {taxa.dia_vencimento}</TableCell>
+                    <TableCell>{t("dueDay", { day: taxa.dia_vencimento })}</TableCell>
                     <TableCell>{taxa.pct_multa_atraso}%</TableCell>
                     <TableCell>{taxa.pct_juros_diario}%</TableCell>
-                    <TableCell>{taxa.dias_graca} dia(s)</TableCell>
+                    <TableCell>{t("graceDays", { count: taxa.dias_graca })}</TableCell>
                     <TableCell>
                       <Badge variant={taxa.ativo ? "default" : "outline"}>
-                        {taxa.ativo ? "Sim" : "Não"}
+                        {taxa.ativo ? tCommon("yes") : tCommon("no")}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           render={
-                            <Button variant="ghost" size="icon-sm" aria-label="Ações" />
+                            <Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />
                           }
                         >
                           <MoreHorizontalIcon />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem render={<Link href={`/taxas-condominio/${taxa.id}`} />}>
-                            Ver detalhes
+                            {t("viewDetails")}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditDialog(taxa)}>
-                            Editar
+                            {tCommon("edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             variant="destructive"
                             onClick={() => setDeleteTarget(taxa)}
                           >
-                            Excluir
+                            {tCommon("delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -200,16 +202,15 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir taxa de condomínio</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a taxa &quot;{deleteTarget?.titulo}&quot;? Essa ação
-              não pode ser desfeita.
+              {t("deleteConfirm", { titulo: deleteTarget?.titulo ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction disabled={isDeleting} onClick={handleDelete}>
-              {isDeleting ? "Excluindo..." : "Excluir"}
+              {isDeleting ? t("deleting") : tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

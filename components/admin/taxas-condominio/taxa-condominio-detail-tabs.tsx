@@ -1,9 +1,11 @@
 import { ChevronLeftIcon, ChevronRightIcon, Receipt } from "lucide-react";
 import Link from "next/link";
+import { getTranslations, getLocale } from "next-intl/server";
 
 import type { UnidadeCobrancaDoMes } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
 import { encontrarTasaNaData, formatVes, type CotacaoHistorico } from "@/lib/moeda";
+import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,22 +28,6 @@ import {
 import { EmitirCobrancasDoMesButton } from "@/components/admin/taxas-condominio/emitir-cobrancas-do-mes-button";
 import { VincularUnidadesTaxaForm } from "@/components/admin/taxas-condominio/vincular-unidades-taxa-form";
 
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "USD",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
-const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
-const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
-
-const statusLabel = { pendente: "Pendente", pago: "Pago", cancelado: "Cancelado" } as const;
-const statusVariant = {
-  pendente: "outline",
-  pago: "default",
-  cancelado: "destructive",
-} as const;
-
 type TaxaCondominioDetailTabsProps = {
   taxaId: string;
   valorUsd: number;
@@ -61,7 +47,7 @@ type TaxaCondominioDetailTabsProps = {
   cotacoes: CotacaoHistorico[];
 };
 
-export function TaxaCondominioDetailTabs({
+export async function TaxaCondominioDetailTabs({
   taxaId,
   valorUsd,
   pctMultaAtraso,
@@ -79,6 +65,20 @@ export function TaxaCondominioDetailTabs({
   dataProcessamento,
   cotacoes,
 }: TaxaCondominioDetailTabsProps) {
+  const t = await getTranslations("taxaCondominioDetail");
+  const tCobrancas = await getTranslations("cobrancas.status");
+  const locale = await getLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
+  const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
+  const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
+  const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short" });
+  const statusLabel = { pendente: tCobrancas("pendente"), pago: tCobrancas("pago"), cancelado: tCobrancas("cancelado") } as const;
+  const statusVariant = {
+    pendente: "outline",
+    pago: "default",
+    cancelado: "destructive",
+  } as const;
   const cotacaoAtual = cotacoes[0] ?? null;
   const emitidas = unidadesDoMes.filter((u) => u.cobranca !== null);
   const naoEmitidas = unidadesDoMes.filter((u) => u.cobranca === null);
@@ -124,8 +124,8 @@ export function TaxaCondominioDetailTabs({
   return (
     <Tabs defaultValue="emissao" className="gap-4">
       <TabsList>
-        <TabsTrigger value="emissao">Emissão mensal</TabsTrigger>
-        <TabsTrigger value="unidades">Unidades vinculadas</TabsTrigger>
+        <TabsTrigger value="emissao">{t("tabs.emission")}</TabsTrigger>
+        <TabsTrigger value="unidades">{t("tabs.linkedUnits")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="emissao" className="flex flex-col gap-6">
@@ -134,20 +134,20 @@ export function TaxaCondominioDetailTabs({
             <div>
               <CardTitle className="flex items-center gap-2">
                 {mesLabelCapitalizado}
-                {competenciaFaturada && <Badge variant="outline">Processada</Badge>}
+                {competenciaFaturada && <Badge variant="outline">{t("processed")}</Badge>}
               </CardTitle>
               <CardDescription>
-                {emitidas.length} de {unidadesDoMes.length} unidades com cobrança emitida neste mês
+                {t("unitsWithChargeIssued", { count: emitidas.length, total: unidadesDoMes.length })}
                 {competenciaFaturada &&
                   dataProcessamento &&
-                  ` · fechada em ${dateTimeFormatter.format(new Date(dataProcessamento))}`}
+                  t("closedOn", { date: dateTimeFormatter.format(new Date(dataProcessamento)) })}
               </CardDescription>
             </div>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="icon-sm"
-                aria-label="Mês anterior"
+                aria-label={t("previousMonth")}
                 nativeButton={false}
                 render={<Link href={mesAnteriorHref} />}
               >
@@ -156,7 +156,7 @@ export function TaxaCondominioDetailTabs({
               <Button
                 variant="outline"
                 size="icon-sm"
-                aria-label="Próximo mês"
+                aria-label={t("nextMonth")}
                 nativeButton={false}
                 render={<Link href={mesSeguinteHref} />}
               >
@@ -168,23 +168,23 @@ export function TaxaCondominioDetailTabs({
             <Progress value={progresso} />
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
               <div>
-                <p className="text-xs text-muted-foreground">Arrecadado</p>
+                <p className="text-xs text-muted-foreground">{t("collected")}</p>
                 <p className="font-medium">{currencyFormatter.format(valorArrecadado)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Emitido</p>
+                <p className="text-xs text-muted-foreground">{t("issued")}</p>
                 <p className="font-medium">{currencyFormatter.format(valorEmitido)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Pagas</p>
+                <p className="text-xs text-muted-foreground">{t("paid")}</p>
                 <p className="font-medium">{pagas}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Pendentes</p>
+                <p className="text-xs text-muted-foreground">{t("pending")}</p>
                 <p className="font-medium">{pendentes}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Não emitidas</p>
+                <p className="text-xs text-muted-foreground">{t("notIssued")}</p>
                 <p className="font-medium">{naoEmitidas.length}</p>
               </div>
             </div>
@@ -193,18 +193,16 @@ export function TaxaCondominioDetailTabs({
 
         <Card>
           <CardHeader>
-            <CardTitle>Cobranças emitidas — {mesLabelCapitalizado}</CardTitle>
+            <CardTitle>{t("issuedChargesTitle", { month: mesLabelCapitalizado })}</CardTitle>
           </CardHeader>
           <CardContent>
             {unidadesDoMes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhuma unidade vinculada a esta taxa no momento.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("noLinkedUnits")}</p>
             ) : emitidas.length === 0 ? (
               <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-input py-10 text-center">
                 <Receipt className="size-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma cobrança emitida ainda para {mesLabelCapitalizado.toLowerCase()}.
+                  {t("noChargesYet", { month: mesLabelCapitalizado.toLowerCase() })}
                 </p>
                 <EmitirCobrancasDoMesButton
                   taxaId={taxaId}
@@ -242,43 +240,43 @@ export function TaxaCondominioDetailTabs({
                         </div>
                         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                           <div>
-                            <dt className="text-xs text-muted-foreground">Valor</dt>
+                            <dt className="text-xs text-muted-foreground">{t("value")}</dt>
                             <dd>
                               {currencyFormatter.format(cobranca.valor_usd)}
                               {cobranca.valor_credito_abatido_usd > 0 && (
                                 <span className="block text-xs text-primary">
-                                  Crédito: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                                  {t("creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
                                 </span>
                               )}
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">Pago</dt>
+                            <dt className="text-xs text-muted-foreground">{t("paidValue")}</dt>
                             <dd>{currencyFormatter.format(totalAbatido)}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">Saldo</dt>
+                            <dt className="text-xs text-muted-foreground">{t("balance")}</dt>
                             <dd>{currencyFormatter.format(encargos.saldoDevedor)}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">Vencimento</dt>
+                            <dt className="text-xs text-muted-foreground">{t("dueDate")}</dt>
                             <dd>
                               {formatDate(cobranca.data_vencimento)}
                               {encargos.diasAtraso > 0 && (
                                 <span className="block text-xs text-destructive">
-                                  {encargos.diasAtraso} dia(s) em atraso
+                                  {tCobrancas("daysOverdue", { count: encargos.diasAtraso })}
                                 </span>
                               )}
                             </dd>
                           </div>
                           {multaJuros > 0 && (
                             <div>
-                              <dt className="text-xs text-muted-foreground">Multa + juros</dt>
+                              <dt className="text-xs text-muted-foreground">{t("penaltyInterest")}</dt>
                               <dd>{currencyFormatter.format(multaJuros)}</dd>
                             </div>
                           )}
                           <div>
-                            <dt className="text-xs text-muted-foreground">Total atualizado</dt>
+                            <dt className="text-xs text-muted-foreground">{t("updatedTotal")}</dt>
                             <dd className="font-medium">
                               {currencyFormatter.format(totalAtualizado)}
                               {tasaVesExibir != null && (
@@ -298,14 +296,14 @@ export function TaxaCondominioDetailTabs({
                 <Table className="hidden sm:table">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Unidade</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Pago</TableHead>
-                      <TableHead>Saldo</TableHead>
-                      <TableHead>Vencimento</TableHead>
-                      <TableHead>Multa + juros</TableHead>
-                      <TableHead>Total atualizado</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>{t("unit")}</TableHead>
+                      <TableHead>{t("value")}</TableHead>
+                      <TableHead>{t("paidValue")}</TableHead>
+                      <TableHead>{t("balance")}</TableHead>
+                      <TableHead>{t("dueDate")}</TableHead>
+                      <TableHead>{t("penaltyInterest")}</TableHead>
+                      <TableHead>{t("updatedTotal")}</TableHead>
+                      <TableHead>{t("status")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -323,7 +321,7 @@ export function TaxaCondominioDetailTabs({
                             {currencyFormatter.format(cobranca.valor_usd)}
                             {cobranca.valor_credito_abatido_usd > 0 && (
                               <span className="block text-xs text-primary">
-                                Crédito: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                                {t("creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
                               </span>
                             )}
                           </TableCell>
@@ -333,7 +331,7 @@ export function TaxaCondominioDetailTabs({
                             {formatDate(cobranca.data_vencimento)}
                             {encargos.diasAtraso > 0 && (
                               <span className="block text-xs text-destructive">
-                                {encargos.diasAtraso} dia(s) em atraso
+                                {tCobrancas("daysOverdue", { count: encargos.diasAtraso })}
                               </span>
                             )}
                           </TableCell>
@@ -383,10 +381,8 @@ export function TaxaCondominioDetailTabs({
       <TabsContent value="unidades">
         <Card>
           <CardHeader>
-            <CardTitle>Unidades vinculadas</CardTitle>
-            <CardDescription>
-              Unidades marcadas recebem cobrança ordinária desta taxa a cada emissão mensal.
-            </CardDescription>
+            <CardTitle>{t("tabs.linkedUnits")}</CardTitle>
+            <CardDescription>{t("linkedUnitsDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <VincularUnidadesTaxaForm

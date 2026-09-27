@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { createClient } from "@/lib/supabase/server";
 import { LiquidacoesManager } from "@/components/admin/liquidacoes/liquidacoes-manager";
 import type { Liquidacao } from "@/lib/types/pagamentos";
@@ -8,6 +10,7 @@ type PagamentoRow = Omit<Liquidacao, "cobranca"> & {
 
 export default async function LiquidacoesPage() {
   const supabase = await createClient();
+  const t = await getTranslations("common");
 
   const { data: pagamentos, error } = await supabase
     .from("pagamentos")
@@ -18,7 +21,7 @@ export default async function LiquidacoesPage() {
     .returns<PagamentoRow[]>();
 
   if (error) {
-    return <p className="text-sm text-destructive">Erro ao carregar dados: {error.message}</p>;
+    return <p className="text-sm text-destructive">{t("errorLoadingData", { message: error.message })}</p>;
   }
 
   const liquidacoes: Liquidacao[] = (pagamentos ?? []).map(

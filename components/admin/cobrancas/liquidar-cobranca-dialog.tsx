@@ -3,10 +3,12 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import type { MoedaTipo } from "@/lib/types/creditos";
 import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
+import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,19 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "USD",
-});
-
-const formaPagamentoLabel: Record<FormaPagamentoTipo, string> = {
-  pago_movil: "Pago móvil",
-  transferencia: "Transferência",
-  efectivo_usd: "Efectivo (USD)",
-  zelle: "Zelle",
-};
-
-const formasPagamento = Object.keys(formaPagamentoLabel) as FormaPagamentoTipo[];
+const formasPagamento: FormaPagamentoTipo[] = ["pago_movil", "transferencia", "efectivo_usd", "zelle"];
 
 type LiquidarCobrancaDialogProps = {
   unidadeId: string;
@@ -55,11 +45,12 @@ export function LiquidarCobrancaDialog({
 }: LiquidarCobrancaDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const t = useTranslations("liquidarCobranca");
 
   return (
     <>
       <Button size="sm" className={triggerClassName} onClick={() => setOpen(true)}>
-        Liquidar
+        {t("trigger")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex max-h-[85dvh] max-w-lg flex-col">
@@ -103,6 +94,19 @@ function LiquidarCobrancaForm({
   onSaved,
 }: LiquidarCobrancaFormProps) {
   const totalDevidoUsd = Number((saldoDevedorUsd + encargosUsd).toFixed(2));
+  const t = useTranslations("liquidarCobranca");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const currencyFormatter = new Intl.NumberFormat(INTL_LOCALE[locale as keyof typeof INTL_LOCALE], {
+    style: "currency",
+    currency: "USD",
+  });
+  const formaPagamentoLabel: Record<FormaPagamentoTipo, string> = {
+    pago_movil: t("paymentMethod.pago_movil"),
+    transferencia: t("paymentMethod.transferencia"),
+    efectivo_usd: t("paymentMethod.efectivo_usd"),
+    zelle: t("paymentMethod.zelle"),
+  };
 
   const [moeda, setMoeda] = useState<MoedaTipo>("USD");
   const [valorRecebido, setValorRecebido] = useState(totalDevidoUsd.toFixed(2));
@@ -146,11 +150,11 @@ function LiquidarCobrancaForm({
     e.preventDefault();
 
     if (valorEquivalenteUsd <= 0) {
-      setError("Informe um valor recebido maior que zero.");
+      setError(t("errorAmountRequired"));
       return;
     }
     if (moeda === "VES" && !cotacaoBcv) {
-      setError("Não há cotação BCV cadastrada para converter o valor em VES.");
+      setError(t("errorNoRate"));
       return;
     }
 
@@ -214,11 +218,11 @@ function LiquidarCobrancaForm({
         if (statusError) throw statusError;
       }
 
-      toast.success("Pagamento registrado com sucesso.");
+      toast.success(t("successMessage"));
       onSaved();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro ao registrar pagamento.");
+      setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
       setIsSubmitting(false);
     }
@@ -227,25 +231,25 @@ function LiquidarCobrancaForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Liquidar cobrança</DialogTitle>
+        <DialogTitle>{t("title")}</DialogTitle>
         <DialogDescription>{descricao}</DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
         <div className="-m-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-1">
           <div className="rounded-lg border border-input bg-muted/30 p-3 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Total devido hoje</span>
+              <span className="text-muted-foreground">{t("totalDueToday")}</span>
               <span className="font-medium">{currencyFormatter.format(totalDevidoUsd)}</span>
             </div>
             {encargosUsd > 0 && (
               <p className="mt-1 text-xs text-muted-foreground">
-                Inclui {currencyFormatter.format(encargosUsd)} de multa/juros por atraso.
+                {t("includesPenalty", { value: currencyFormatter.format(encargosUsd) })}
               </p>
             )}
           </div>
 
           <div className="grid gap-2">
-            <Label>Moeda recebida</Label>
+            <Label>{t("currencyReceived")}</Label>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
@@ -264,14 +268,12 @@ function LiquidarCobrancaForm({
               </Button>
             </div>
             {!cotacaoBcv && (
-              <p className="text-xs text-muted-foreground">
-                Cadastre uma cotação BCV para aceitar pagamentos em VES.
-              </p>
+              <p className="text-xs text-muted-foreground">{t("noRateHint")}</p>
             )}
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="valor_recebido">Valor recebido ({moeda})</Label>
+            <Label htmlFor="valor_recebido">{t("amountReceived", { moeda })}</Label>
             <Input
               id="valor_recebido"
               type="number"
@@ -284,18 +286,21 @@ function LiquidarCobrancaForm({
             />
             {moeda === "VES" && cotacaoBcv && (
               <p className="text-xs text-muted-foreground">
-                ≈ {currencyFormatter.format(valorEquivalenteUsd)} (cotação {cotacaoBcv.tasa_ves} VES/USD)
+                {t("approxEquivalent", {
+                  value: currencyFormatter.format(valorEquivalenteUsd),
+                  rate: cotacaoBcv.tasa_ves,
+                })}
               </p>
             )}
             {sobraUsd > 0 && (
               <p className="text-xs text-primary">
-                Sobra de {currencyFormatter.format(sobraUsd)} será registrada como crédito da unidade.
+                {t("surplusHint", { value: currencyFormatter.format(sobraUsd) })}
               </p>
             )}
           </div>
 
           <div className="grid gap-2">
-            <Label>Forma de pagamento</Label>
+            <Label>{t("paymentMethodLabel")}</Label>
             <div className="grid grid-cols-2 gap-2">
               {formasPagamento.map((forma) => (
                 <Button
@@ -311,7 +316,7 @@ function LiquidarCobrancaForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="data_pagamento">Data do pagamento</Label>
+            <Label htmlFor="data_pagamento">{t("paymentDateLabel")}</Label>
             <Input
               id="data_pagamento"
               type="date"
@@ -324,7 +329,7 @@ function LiquidarCobrancaForm({
           {showDetalhes ? (
             <>
               <div className="grid gap-2">
-                <Label htmlFor="referencia_bancaria">Referência bancária</Label>
+                <Label htmlFor="referencia_bancaria">{t("bankReferenceLabel")}</Label>
                 <Input
                   id="referencia_bancaria"
                   value={referenciaBancaria}
@@ -332,7 +337,7 @@ function LiquidarCobrancaForm({
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="observacao">Observação</Label>
+                <Label htmlFor="observacao">{t("observationLabel")}</Label>
                 <Textarea
                   id="observacao"
                   value={observacao}
@@ -347,7 +352,7 @@ function LiquidarCobrancaForm({
               className="w-fit px-0"
               onClick={() => setShowDetalhes(true)}
             >
-              + Referência bancária / observação
+              {t("showDetails")}
             </Button>
           )}
 
@@ -362,12 +367,12 @@ function LiquidarCobrancaForm({
             onClick={onClose}
             disabled={isSubmitting}
           >
-            Cancelar
+            {tCommon("cancel")}
           </Button>
           <Button type="submit" className="flex-1" disabled={isSubmitting}>
             {isSubmitting
-              ? "Registrando..."
-              : `Confirmar ${currencyFormatter.format(valorEquivalenteUsd)}`}
+              ? t("submitting")
+              : t("confirmButton", { value: currencyFormatter.format(valorEquivalenteUsd) })}
           </Button>
         </DialogFooter>
       </form>

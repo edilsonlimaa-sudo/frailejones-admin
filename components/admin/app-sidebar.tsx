@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { navItems } from "@/components/admin/nav-items";
 import { LogoutButton } from "@/components/logout-button";
@@ -20,6 +21,7 @@ import {
 
 export function AppSidebar({ userEmail }: { userEmail: string }) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
 
   return (
     <Sidebar collapsible="icon">
@@ -30,7 +32,7 @@ export function AppSidebar({ userEmail }: { userEmail: string }) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("menu")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
@@ -38,10 +40,10 @@ export function AppSidebar({ userEmail }: { userEmail: string }) {
                   <SidebarMenuButton
                     render={<Link href={item.url} />}
                     isActive={pathname === item.url}
-                    tooltip={item.title}
+                    tooltip={t(item.titleKey)}
                   >
                     <item.icon />
-                    <span>{item.title}</span>
+                    <span>{t(item.titleKey)}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

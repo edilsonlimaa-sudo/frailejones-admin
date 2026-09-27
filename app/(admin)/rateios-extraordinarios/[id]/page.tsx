@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
+import { getTranslations, getLocale } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaDoRateio, CobrancaStatus } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
 import { encontrarTasaNaData, formatVes } from "@/lib/moeda";
+import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,27 +27,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "USD",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
-
-const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
-
-const statusLabel: Record<CobrancaStatus, string> = {
-  pendente: "Pendente",
-  pago: "Pago",
-  cancelado: "Cancelado",
-};
-
-const statusVariant: Record<CobrancaStatus, "default" | "outline" | "destructive"> = {
-  pendente: "outline",
-  pago: "default",
-  cancelado: "destructive",
-};
-
 type CobrancaRow = Omit<
   CobrancaDoRateio,
   "valor_principal_pago_usd" | "valor_juros_pago_usd" | "data_ultimo_pagamento"
@@ -64,6 +45,24 @@ export default async function RateioExtraordinarioDetalhePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const t = await getTranslations("common");
+  const tRateio = await getTranslations("rateioExtraordinarioDetail");
+  const tCobrancas = await getTranslations("cobrancas.status");
+  const locale = await getLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
+  const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
+  const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
+  const statusLabel: Record<CobrancaStatus, string> = {
+    pendente: tCobrancas("pendente"),
+    pago: tCobrancas("pago"),
+    cancelado: tCobrancas("cancelado"),
+  };
+  const statusVariant: Record<CobrancaStatus, "default" | "outline" | "destructive"> = {
+    pendente: "outline",
+    pago: "default",
+    cancelado: "destructive",
+  };
 
   const { data: despesa, error: despesaError } = await supabase
     .from("despesas_extraordinarias")
@@ -74,7 +73,7 @@ export default async function RateioExtraordinarioDetalhePage({
     .maybeSingle();
 
   if (despesaError) {
-    return <p className="text-sm text-destructive">Erro ao carregar dados: {despesaError.message}</p>;
+    return <p className="text-sm text-destructive">{t("errorLoadingData", { message: despesaError.message })}</p>;
   }
 
   if (!despesa) {
@@ -104,7 +103,7 @@ export default async function RateioExtraordinarioDetalhePage({
   if (cobrancasError || cotacaoBcvError) {
     return (
       <p className="text-sm text-destructive">
-        Erro ao carregar dados: {cobrancasError?.message ?? cotacaoBcvError?.message}
+        {t("errorLoadingData", { message: cobrancasError?.message ?? cotacaoBcvError?.message ?? "" })}
       </p>
     );
   }
@@ -175,7 +174,7 @@ export default async function RateioExtraordinarioDetalhePage({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Voltar"
+          aria-label={t("back")}
           nativeButton={false}
           render={<Link href="/rateios-extraordinarios" />}
         >
@@ -191,39 +190,39 @@ export default async function RateioExtraordinarioDetalhePage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Resumo do rateio</CardTitle>
+          <CardTitle>{tRateio("summaryTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
-              <dt className="text-xs text-muted-foreground">Valor total</dt>
+              <dt className="text-xs text-muted-foreground">{tRateio("totalValue")}</dt>
               <dd className="font-medium">{currencyFormatter.format(despesa.valor_total_usd)}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Valor por unidade</dt>
+              <dt className="text-xs text-muted-foreground">{tRateio("valuePerUnit")}</dt>
               <dd className="font-medium">
                 {currencyFormatter.format(despesa.valor_por_unidade_usd)}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Vencimento</dt>
+              <dt className="text-xs text-muted-foreground">{tRateio("dueDate")}</dt>
               <dd className="font-medium">{formatDate(despesa.data_vencimento)}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Unidades</dt>
+              <dt className="text-xs text-muted-foreground">{tRateio("units")}</dt>
               <dd className="font-medium">{cobrancas.length}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Multa</dt>
+              <dt className="text-xs text-muted-foreground">{tRateio("penalty")}</dt>
               <dd className="font-medium">{despesa.pct_multa_atraso}%</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Juros/dia</dt>
+              <dt className="text-xs text-muted-foreground">{tRateio("dailyInterest")}</dt>
               <dd className="font-medium">{despesa.pct_juros_diario}%</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Carência</dt>
-              <dd className="font-medium">{despesa.dias_graca} dia(s)</dd>
+              <dt className="text-xs text-muted-foreground">{tRateio("gracePeriod")}</dt>
+              <dd className="font-medium">{tRateio("graceDays", { count: despesa.dias_graca })}</dd>
             </div>
           </dl>
         </CardContent>
@@ -231,29 +230,29 @@ export default async function RateioExtraordinarioDetalhePage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Progresso de pagamento</CardTitle>
+          <CardTitle>{tRateio("progressTitle")}</CardTitle>
           <CardDescription>
-            {pagas} de {cobrancas.length} cobranças pagas
-            {canceladas > 0 && ` · ${canceladas} cancelada(s)`}
+            {tRateio("paidCharges", { paid: pagas, total: cobrancas.length })}
+            {canceladas > 0 && tRateio("cancelledSuffix", { count: canceladas })}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Progress value={progresso} />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
-              <p className="text-xs text-muted-foreground">Arrecadado</p>
+              <p className="text-xs text-muted-foreground">{tRateio("collected")}</p>
               <p className="font-medium">{currencyFormatter.format(valorTotalArrecadado)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Esperado</p>
+              <p className="text-xs text-muted-foreground">{tRateio("expected")}</p>
               <p className="font-medium">{currencyFormatter.format(valorTotalEsperado)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Pendentes</p>
+              <p className="text-xs text-muted-foreground">{tRateio("pending")}</p>
               <p className="font-medium">{pendentes}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Pagas</p>
+              <p className="text-xs text-muted-foreground">{tRateio("paid")}</p>
               <p className="font-medium">{pagas}</p>
             </div>
           </div>
@@ -262,13 +261,11 @@ export default async function RateioExtraordinarioDetalhePage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Cobranças por unidade</CardTitle>
+          <CardTitle>{tRateio("chargesByUnitTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {cobrancas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma cobrança foi gerada para este rateio.
-            </p>
+            <p className="text-sm text-muted-foreground">{tRateio("noCharges")}</p>
           ) : (
             <>
               {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
@@ -283,43 +280,43 @@ export default async function RateioExtraordinarioDetalhePage({
                     </div>
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                       <div>
-                        <dt className="text-xs text-muted-foreground">Valor</dt>
+                        <dt className="text-xs text-muted-foreground">{tRateio("value")}</dt>
                         <dd>
                           {currencyFormatter.format(cobranca.valor_usd)}
                           {cobranca.valor_credito_abatido_usd > 0 && (
                             <span className="block text-xs text-primary">
-                              Crédito: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                              {tRateio("creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
                             </span>
                           )}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted-foreground">Pago</dt>
+                        <dt className="text-xs text-muted-foreground">{tRateio("paidValue")}</dt>
                         <dd>{currencyFormatter.format(totalAbatido)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted-foreground">Saldo</dt>
+                        <dt className="text-xs text-muted-foreground">{tRateio("balance")}</dt>
                         <dd>{currencyFormatter.format(encargos.saldoDevedor)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted-foreground">Vencimento</dt>
+                        <dt className="text-xs text-muted-foreground">{tRateio("dueDate")}</dt>
                         <dd>
                           {formatDate(cobranca.data_vencimento)}
                           {encargos.diasAtraso > 0 && (
                             <span className="block text-xs text-destructive">
-                              {encargos.diasAtraso} dia(s) em atraso
+                              {tCobrancas("daysOverdue", { count: encargos.diasAtraso })}
                             </span>
                           )}
                         </dd>
                       </div>
                       {multaJuros > 0 && (
                         <div>
-                          <dt className="text-xs text-muted-foreground">Multa + juros</dt>
+                          <dt className="text-xs text-muted-foreground">{tRateio("penaltyInterest")}</dt>
                           <dd>{currencyFormatter.format(multaJuros)}</dd>
                         </div>
                       )}
                       <div>
-                        <dt className="text-xs text-muted-foreground">Total atualizado</dt>
+                        <dt className="text-xs text-muted-foreground">{tRateio("updatedTotal")}</dt>
                         <dd className="font-medium">
                           {currencyFormatter.format(totalAtualizado)}
                           {tasaVesExibir != null && (
@@ -338,14 +335,14 @@ export default async function RateioExtraordinarioDetalhePage({
               <Table className="hidden sm:table">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Unidade</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Pago</TableHead>
-                    <TableHead>Saldo</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Multa + juros</TableHead>
-                    <TableHead>Total atualizado</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{tRateio("unit")}</TableHead>
+                    <TableHead>{tRateio("value")}</TableHead>
+                    <TableHead>{tRateio("paidValue")}</TableHead>
+                    <TableHead>{tRateio("balance")}</TableHead>
+                    <TableHead>{tRateio("dueDate")}</TableHead>
+                    <TableHead>{tRateio("penaltyInterest")}</TableHead>
+                    <TableHead>{tRateio("updatedTotal")}</TableHead>
+                    <TableHead>{tRateio("status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -358,7 +355,7 @@ export default async function RateioExtraordinarioDetalhePage({
                         {currencyFormatter.format(cobranca.valor_usd)}
                         {cobranca.valor_credito_abatido_usd > 0 && (
                           <span className="block text-xs text-primary">
-                            Crédito: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                            {tRateio("creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
                           </span>
                         )}
                       </TableCell>
@@ -368,7 +365,7 @@ export default async function RateioExtraordinarioDetalhePage({
                         {formatDate(cobranca.data_vencimento)}
                         {encargos.diasAtraso > 0 && (
                           <span className="block text-xs text-destructive">
-                            {encargos.diasAtraso} dia(s) em atraso
+                            {tCobrancas("daysOverdue", { count: encargos.diasAtraso })}
                           </span>
                         )}
                       </TableCell>

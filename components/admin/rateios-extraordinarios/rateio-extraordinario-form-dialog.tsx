@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import { aplicarSaldoAFavor } from "@/lib/creditos";
@@ -66,6 +67,8 @@ function RateioExtraordinarioFormFields({
   onClose,
 }: RateioExtraordinarioFormFieldsProps) {
   const isEditing = Boolean(despesa);
+  const t = useTranslations("rateiosExtraordinarios.form");
+  const tCommon = useTranslations("common");
 
   const [titulo, setTitulo] = useState(despesa?.titulo ?? "");
   const [descricao, setDescricao] = useState(despesa?.descricao ?? "");
@@ -104,7 +107,7 @@ function RateioExtraordinarioFormFields({
 
     if (step === 1) {
       if (!titulo.trim() || !valorTotalUsd || !dataVencimento) {
-        setError("Preencha os campos obrigatórios antes de continuar.");
+        setError(t("requiredFieldsError"));
         return;
       }
       setError(null);
@@ -113,7 +116,7 @@ function RateioExtraordinarioFormFields({
     }
 
     if (unidadeIds.length === 0) {
-      setError("Selecione ao menos uma unidade participante.");
+      setError(t("selectAtLeastOneUnit"));
       return;
     }
 
@@ -200,12 +203,12 @@ function RateioExtraordinarioFormFields({
       onSaved({ ...data, unidade_ids: unidadeIds });
       toast.success(
         isEditing
-          ? "Rateio extraordinário atualizado."
-          : `Rateio extraordinário cadastrado e ${cobrancasGeradas} cobrança(s) gerada(s).`,
+          ? t("updateSuccess")
+          : t("createSuccess", { count: cobrancasGeradas }),
       );
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro ao salvar rateio extraordinário.");
+      setError(err instanceof Error ? err.message : t("saveError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -215,21 +218,17 @@ function RateioExtraordinarioFormFields({
     <>
       <DialogHeader>
         <DialogTitle>
-          {isEditing ? "Editar rateio extraordinário" : "Novo rateio extraordinário"}
+          {isEditing ? t("editTitle") : t("createTitle")}
           {" — "}
-          {step === 1 ? "passo 1 de 2: dados do rateio" : "passo 2 de 2: unidades participantes"}
+          {step === 1 ? t("step1Title") : t("step2Title")}
         </DialogTitle>
         <DialogDescription>
           {step === 1 ? (
-            <>
-              Despesa extraordinária (ex: reparo) rateada entre as unidades selecionadas. As regras
-              abaixo são congeladas em cada cobrança gerada a partir deste rateio.
-            </>
+            t("step1Description")
           ) : (
             <>
-              Escolha as unidades que vão participar deste rateio.
-              {!isEditing &&
-                " Nada é salvo até você confirmar no passo final — ao salvar, uma cobrança já é emitida para cada unidade selecionada."}
+              {t("step2Description")}
+              {!isEditing && t("step2DescriptionExtra")}
             </>
           )}
         </DialogDescription>
@@ -240,10 +239,10 @@ function RateioExtraordinarioFormFields({
           {step === 1 ? (
             <>
               <div className="grid gap-2">
-                <Label htmlFor="titulo">Título</Label>
+                <Label htmlFor="titulo">{t("titleLabel")}</Label>
                 <Input
                   id="titulo"
-                  placeholder="Ex: Reparo do telhado"
+                  placeholder={t("titlePlaceholder")}
                   required
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
@@ -251,10 +250,10 @@ function RateioExtraordinarioFormFields({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="descricao">Descrição</Label>
+                <Label htmlFor="descricao">{t("descriptionLabel")}</Label>
                 <Textarea
                   id="descricao"
-                  placeholder="Detalhes do reparo ou despesa"
+                  placeholder={t("descriptionPlaceholder")}
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
                 />
@@ -262,7 +261,7 @@ function RateioExtraordinarioFormFields({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="valor_total_usd">Valor total (USD)</Label>
+                  <Label htmlFor="valor_total_usd">{t("totalValueLabel")}</Label>
                   <Input
                     id="valor_total_usd"
                     type="number"
@@ -274,7 +273,7 @@ function RateioExtraordinarioFormFields({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="data_vencimento">Vencimento</Label>
+                  <Label htmlFor="data_vencimento">{t("dueDateLabel")}</Label>
                   <Input
                     id="data_vencimento"
                     type="date"
@@ -287,7 +286,7 @@ function RateioExtraordinarioFormFields({
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="pct_multa_atraso">Multa (%)</Label>
+                  <Label htmlFor="pct_multa_atraso">{t("penaltyLabel")}</Label>
                   <Input
                     id="pct_multa_atraso"
                     type="number"
@@ -298,7 +297,7 @@ function RateioExtraordinarioFormFields({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="pct_juros_diario">Juros/dia (%)</Label>
+                  <Label htmlFor="pct_juros_diario">{t("dailyInterestLabel")}</Label>
                   <Input
                     id="pct_juros_diario"
                     type="number"
@@ -309,7 +308,7 @@ function RateioExtraordinarioFormFields({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="dias_graca">Carência (dias)</Label>
+                  <Label htmlFor="dias_graca">{t("gracePeriodLabel")}</Label>
                   <Input
                     id="dias_graca"
                     type="number"
@@ -324,13 +323,13 @@ function RateioExtraordinarioFormFields({
           ) : (
             <div className="grid gap-2">
               <div className="flex items-center justify-between gap-2">
-                <Label>Unidades participantes</Label>
+                <Label>{t("participatingUnitsLabel")}</Label>
                 <span className="text-xs text-muted-foreground">
-                  {unidadeIds.length} de {unidades.length} selecionada(s)
+                  {t("selectedCount", { count: unidadeIds.length, total: unidades.length })}
                 </span>
               </div>
               {unidades.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma unidade cadastrada.</p>
+                <p className="text-sm text-muted-foreground">{t("noUnits")}</p>
               ) : (
                 <>
                   <label
@@ -343,7 +342,7 @@ function RateioExtraordinarioFormFields({
                       indeterminate={algumasSelecionadas}
                       onCheckedChange={(checked) => handleToggleTodas(checked === true)}
                     />
-                    Selecionar todas
+                    {t("selectAll")}
                   </label>
                   <div className="flex max-h-[40dvh] flex-col divide-y divide-border overflow-y-auto rounded-lg border border-input">
                     {unidades.map((unidade) => (
@@ -360,7 +359,7 @@ function RateioExtraordinarioFormFields({
                         <div className="flex flex-col">
                           <span className="font-medium">{unidade.identificacao}</span>
                           <span className="text-xs text-muted-foreground">
-                            {unidade.proprietario?.nome ?? "Sem proprietário"}
+                            {unidade.proprietario?.nome ?? t("noOwner")}
                           </span>
                         </div>
                       </label>
@@ -384,11 +383,11 @@ function RateioExtraordinarioFormFields({
                 setStep(1);
               }}
             >
-              Voltar
+              {tCommon("back")}
             </Button>
           )}
           <Button type="submit" disabled={isSubmitting}>
-            {step === 1 ? "Próximo" : isSubmitting ? "Salvando..." : "Salvar"}
+            {step === 1 ? t("next") : isSubmitting ? tCommon("saving") : tCommon("save")}
           </Button>
         </DialogFooter>
       </form>

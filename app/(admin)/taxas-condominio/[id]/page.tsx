@@ -1,24 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
+import { getTranslations, getLocale } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
 import type { UnidadeCobrancaDoMes } from "@/lib/types/cobrancas";
+import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TaxaCondominioDetailTabs } from "@/components/admin/taxas-condominio/taxa-condominio-detail-tabs";
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "USD",
-});
-
-const mesLabelFormatter = new Intl.DateTimeFormat("pt-BR", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
 
 function parseMes(mes: string | undefined) {
   const hoje = new Date();
@@ -69,6 +60,16 @@ export default async function TaxaCondominioDetalhePage({
   const { id } = await params;
   const { mes: mesParam } = await searchParams;
   const supabase = await createClient();
+  const t = await getTranslations("common");
+  const tTaxa = await getTranslations("taxaCondominioDetail");
+  const locale = await getLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
+  const mesLabelFormatter = new Intl.DateTimeFormat(intlLocale, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
   const { data: taxa, error: taxaError } = await supabase
     .from("taxa_condominio")
@@ -79,7 +80,7 @@ export default async function TaxaCondominioDetalhePage({
     .maybeSingle<TaxaCondominio>();
 
   if (taxaError) {
-    return <p className="text-sm text-destructive">Erro ao carregar dados: {taxaError.message}</p>;
+    return <p className="text-sm text-destructive">{t("errorLoadingData", { message: taxaError.message })}</p>;
   }
 
   if (!taxa) {
@@ -139,12 +140,15 @@ export default async function TaxaCondominioDetalhePage({
   if (todasUnidadesError || vinculosError || cobrancasError || faturamentoError || cotacaoBcvError) {
     return (
       <p className="text-sm text-destructive">
-        Erro ao carregar dados:{" "}
-        {todasUnidadesError?.message ??
-          vinculosError?.message ??
-          cobrancasError?.message ??
-          faturamentoError?.message ??
-          cotacaoBcvError?.message}
+        {t("errorLoadingData", {
+          message:
+            todasUnidadesError?.message ??
+            vinculosError?.message ??
+            cobrancasError?.message ??
+            faturamentoError?.message ??
+            cotacaoBcvError?.message ??
+            "",
+        })}
       </p>
     );
   }
@@ -207,7 +211,7 @@ export default async function TaxaCondominioDetalhePage({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Voltar"
+          aria-label={t("back")}
           nativeButton={false}
           render={<Link href="/taxas-condominio" />}
         >
@@ -216,11 +220,11 @@ export default async function TaxaCondominioDetalhePage({
         <div>
           <h1 className="text-lg font-medium">{taxa.titulo}</h1>
           <p className="text-sm text-muted-foreground">
-            {currencyFormatter.format(taxa.valor_usd)} · vencimento todo dia {taxa.dia_vencimento}
+            {tTaxa("headerSubtitle", { value: currencyFormatter.format(taxa.valor_usd), day: taxa.dia_vencimento })}
           </p>
         </div>
         <Badge variant={taxa.ativo ? "default" : "outline"} className="ml-auto">
-          {taxa.ativo ? "Ativa" : "Inativa"}
+          {taxa.ativo ? tTaxa("activeFeminine") : tTaxa("inactiveFeminine")}
         </Badge>
       </div>
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { aplicarSaldoAFavor } from "@/lib/creditos";
 import { createClient } from "@/lib/supabase/client";
@@ -34,6 +35,7 @@ export function EmitirCobrancasDoMesButton({
 }: EmitirCobrancasDoMesButtonProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const t = useTranslations("emitirCobrancasDoMes");
 
   const handleEmitir = async () => {
     const supabase = createClient();
@@ -80,10 +82,10 @@ export function EmitirCobrancasDoMesButton({
       });
       if (faturamentoError) throw faturamentoError;
 
-      toast.success(`${unidades.length} cobrança(s) emitida(s) para este mês.`);
+      toast.success(t("successMessage", { count: unidades.length }));
       router.refresh();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao emitir cobranças do mês.");
+      toast.error(err instanceof Error ? err.message : t("errorMessage"));
     } finally {
       setIsSubmitting(false);
     }
@@ -91,7 +93,7 @@ export function EmitirCobrancasDoMesButton({
 
   return (
     <Button onClick={handleEmitir} disabled={isSubmitting} className={cn("self-start", className)}>
-      {isSubmitting ? "Emitindo..." : "Emitir cobrança do mês"}
+      {isSubmitting ? t("submitting") : t("trigger")}
     </Button>
   );
 }

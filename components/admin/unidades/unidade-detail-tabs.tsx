@@ -1,8 +1,11 @@
+import { useTranslations, useLocale } from "next-intl";
+
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
 import type { CobrancaDaUnidade, CobrancaStatus, CobrancaTipo } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao, MovimentacaoTipo } from "@/lib/types/creditos";
 import { calcularEncargos } from "@/lib/encargos";
 import { encontrarTasaNaData, formatVes, type CotacaoHistorico } from "@/lib/moeda";
+import { INTL_LOCALE } from "@/lib/intl-locale";
 import { LiquidarCobrancaDialog } from "@/components/admin/cobrancas/liquidar-cobranca-dialog";
 import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -17,46 +20,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "USD",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
-const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
-
-const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
-
-const cobrancaTipoLabel: Record<CobrancaTipo, string> = {
-  ordinaria: "Ordinária",
-  extraordinaria: "Extraordinária",
-};
-
-const cobrancaStatusLabel: Record<CobrancaStatus, string> = {
-  pendente: "Pendente",
-  pago: "Pago",
-  cancelado: "Cancelado",
-};
-
-const cobrancaStatusVariant: Record<CobrancaStatus, "default" | "outline" | "destructive"> = {
-  pendente: "outline",
-  pago: "default",
-  cancelado: "destructive",
-};
-
-const movimentacaoTipoLabel: Record<MovimentacaoTipo, string> = {
-  ENTRADA: "Entrada",
-  SAIDA: "Saída",
-};
-
-const movimentacaoTipoVariant: Record<MovimentacaoTipo, "default" | "secondary"> = {
-  ENTRADA: "default",
-  SAIDA: "secondary",
-};
-
 type UnidadeDetailTabsProps = {
   unidade: Omit<Unidade, "proprietario"> & { proprietario: Proprietario | null };
   cobrancas: CobrancaDaUnidade[];
@@ -65,6 +28,39 @@ type UnidadeDetailTabsProps = {
 };
 
 export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: UnidadeDetailTabsProps) {
+  const t = useTranslations("unidadeDetail");
+  const tCobrancas = useTranslations("cobrancas");
+  const locale = useLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
+  const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
+  const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+  const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
+  const cobrancaTipoLabel: Record<CobrancaTipo, string> = {
+    ordinaria: tCobrancas("tipo.ordinaria"),
+    extraordinaria: tCobrancas("tipo.extraordinaria"),
+  };
+  const cobrancaStatusLabel: Record<CobrancaStatus, string> = {
+    pendente: tCobrancas("status.pendente"),
+    pago: tCobrancas("status.pago"),
+    cancelado: tCobrancas("status.cancelado"),
+  };
+  const movimentacaoTipoLabel: Record<MovimentacaoTipo, string> = {
+    ENTRADA: tCobrancas("creditType.ENTRADA"),
+    SAIDA: tCobrancas("creditType.SAIDA"),
+  };
+  const cobrancaStatusVariant: Record<CobrancaStatus, "default" | "outline" | "destructive"> = {
+    pendente: "outline",
+    pago: "default",
+    cancelado: "destructive",
+  };
+  const movimentacaoTipoVariant: Record<MovimentacaoTipo, "default" | "secondary"> = {
+    ENTRADA: "default",
+    SAIDA: "secondary",
+  };
   const cotacaoAtual = cotacoes[0] ?? null;
 
   // saldo em VES é reconvertido pra USD sempre com a cotação MAIS RECENTE (não a do dia em que
@@ -119,48 +115,48 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
   return (
     <Tabs defaultValue="geral">
       <TabsList>
-        <TabsTrigger value="geral">Visão geral</TabsTrigger>
-        <TabsTrigger value="cobrancas">Cobranças</TabsTrigger>
-        <TabsTrigger value="creditos">Extrato de crédito</TabsTrigger>
+        <TabsTrigger value="geral">{t("tabs.general")}</TabsTrigger>
+        <TabsTrigger value="cobrancas">{t("tabs.charges")}</TabsTrigger>
+        <TabsTrigger value="creditos">{t("tabs.creditStatement")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="geral">
         <Card>
           <CardHeader>
-            <CardTitle>Dados cadastrais</CardTitle>
+            <CardTitle>{t("general.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <div>
-                <dt className="text-xs text-muted-foreground">Identificação</dt>
+                <dt className="text-xs text-muted-foreground">{t("general.identification")}</dt>
                 <dd className="font-medium">{unidade.identificacao}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Proprietário</dt>
+                <dt className="text-xs text-muted-foreground">{t("general.owner")}</dt>
                 <dd className="font-medium">{unidade.proprietario?.nome ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Documento</dt>
+                <dt className="text-xs text-muted-foreground">{t("general.document")}</dt>
                 <dd className="font-medium">
                   {unidade.proprietario?.documento_identidad ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Telefone (WhatsApp)</dt>
+                <dt className="text-xs text-muted-foreground">{t("general.phone")}</dt>
                 <dd className="font-medium">
                   {unidade.proprietario?.telefone_whatsapp ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Email</dt>
+                <dt className="text-xs text-muted-foreground">{t("general.email")}</dt>
                 <dd className="font-medium">{unidade.proprietario?.email ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Saldo a favor (USD)</dt>
+                <dt className="text-xs text-muted-foreground">{t("general.creditBalance")}</dt>
                 <dd className="font-medium">{currencyFormatter.format(saldoUsd)}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Criada em</dt>
+                <dt className="text-xs text-muted-foreground">{t("general.createdAt")}</dt>
                 <dd className="font-medium">{dateTimeFormatter.format(new Date(unidade.created_at))}</dd>
               </div>
             </dl>
@@ -171,11 +167,11 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
       <TabsContent value="cobrancas">
         <Card>
           <CardHeader>
-            <CardTitle>Cobranças</CardTitle>
+            <CardTitle>{t("tabs.charges")}</CardTitle>
           </CardHeader>
           <CardContent>
             {cobrancas.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma cobrança para esta unidade.</p>
+              <p className="text-sm text-muted-foreground">{t("charges.empty")}</p>
             ) : (
               <>
                 {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
@@ -190,43 +186,43 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
                       </div>
                       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                         <div>
-                          <dt className="text-xs text-muted-foreground">Competência</dt>
+                          <dt className="text-xs text-muted-foreground">{t("charges.competencia")}</dt>
                           <dd>{formatDate(cobranca.competencia)}</dd>
                         </div>
                         <div>
-                          <dt className="text-xs text-muted-foreground">Tipo</dt>
+                          <dt className="text-xs text-muted-foreground">{t("charges.type")}</dt>
                           <dd>{cobrancaTipoLabel[cobranca.tipo]}</dd>
                         </div>
                         <div>
-                          <dt className="text-xs text-muted-foreground">Valor</dt>
+                          <dt className="text-xs text-muted-foreground">{t("charges.value")}</dt>
                           <dd>
                             {currencyFormatter.format(cobranca.valor_usd)}
                             {cobranca.valor_credito_abatido_usd > 0 && (
                               <span className="block text-xs text-primary">
-                                Crédito aplicado: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                                {t("charges.creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
                               </span>
                             )}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-xs text-muted-foreground">Vencimento</dt>
+                          <dt className="text-xs text-muted-foreground">{t("charges.dueDate")}</dt>
                           <dd>
                             {formatDate(cobranca.data_vencimento)}
                             {encargos.diasAtraso > 0 && (
                               <span className="block text-xs text-destructive">
-                                {encargos.diasAtraso} dia(s) em atraso
+                                {tCobrancas("status.daysOverdue", { count: encargos.diasAtraso })}
                               </span>
                             )}
                           </dd>
                         </div>
                         {multaJuros > 0 && (
                           <div>
-                            <dt className="text-xs text-muted-foreground">Multa + juros</dt>
+                            <dt className="text-xs text-muted-foreground">{t("charges.penaltyInterest")}</dt>
                             <dd>{currencyFormatter.format(multaJuros)}</dd>
                           </div>
                         )}
                         <div>
-                          <dt className="text-xs text-muted-foreground">Total atualizado</dt>
+                          <dt className="text-xs text-muted-foreground">{t("charges.updatedTotal")}</dt>
                           <dd className="font-medium">
                             {currencyFormatter.format(totalAtualizado)}
                             {tasaVesExibir != null && (
@@ -270,15 +266,15 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
                 <Table className="hidden sm:table">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Competência</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Vencimento</TableHead>
-                      <TableHead>Multa + juros</TableHead>
-                      <TableHead>Total atualizado</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableHead>{t("charges.competencia")}</TableHead>
+                      <TableHead>{t("charges.type")}</TableHead>
+                      <TableHead>{t("charges.description")}</TableHead>
+                      <TableHead>{t("charges.value")}</TableHead>
+                      <TableHead>{t("charges.dueDate")}</TableHead>
+                      <TableHead>{t("charges.penaltyInterest")}</TableHead>
+                      <TableHead>{t("charges.updatedTotal")}</TableHead>
+                      <TableHead>{t("charges.status")}</TableHead>
+                      <TableHead>{t("charges.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -291,7 +287,7 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
                           {currencyFormatter.format(cobranca.valor_usd)}
                           {cobranca.valor_credito_abatido_usd > 0 && (
                             <span className="block text-xs text-primary">
-                              Crédito aplicado: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                              {t("charges.creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
                             </span>
                           )}
                         </TableCell>
@@ -299,7 +295,7 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
                           {formatDate(cobranca.data_vencimento)}
                           {encargos.diasAtraso > 0 && (
                             <span className="block text-xs text-destructive">
-                              {encargos.diasAtraso} dia(s) em atraso
+                              {tCobrancas("status.daysOverdue", { count: encargos.diasAtraso })}
                             </span>
                           )}
                         </TableCell>
@@ -355,12 +351,12 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
       <TabsContent value="creditos">
         <Card>
           <CardHeader>
-            <CardTitle>Extrato de crédito</CardTitle>
+            <CardTitle>{t("tabs.creditStatement")}</CardTitle>
           </CardHeader>
           <CardContent>
             {creditos.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nenhuma movimentação de crédito para esta unidade.
+                {t("credits.empty")}
               </p>
             ) : (
               <>
@@ -379,36 +375,36 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
                         </div>
                         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                           <div>
-                            <dt className="text-xs text-muted-foreground">Valor</dt>
+                            <dt className="text-xs text-muted-foreground">{t("credits.value")}</dt>
                             <dd>
                               {credito.valor} {credito.moeda}
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">Equivalente USD</dt>
+                            <dt className="text-xs text-muted-foreground">{t("credits.equivalentUsd")}</dt>
                             <dd>
                               {currencyFormatter.format(valorEquivalenteExibido)}
                               {credito.moeda === "VES" && cotacaoAtual && (
                                 <span className="block text-xs font-normal text-muted-foreground">
-                                  cotação de hoje: {cotacaoAtual.tasa_ves} VES/USD
+                                  {t("credits.todayRate", { rate: cotacaoAtual.tasa_ves })}
                                 </span>
                               )}
                             </dd>
                           </div>
                           <div className="col-span-2">
                             <dt className="text-xs text-muted-foreground">
-                              {credito.tipo === "ENTRADA" ? "Origem (pagamento)" : "Aplicado na cobrança"}
+                              {credito.tipo === "ENTRADA" ? t("credits.origin") : t("credits.appliedTo")}
                             </dt>
                             <dd>
                               {cobrancaRelacionada ? (
                                 <>
                                   <span className="block font-medium">{cobrancaRelacionada.descricao}</span>
                                   <span className="block text-xs text-muted-foreground">
-                                    Competência: {formatDate(cobrancaRelacionada.competencia)}
+                                    {t("credits.competencia", { date: formatDate(cobrancaRelacionada.competencia) })}
                                   </span>
                                   {dataPagamento && (
                                     <span className="block text-xs text-muted-foreground">
-                                      Pago em: {dateTimeFormatter.format(new Date(dataPagamento))}
+                                      {t("credits.paidOn", { date: dateTimeFormatter.format(new Date(dataPagamento)) })}
                                     </span>
                                   )}
                                 </>
@@ -418,7 +414,7 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
                             </dd>
                           </div>
                           <div className="col-span-2">
-                            <dt className="text-xs text-muted-foreground">Saldo acumulado</dt>
+                            <dt className="text-xs text-muted-foreground">{t("credits.runningBalance")}</dt>
                             <dd className="font-medium">{currencyFormatter.format(saldoAcumulado)}</dd>
                           </div>
                         </dl>
@@ -431,12 +427,12 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
                 <Table className="hidden sm:table">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Equivalente USD</TableHead>
-                      <TableHead>Origem / Cobrança aplicada</TableHead>
-                      <TableHead>Saldo acumulado</TableHead>
+                      <TableHead>{t("credits.date")}</TableHead>
+                      <TableHead>{t("credits.type")}</TableHead>
+                      <TableHead>{t("credits.value")}</TableHead>
+                      <TableHead>{t("credits.equivalentUsd")}</TableHead>
+                      <TableHead>{t("credits.originHeader")}</TableHead>
+                      <TableHead>{t("credits.runningBalance")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -456,7 +452,7 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
                             {currencyFormatter.format(valorEquivalenteExibido)}
                             {credito.moeda === "VES" && cotacaoAtual && (
                               <span className="block text-xs font-normal text-muted-foreground">
-                                cotação de hoje: {cotacaoAtual.tasa_ves} VES/USD
+                                {t("credits.todayRate", { rate: cotacaoAtual.tasa_ves })}
                               </span>
                             )}
                           </TableCell>
@@ -465,11 +461,11 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
                               <>
                                 <span className="block font-medium">{cobrancaRelacionada.descricao}</span>
                                 <span className="block text-xs text-muted-foreground">
-                                  Competência: {formatDate(cobrancaRelacionada.competencia)}
+                                  {t("credits.competencia", { date: formatDate(cobrancaRelacionada.competencia) })}
                                 </span>
                                 {dataPagamento && (
                                   <span className="block text-xs text-muted-foreground">
-                                    Pago em: {dateTimeFormatter.format(new Date(dataPagamento))}
+                                    {t("credits.paidOn", { date: dateTimeFormatter.format(new Date(dataPagamento)) })}
                                   </span>
                                 )}
                               </>

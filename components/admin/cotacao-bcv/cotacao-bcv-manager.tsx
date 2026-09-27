@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import type { CotacaoBcv } from "@/lib/types/cotacao-bcv";
+import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,13 +34,6 @@ type DolarApiResponse = {
   fechaActualizacion: string;
 };
 
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
-const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
-const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
-
 type CotacaoBcvManagerProps = {
   cotacoes: CotacaoBcv[];
 };
@@ -46,6 +41,15 @@ type CotacaoBcvManagerProps = {
 export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
+  const t = useTranslations("cotacaoBcvPage");
+  const locale = useLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
+  const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+  const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
 
   const atual = cotacoes[0] ?? null;
 
@@ -54,11 +58,11 @@ export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
 
     try {
       const response = await fetch(DOLAR_API_URL);
-      if (!response.ok) throw new Error("Não foi possível consultar a API do BCV.");
+      if (!response.ok) throw new Error(t("errorFetchApi"));
 
       const data: DolarApiResponse = await response.json();
       if (typeof data.promedio !== "number") {
-        throw new Error("A API do BCV não retornou uma taxa válida.");
+        throw new Error(t("errorInvalidRate"));
       }
 
       const dataCotacao = data.fechaActualizacion.slice(0, 10);
@@ -80,10 +84,10 @@ export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
 
       if (error) throw error;
 
-      toast.success(`Cotação atualizada: ${data.promedio} VES/USD`);
+      toast.success(t("updateSuccess", { rate: data.promedio }));
       router.refresh();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao atualizar cotação.");
+      toast.error(err instanceof Error ? err.message : t("updateError"));
     } finally {
       setIsUpdating(false);
     }
@@ -93,13 +97,11 @@ export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Cotação BCV</CardTitle>
-          <CardDescription>
-            Taxa oficial VES/USD usada para converter pagamentos recebidos em bolívares.
-          </CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
           <CardAction>
             <Button onClick={handleAtualizar} disabled={isUpdating}>
-              {isUpdating ? "Atualizando..." : "Atualizar cotação agora"}
+              {isUpdating ? t("updating") : t("updateNow")}
             </Button>
           </CardAction>
         </CardHeader>
@@ -107,41 +109,39 @@ export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
           {atual ? (
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <div>
-                <dt className="text-xs text-muted-foreground">Data</dt>
+                <dt className="text-xs text-muted-foreground">{t("date")}</dt>
                 <dd className="font-medium">{formatDate(atual.data_cotacao)}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Taxa (VES/USD)</dt>
+                <dt className="text-xs text-muted-foreground">{t("rate")}</dt>
                 <dd className="font-medium">{atual.tasa_ves}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Fonte</dt>
+                <dt className="text-xs text-muted-foreground">{t("source")}</dt>
                 <dd className="font-medium">{atual.fuente}</dd>
               </div>
             </dl>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma cotação cadastrada ainda. Clique em &ldquo;Atualizar cotação agora&rdquo;.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("noRates")}</p>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Histórico</CardTitle>
+          <CardTitle>{t("historyTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {cotacoes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma cotação cadastrada ainda.</p>
+            <p className="text-sm text-muted-foreground">{t("noRatesShort")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Taxa (VES/USD)</TableHead>
-                  <TableHead>Fonte</TableHead>
-                  <TableHead>Atualizada em</TableHead>
+                  <TableHead>{t("date")}</TableHead>
+                  <TableHead>{t("rate")}</TableHead>
+                  <TableHead>{t("source")}</TableHead>
+                  <TableHead>{t("updatedAt")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

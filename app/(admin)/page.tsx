@@ -6,11 +6,13 @@ import {
   HardHat,
   Receipt,
 } from "lucide-react";
+import { getTranslations, getLocale } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
 import { formatVes } from "@/lib/moeda";
+import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,20 +23,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "USD",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
-const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
-
-const mesLabelFormatter = new Intl.DateTimeFormat("pt-BR", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
 
 function parseMes(mes: string | undefined) {
   const hoje = new Date();
@@ -54,11 +42,6 @@ function mesAdjacente(ano: number, mes: number, delta: number) {
   return { ano: data.getUTCFullYear(), mes: data.getUTCMonth() + 1 };
 }
 
-const statusLabel: Record<CobrancaStatus, string> = {
-  pendente: "Pendente",
-  pago: "Pago",
-  cancelado: "Cancelado",
-};
 const statusVariant: Record<CobrancaStatus, "outline" | "default" | "destructive"> = {
   pendente: "outline",
   pago: "default",
@@ -88,6 +71,19 @@ export default async function Home({
   const hoje = new Date();
   const isMesAtual = ano === hoje.getUTCFullYear() && mes === hoje.getUTCMonth() + 1;
   const hojeIso = hoje.toISOString().slice(0, 10);
+
+  const t = await getTranslations("dashboard");
+  const tStatus = await getTranslations("cobrancas.status");
+  const locale = await getLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
+  const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
+  const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
+  const mesLabelFormatter = new Intl.DateTimeFormat(intlLocale, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
   const inicioMes = `${ano}-${String(mes).padStart(2, "0")}-01`;
   const { ano: anoSeguinte, mes: mesSeguinteNumero } = mesAdjacente(ano, mes, 1);
@@ -125,7 +121,9 @@ export default async function Home({
   if (cobrancasError || taxaVinculosError || cotacaoBcvError) {
     return (
       <p className="text-sm text-destructive">
-        Erro ao carregar dados: {cobrancasError?.message ?? taxaVinculosError?.message ?? cotacaoBcvError?.message}
+        {t("loadError", {
+          message: cobrancasError?.message ?? taxaVinculosError?.message ?? cotacaoBcvError?.message ?? "",
+        })}
       </p>
     );
   }
@@ -167,14 +165,14 @@ export default async function Home({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-lg font-medium">Painel</h1>
+          <h1 className="text-lg font-medium">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">{mesLabelCapitalizado}</p>
         </div>
         <div className="flex items-center gap-1">
           <Button
             variant="outline"
             size="icon-sm"
-            aria-label="Mês anterior"
+            aria-label={t("previousMonth")}
             nativeButton={false}
             render={<Link href={`/?mes=${formatMes(mesAnterior.ano, mesAnterior.mes)}`} />}
           >
@@ -182,13 +180,13 @@ export default async function Home({
           </Button>
           {!isMesAtual && (
             <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/" />}>
-              Hoje
+              {t("today")}
             </Button>
           )}
           <Button
             variant="outline"
             size="icon-sm"
-            aria-label="Próximo mês"
+            aria-label={t("nextMonth")}
             nativeButton={false}
             render={<Link href={`/?mes=${formatMes(mesSeguinte.ano, mesSeguinte.mes)}`} />}
           >
@@ -200,25 +198,25 @@ export default async function Home({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card size="sm">
           <CardHeader>
-            <CardDescription>Emitido no mês</CardDescription>
+            <CardDescription>{t("issuedThisMonth")}</CardDescription>
             <CardTitle className="text-xl">{currencyFormatter.format(valorEmitido)}</CardTitle>
           </CardHeader>
         </Card>
         <Card size="sm">
           <CardHeader>
-            <CardDescription>Arrecadado no mês</CardDescription>
+            <CardDescription>{t("collectedThisMonth")}</CardDescription>
             <CardTitle className="text-xl">{currencyFormatter.format(valorArrecadado)}</CardTitle>
           </CardHeader>
         </Card>
         <Card size="sm">
           <CardHeader>
-            <CardDescription>Pendentes</CardDescription>
+            <CardDescription>{t("pending")}</CardDescription>
             <CardTitle className="text-xl">{pendentes.length}</CardTitle>
           </CardHeader>
         </Card>
         <Card size="sm">
           <CardHeader>
-            <CardDescription>Em atraso</CardDescription>
+            <CardDescription>{t("overdue")}</CardDescription>
             <CardTitle className="text-xl text-destructive">{emAtraso.length}</CardTitle>
           </CardHeader>
         </Card>
@@ -226,41 +224,37 @@ export default async function Home({
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Arrecadação do mês</CardTitle>
-          <CardDescription>
-            {unidadesAtivas} unidade(s) ativa(s) na emissão de cobranças
-          </CardDescription>
+          <CardTitle>{t("collectionTitle")}</CardTitle>
+          <CardDescription>{t("activeUnitsDescription", { count: unidadesAtivas })}</CardDescription>
         </CardHeader>
         <CardContent>
           <Progress value={progresso} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {progresso.toFixed(0)}% arrecadado
-          </p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("collectedPercent", { percent: progresso.toFixed(0) })}</p>
         </CardContent>
       </Card>
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Cobranças pendentes</CardTitle>
-          <CardDescription>Vencimentos do mês selecionado</CardDescription>
+          <CardTitle>{t("pendingChargesTitle")}</CardTitle>
+          <CardDescription>{t("pendingChargesDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           {pendentes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma cobrança pendente neste mês.</p>
+            <p className="text-sm text-muted-foreground">{t("noPendingCharges")}</p>
           ) : (
             <ul className="flex flex-col gap-3">
               {linhasPendentes.slice(0, 6).map(({ cobranca: c, encargos }) => (
                 <li key={c.id} className="flex items-center justify-between gap-2 text-sm">
                   <div className="min-w-0">
                     <p className="truncate font-medium">
-                      {c.unidade?.identificacao ?? "Unidade removida"}
+                      {c.unidade?.identificacao ?? t("unitRemoved")}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Vence em {formatDate(c.data_vencimento)}
+                      {t("dueOn", { date: formatDate(c.data_vencimento) })}
                       {encargos.diasAtraso > 0 && (
                         <span className="text-destructive">
                           {" "}
-                          · {encargos.diasAtraso} dia(s) em atraso
+                          · {tStatus("daysOverdue", { count: encargos.diasAtraso })}
                         </span>
                       )}
                     </p>
@@ -281,7 +275,7 @@ export default async function Home({
                         </p>
                       )}
                     </div>
-                    <Badge variant={statusVariant[c.status]}>{statusLabel[c.status]}</Badge>
+                    <Badge variant={statusVariant[c.status]}>{tStatus(c.status)}</Badge>
                   </div>
                 </li>
               ))}
@@ -299,8 +293,8 @@ export default async function Home({
         >
           <Building2 className="size-5 shrink-0" />
           <div className="text-left">
-            <p className="text-sm font-medium">Unidades</p>
-            <p className="text-xs text-muted-foreground">Unidades e proprietários</p>
+            <p className="text-sm font-medium">{t("shortcutUnidades")}</p>
+            <p className="text-xs text-muted-foreground">{t("shortcutUnidadesDescription")}</p>
           </div>
         </Button>
         <Button
@@ -311,8 +305,8 @@ export default async function Home({
         >
           <Receipt className="size-5 shrink-0" />
           <div className="text-left">
-            <p className="text-sm font-medium">Taxas de Condomínio</p>
-            <p className="text-xs text-muted-foreground">Cobrança ordinária mensal</p>
+            <p className="text-sm font-medium">{t("shortcutTaxas")}</p>
+            <p className="text-xs text-muted-foreground">{t("shortcutTaxasDescription")}</p>
           </div>
         </Button>
         <Button
@@ -323,8 +317,8 @@ export default async function Home({
         >
           <HardHat className="size-5 shrink-0" />
           <div className="text-left">
-            <p className="text-sm font-medium">Rateios Extraordinários</p>
-            <p className="text-xs text-muted-foreground">Despesas rateadas entre unidades</p>
+            <p className="text-sm font-medium">{t("shortcutRateios")}</p>
+            <p className="text-xs text-muted-foreground">{t("shortcutRateiosDescription")}</p>
           </div>
         </Button>
       </div>

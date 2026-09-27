@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
@@ -48,6 +49,8 @@ type UnidadesManagerProps = {
 };
 
 export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProps) {
+  const t = useTranslations("unidades");
+  const tCommon = useTranslations("common");
   const [unidadesList, setUnidadesList] = useState(unidades);
   const [proprietariosList, setProprietariosList] = useState(proprietarios);
 
@@ -93,10 +96,10 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
       if (error) throw error;
 
       setUnidadesList((prev) => prev.filter((u) => u.id !== deleteTarget.id));
-      toast.success("Unidade excluída.");
+      toast.success(t("deleteSuccess"));
       setDeleteTarget(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao excluir unidade.");
+      toast.error(err instanceof Error ? err.message : t("deleteError"));
     } finally {
       setIsDeleting(false);
     }
@@ -106,24 +109,24 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Unidades</CardTitle>
-          <CardDescription>Cadastro das unidades do condomínio.</CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
           <CardAction>
             <Button onClick={openCreateDialog}>
               <PlusIcon />
-              Nova unidade
+              {t("newUnit")}
             </Button>
           </CardAction>
         </CardHeader>
         <CardContent>
           {unidadesList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma unidade cadastrada.</p>
+            <p className="text-sm text-muted-foreground">{t("noUnits")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Identificação</TableHead>
-                  <TableHead>Proprietário</TableHead>
+                  <TableHead>{t("identification")}</TableHead>
+                  <TableHead>{t("owner")}</TableHead>
                   <TableHead className="w-9" />
                 </TableRow>
               </TableHeader>
@@ -140,23 +143,23 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           render={
-                            <Button variant="ghost" size="icon-sm" aria-label="Ações" />
+                            <Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />
                           }
                         >
                           <MoreHorizontalIcon />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem render={<Link href={`/unidades/${unidade.id}`} />}>
-                            Ver detalhes
+                            {t("viewDetails")}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditDialog(unidade)}>
-                            Editar
+                            {tCommon("edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             variant="destructive"
                             onClick={() => setDeleteTarget(unidade)}
                           >
-                            Excluir
+                            {tCommon("delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -184,16 +187,15 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir unidade</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a unidade &quot;{deleteTarget?.identificacao}&quot;?
-              Essa ação não pode ser desfeita.
+              {t("deleteConfirm", { identificacao: deleteTarget?.identificacao ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction disabled={isDeleting} onClick={handleDelete}>
-              {isDeleting ? "Excluindo..." : "Excluir"}
+              {isDeleting ? t("deleting") : tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

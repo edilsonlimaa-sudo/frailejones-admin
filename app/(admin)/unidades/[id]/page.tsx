@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Unidade } from "@/lib/types/unidades";
@@ -42,6 +43,8 @@ export default async function UnidadeDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const t = await getTranslations("common");
+  const tUnidades = await getTranslations("unidades");
 
   const { data: unidade, error: unidadeError } = await supabase
     .from("unidades")
@@ -62,7 +65,7 @@ export default async function UnidadeDetailPage({
     >();
 
   if (unidadeError) {
-    return <p className="text-sm text-destructive">Erro ao carregar dados: {unidadeError.message}</p>;
+    return <p className="text-sm text-destructive">{t("errorLoadingData", { message: unidadeError.message })}</p>;
   }
 
   if (!unidade) {
@@ -101,8 +104,9 @@ export default async function UnidadeDetailPage({
   if (cobrancasError || creditosError || cotacaoBcvError) {
     return (
       <p className="text-sm text-destructive">
-        Erro ao carregar dados:{" "}
-        {cobrancasError?.message ?? creditosError?.message ?? cotacaoBcvError?.message}
+        {t("errorLoadingData", {
+          message: cobrancasError?.message ?? creditosError?.message ?? cotacaoBcvError?.message ?? "",
+        })}
       </p>
     );
   }
@@ -161,7 +165,7 @@ export default async function UnidadeDetailPage({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Voltar"
+          aria-label={t("back")}
           nativeButton={false}
           render={<Link href="/unidades" />}
         >
@@ -170,7 +174,7 @@ export default async function UnidadeDetailPage({
         <div>
           <h1 className="text-lg font-medium">{unidade.identificacao}</h1>
           <p className="text-sm text-muted-foreground">
-            {unidade.proprietario?.nome ?? "Sem proprietário"}
+            {unidade.proprietario?.nome ?? tUnidades("noOwnerAssigned")}
           </p>
         </div>
       </div>

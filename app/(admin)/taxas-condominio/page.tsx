@@ -1,9 +1,12 @@
+import { getTranslations } from "next-intl/server";
+
 import { createClient } from "@/lib/supabase/server";
 import { TaxasCondominioManager } from "@/components/admin/taxas-condominio/taxas-condominio-manager";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
 
 export default async function TaxasCondominioPage() {
   const supabase = await createClient();
+  const t = await getTranslations("common");
 
   const { data: taxas, error } = await supabase
     .from("taxa_condominio")
@@ -15,7 +18,7 @@ export default async function TaxasCondominioPage() {
     .returns<TaxaCondominio[]>();
 
   if (error) {
-    return <p className="text-sm text-destructive">Erro ao carregar dados: {error.message}</p>;
+    return <p className="text-sm text-destructive">{t("errorLoadingData", { message: error.message })}</p>;
   }
 
   return <TaxasCondominioManager taxas={taxas ?? []} />;

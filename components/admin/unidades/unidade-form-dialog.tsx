@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PlusIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
@@ -75,6 +76,8 @@ function UnidadeFormFields({
   onClose,
 }: UnidadeFormFieldsProps) {
   const isEditing = Boolean(unidade);
+  const t = useTranslations("unidades.form");
+  const tCommon = useTranslations("common");
 
   const [identificacao, setIdentificacao] = useState(unidade?.identificacao ?? "");
   const [proprietarioId, setProprietarioId] = useState<string | null>(
@@ -88,7 +91,7 @@ function UnidadeFormFields({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!proprietarioId) {
-      setError("Selecione um proprietário.");
+      setError(t("selectOwnerRequired"));
       return;
     }
 
@@ -117,15 +120,15 @@ function UnidadeFormFields({
         ...data,
         proprietario: proprietario ? { id: proprietario.id, nome: proprietario.nome } : null,
       });
-      toast.success(isEditing ? "Unidade atualizada." : "Unidade cadastrada.");
+      toast.success(isEditing ? t("updateSuccess") : t("createSuccess"));
       onClose();
     } catch (err: unknown) {
       const message =
         err && typeof err === "object" && "code" in err && err.code === "23505"
-          ? "Já existe uma unidade com essa identificação."
+          ? t("duplicateIdentification")
           : err instanceof Error
             ? err.message
-            : "Erro ao salvar unidade.";
+            : t("saveError");
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -135,17 +138,15 @@ function UnidadeFormFields({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{isEditing ? "Editar unidade" : "Nova unidade"}</DialogTitle>
-        <DialogDescription>
-          Preencha os dados da unidade e vincule um proprietário.
-        </DialogDescription>
+        <DialogTitle>{isEditing ? t("editTitle") : t("createTitle")}</DialogTitle>
+        <DialogDescription>{t("description")}</DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="identificacao">Identificação</Label>
+          <Label htmlFor="identificacao">{t("identificationLabel")}</Label>
           <Input
             id="identificacao"
-            placeholder="Ex: Apto 101"
+            placeholder={t("identificationPlaceholder")}
             required
             value={identificacao}
             onChange={(e) => setIdentificacao(e.target.value)}
@@ -153,11 +154,11 @@ function UnidadeFormFields({
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="proprietario">Proprietário</Label>
+          <Label htmlFor="proprietario">{t("ownerLabel")}</Label>
           <div className="flex gap-2">
             <Select value={proprietarioId} onValueChange={(value) => setProprietarioId(value)}>
               <SelectTrigger id="proprietario" className="w-full">
-                <SelectValue placeholder="Selecione um proprietário" />
+                <SelectValue placeholder={t("ownerPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {proprietarios.map((proprietario) => (
@@ -171,7 +172,7 @@ function UnidadeFormFields({
               type="button"
               variant="outline"
               size="icon"
-              aria-label="Cadastrar novo proprietário"
+              aria-label={t("addOwnerAria")}
               onClick={() => setQuickCreateOpen(true)}
             >
               <PlusIcon />
@@ -183,7 +184,7 @@ function UnidadeFormFields({
 
         <DialogFooter>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Salvando..." : "Salvar"}
+            {isSubmitting ? tCommon("saving") : tCommon("save")}
           </Button>
         </DialogFooter>
       </form>
@@ -232,6 +233,8 @@ function ProprietarioQuickCreateFields({
   onCreated: (proprietario: Proprietario) => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("unidades.quickCreateOwner");
+  const tCommon = useTranslations("common");
   const [nome, setNome] = useState("");
   const [documento, setDocumento] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -260,10 +263,10 @@ function ProprietarioQuickCreateFields({
       if (saveError) throw saveError;
 
       onCreated(data);
-      toast.success("Proprietário cadastrado.");
+      toast.success(t("saveSuccess"));
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro ao salvar proprietário.");
+      setError(err instanceof Error ? err.message : t("saveError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -272,16 +275,16 @@ function ProprietarioQuickCreateFields({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Novo proprietário</DialogTitle>
-        <DialogDescription>Cadastro rápido para vincular à unidade.</DialogDescription>
+        <DialogTitle>{t("title")}</DialogTitle>
+        <DialogDescription>{t("description")}</DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="qc-nome">Nome</Label>
+          <Label htmlFor="qc-nome">{t("nameLabel")}</Label>
           <Input id="qc-nome" required value={nome} onChange={(e) => setNome(e.target.value)} />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="qc-documento">Documento de identidade</Label>
+          <Label htmlFor="qc-documento">{t("documentLabel")}</Label>
           <Input
             id="qc-documento"
             required
@@ -290,11 +293,11 @@ function ProprietarioQuickCreateFields({
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="qc-telefone">Telefone (WhatsApp)</Label>
+          <Label htmlFor="qc-telefone">{t("phoneLabel")}</Label>
           <Input id="qc-telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="qc-email">Email</Label>
+          <Label htmlFor="qc-email">{t("emailLabel")}</Label>
           <Input
             id="qc-email"
             type="email"
@@ -305,7 +308,7 @@ function ProprietarioQuickCreateFields({
         {error && <p className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Salvando..." : "Salvar"}
+            {isSubmitting ? tCommon("saving") : tCommon("save")}
           </Button>
         </DialogFooter>
       </form>

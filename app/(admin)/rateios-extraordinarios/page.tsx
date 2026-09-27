@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { createClient } from "@/lib/supabase/server";
 import { RateiosExtraordinariosManager } from "@/components/admin/rateios-extraordinarios/rateios-extraordinarios-manager";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
@@ -9,6 +11,7 @@ type DespesaExtraordinariaRow = Omit<DespesaExtraordinaria, "unidade_ids"> & {
 
 export default async function RateiosExtraordinariosPage() {
   const supabase = await createClient();
+  const t = await getTranslations("common");
 
   const [{ data: despesas, error: despesasError }, { data: unidades, error: unidadesError }] =
     await Promise.all([
@@ -29,7 +32,7 @@ export default async function RateiosExtraordinariosPage() {
   if (despesasError || unidadesError) {
     return (
       <p className="text-sm text-destructive">
-        Erro ao carregar dados: {despesasError?.message ?? unidadesError?.message}
+        {t("errorLoadingData", { message: despesasError?.message ?? unidadesError?.message ?? "" })}
       </p>
     );
   }

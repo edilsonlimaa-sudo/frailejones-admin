@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ export function VincularUnidadesTaxaForm({
   unidadesVinculadasIds,
 }: VincularUnidadesTaxaFormProps) {
   const router = useRouter();
+  const t = useTranslations("vincularUnidadesTaxa");
   const [unidadeIds, setUnidadeIds] = useState<string[]>(unidadesVinculadasIds);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,10 +63,10 @@ export function VincularUnidadesTaxaForm({
         if (insertError) throw insertError;
       }
 
-      toast.success("Unidades vinculadas atualizadas.");
+      toast.success(t("successMessage"));
       router.refresh();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao atualizar unidades vinculadas.");
+      toast.error(err instanceof Error ? err.message : t("errorMessage"));
     } finally {
       setIsSubmitting(false);
     }
@@ -73,7 +75,7 @@ export function VincularUnidadesTaxaForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {todasUnidades.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma unidade cadastrada.</p>
+        <p className="text-sm text-muted-foreground">{t("noUnits")}</p>
       ) : (
         <>
           <label htmlFor="taxa-unidade-selecionar-todas" className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -83,7 +85,7 @@ export function VincularUnidadesTaxaForm({
               indeterminate={algumasSelecionadas}
               onCheckedChange={(checked) => handleToggleTodas(checked === true)}
             />
-            Selecionar todas
+            {t("selectAll")}
           </label>
           <div className="flex flex-col divide-y divide-border rounded-lg border border-input">
             {todasUnidades.map((unidade) => (
@@ -100,7 +102,7 @@ export function VincularUnidadesTaxaForm({
                 <div className="flex flex-col">
                   <span className="font-medium">{unidade.identificacao}</span>
                   <span className="text-xs text-muted-foreground">
-                    {unidade.proprietario?.nome ?? "Sem proprietário"}
+                    {unidade.proprietario?.nome ?? t("noOwner")}
                   </span>
                 </div>
               </label>
@@ -110,7 +112,7 @@ export function VincularUnidadesTaxaForm({
       )}
 
       <Button type="submit" disabled={isSubmitting || !houveAlteracao} className="self-start">
-        {isSubmitting ? "Salvando..." : "Salvar vínculos"}
+        {isSubmitting ? t("saving") : t("saveLinks")}
       </Button>
     </form>
   );

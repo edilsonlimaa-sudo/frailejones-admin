@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
@@ -54,6 +55,8 @@ type TaxaCondominioFormFieldsProps = {
 
 function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioFormFieldsProps) {
   const isEditing = Boolean(taxa);
+  const t = useTranslations("taxasCondominio.form");
+  const tCommon = useTranslations("common");
 
   const [titulo, setTitulo] = useState(taxa?.titulo ?? "");
   const [valorUsd, setValorUsd] = useState(taxa ? String(taxa.valor_usd) : "");
@@ -74,7 +77,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
 
     const dia = Number(diaVencimento);
     if (!Number.isInteger(dia) || dia < 1 || dia > 31) {
-      setError("O dia de vencimento deve ser um número entre 1 e 31.");
+      setError(t("invalidDueDay"));
       return;
     }
 
@@ -106,10 +109,10 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
       if (saveError) throw saveError;
 
       onSaved(data);
-      toast.success(isEditing ? "Taxa de condomínio atualizada." : "Taxa de condomínio cadastrada.");
+      toast.success(isEditing ? t("updateSuccess") : t("createSuccess"));
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro ao salvar taxa de condomínio.");
+      setError(err instanceof Error ? err.message : t("saveError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -118,17 +121,15 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{isEditing ? "Editar taxa de condomínio" : "Nova taxa de condomínio"}</DialogTitle>
-        <DialogDescription>
-          Essas regras são congeladas em cada cobrança gerada a partir desta taxa.
-        </DialogDescription>
+        <DialogTitle>{isEditing ? t("editTitle") : t("createTitle")}</DialogTitle>
+        <DialogDescription>{t("description")}</DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="titulo">Título</Label>
+          <Label htmlFor="titulo">{t("titleLabel")}</Label>
           <Input
             id="titulo"
-            placeholder="Ex: Taxa ordinária 2026"
+            placeholder={t("titlePlaceholder")}
             required
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
@@ -137,7 +138,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
 
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="valor_usd">Valor (USD)</Label>
+            <Label htmlFor="valor_usd">{t("valueLabel")}</Label>
             <Input
               id="valor_usd"
               type="number"
@@ -149,7 +150,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="dia_vencimento">Dia de vencimento</Label>
+            <Label htmlFor="dia_vencimento">{t("dueDayLabel")}</Label>
             <Input
               id="dia_vencimento"
               type="number"
@@ -164,7 +165,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
 
         <div className="grid grid-cols-3 gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="pct_multa_atraso">Multa (%)</Label>
+            <Label htmlFor="pct_multa_atraso">{t("penaltyLabel")}</Label>
             <Input
               id="pct_multa_atraso"
               type="number"
@@ -175,7 +176,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="pct_juros_diario">Juros/dia (%)</Label>
+            <Label htmlFor="pct_juros_diario">{t("dailyInterestLabel")}</Label>
             <Input
               id="pct_juros_diario"
               type="number"
@@ -186,7 +187,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="dias_graca">Carência (dias)</Label>
+            <Label htmlFor="dias_graca">{t("gracePeriodLabel")}</Label>
             <Input
               id="dias_graca"
               type="number"
@@ -200,10 +201,8 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
 
         <div className="flex items-center justify-between rounded-2xl border border-input bg-input/30 px-3 py-2.5">
           <div className="flex flex-col">
-            <Label htmlFor="ativo">Ativa</Label>
-            <span className="text-xs text-muted-foreground">
-              Somente taxas ativas devem ser usadas para gerar novas cobranças.
-            </span>
+            <Label htmlFor="ativo">{tCommon("active")}</Label>
+            <span className="text-xs text-muted-foreground">{t("activeHint")}</span>
           </div>
           <Switch id="ativo" checked={ativo} onCheckedChange={setAtivo} />
         </div>
@@ -212,7 +211,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
 
         <DialogFooter>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Salvando..." : "Salvar"}
+            {isSubmitting ? tCommon("saving") : tCommon("save")}
           </Button>
         </DialogFooter>
       </form>

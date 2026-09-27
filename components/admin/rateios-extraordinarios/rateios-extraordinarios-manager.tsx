@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
@@ -43,13 +44,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { RateioExtraordinarioFormDialog } from "@/components/admin/rateios-extraordinarios/rateio-extraordinario-form-dialog";
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "USD",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
+import { INTL_LOCALE } from "@/lib/intl-locale";
 
 type RateiosExtraordinariosManagerProps = {
   despesas: DespesaExtraordinaria[];
@@ -60,6 +55,12 @@ export function RateiosExtraordinariosManager({
   despesas,
   unidades,
 }: RateiosExtraordinariosManagerProps) {
+  const t = useTranslations("rateiosExtraordinarios");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
+  const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const [despesasList, setDespesasList] = useState(despesas);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -102,10 +103,10 @@ export function RateiosExtraordinariosManager({
       if (error) throw error;
 
       setDespesasList((prev) => prev.filter((d) => d.id !== deleteTarget.id));
-      toast.success("Rateio extraordinário excluído.");
+      toast.success(t("deleteSuccess"));
       setDeleteTarget(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao excluir rateio extraordinário.");
+      toast.error(err instanceof Error ? err.message : t("deleteError"));
     } finally {
       setIsDeleting(false);
     }
@@ -115,33 +116,30 @@ export function RateiosExtraordinariosManager({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Rateios Extraordinários</CardTitle>
-          <CardDescription>
-            Despesas extraordinárias (ex: reparos) rateadas entre as unidades participantes e
-            cobradas via cobranças extraordinárias.
-          </CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
           <CardAction>
             <Button onClick={openCreateDialog}>
               <PlusIcon />
-              Novo rateio
+              {t("newRateio")}
             </Button>
           </CardAction>
         </CardHeader>
         <CardContent>
           {despesasList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum rateio extraordinário cadastrado.</p>
+            <p className="text-sm text-muted-foreground">{t("noRateios")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Valor total</TableHead>
-                  <TableHead>Valor/unidade</TableHead>
-                  <TableHead>Unidades</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Multa</TableHead>
-                  <TableHead>Juros/dia</TableHead>
-                  <TableHead>Carência</TableHead>
+                  <TableHead>{t("titleColumn")}</TableHead>
+                  <TableHead>{t("totalValue")}</TableHead>
+                  <TableHead>{t("valuePerUnit")}</TableHead>
+                  <TableHead>{t("units")}</TableHead>
+                  <TableHead>{t("dueDate")}</TableHead>
+                  <TableHead>{t("penalty")}</TableHead>
+                  <TableHead>{t("dailyInterest")}</TableHead>
+                  <TableHead>{t("gracePeriod")}</TableHead>
                   <TableHead className="w-9" />
                 </TableRow>
               </TableHeader>
@@ -166,28 +164,28 @@ export function RateiosExtraordinariosManager({
                     </TableCell>
                     <TableCell>{despesa.pct_multa_atraso}%</TableCell>
                     <TableCell>{despesa.pct_juros_diario}%</TableCell>
-                    <TableCell>{despesa.dias_graca} dia(s)</TableCell>
+                    <TableCell>{t("graceDays", { count: despesa.dias_graca })}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           render={
-                            <Button variant="ghost" size="icon-sm" aria-label="Ações" />
+                            <Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />
                           }
                         >
                           <MoreHorizontalIcon />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem render={<Link href={`/rateios-extraordinarios/${despesa.id}`} />}>
-                            Ver progresso
+                            {t("viewProgress")}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditDialog(despesa)}>
-                            Editar
+                            {tCommon("edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             variant="destructive"
                             onClick={() => setDeleteTarget(despesa)}
                           >
-                            Excluir
+                            {tCommon("delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -214,16 +212,15 @@ export function RateiosExtraordinariosManager({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir rateio extraordinário</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o rateio &quot;{deleteTarget?.titulo}&quot;? Essa ação
-              não pode ser desfeita.
+              {t("deleteConfirm", { titulo: deleteTarget?.titulo ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction disabled={isDeleting} onClick={handleDelete}>
-              {isDeleting ? "Excluindo..." : "Excluir"}
+              {isDeleting ? t("deleting") : tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
