@@ -1,3 +1,5 @@
+import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
+
 export type CobrancaTipo = "ordinaria" | "extraordinaria";
 export type CobrancaStatus = "pendente" | "pago" | "cancelado";
 
@@ -9,6 +11,9 @@ export type CobrancaDaUnidade = {
   valor_usd: number;
   valor_credito_abatido_usd: number;
   valor_principal_pago_usd: number;
+  valor_juros_pago_usd: number;
+  data_ultimo_pagamento: string | null;
+  pagamentos: PagamentoDaCobranca[];
   data_vencimento: string;
   dias_graca: number;
   pct_multa_atraso: number;
@@ -31,6 +36,7 @@ export type CobrancaDoRateio = {
   unidade: { id: string; identificacao: string } | null;
   valor_principal_pago_usd: number;
   valor_juros_pago_usd: number;
+  data_ultimo_pagamento: string | null;
 };
 
 export type UnidadeCobrancaDoMes = {
@@ -47,5 +53,6 @@ export type UnidadeCobrancaDoMes = {
     status: CobrancaStatus;
     valor_principal_pago_usd: number;
     valor_juros_pago_usd: number;
+    data_ultimo_pagamento: string | null;
   } | null;
 };

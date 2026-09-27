@@ -21,6 +21,26 @@ export type Encargos = {
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
+// dias de atraso em relação ao vencimento (já descontada a carência) numa data de referência
+// qualquer — não depende do status atual da cobrança. Usado tanto pelo cálculo de encargos "hoje"
+// quanto pra reconstruir, depois de paga, há quantos dias a cobrança estava vencida quando um
+// pagamento específico foi feito (a informação que gerou a multa/juros daquele pagamento).
+export function calcularDiasAtrasoNaData(
+  dataVencimento: string,
+  diasGraca: number,
+  dataReferenciaIso: string,
+): number {
+  const limiteCarencia = new Date(`${dataVencimento}T00:00:00Z`);
+  limiteCarencia.setUTCDate(limiteCarencia.getUTCDate() + diasGraca);
+
+  return Math.max(
+    Math.round(
+      (new Date(`${dataReferenciaIso}T00:00:00Z`).getTime() - limiteCarencia.getTime()) / MS_POR_DIA,
+    ),
+    0,
+  );
+}
+
 // fonte única do cálculo de encargos: multa fixa única + juros simples ao dia sobre o saldo
 // devedor, contados a partir do fim da carência (evita divergência entre as telas que listam cobranças)
 export function calcularEncargos(cobranca: CobrancaParaEncargos, hojeIso: string): Encargos {
@@ -41,13 +61,7 @@ export function calcularEncargos(cobranca: CobrancaParaEncargos, hojeIso: string
     return semEncargos;
   }
 
-  const limiteCarencia = new Date(`${cobranca.data_vencimento}T00:00:00Z`);
-  limiteCarencia.setUTCDate(limiteCarencia.getUTCDate() + cobranca.dias_graca);
-
-  const diasAtraso = Math.max(
-    Math.round((new Date(`${hojeIso}T00:00:00Z`).getTime() - limiteCarencia.getTime()) / MS_POR_DIA),
-    0,
-  );
+  const diasAtraso = calcularDiasAtrasoNaData(cobranca.data_vencimento, cobranca.dias_graca, hojeIso);
 
   if (diasAtraso <= 0) {
     return semEncargos;

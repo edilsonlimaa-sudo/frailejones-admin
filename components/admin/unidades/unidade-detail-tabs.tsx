@@ -2,6 +2,9 @@ import type { Proprietario, Unidade } from "@/lib/types/unidades";
 import type { CobrancaDaUnidade, CobrancaStatus, CobrancaTipo } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao, MovimentacaoTipo } from "@/lib/types/creditos";
 import { calcularEncargos } from "@/lib/encargos";
+import { encontrarTasaNaData, formatVes, type CotacaoHistorico } from "@/lib/moeda";
+import { LiquidarCobrancaDialog } from "@/components/admin/cobrancas/liquidar-cobranca-dialog";
+import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,19 +61,60 @@ type UnidadeDetailTabsProps = {
   unidade: Omit<Unidade, "proprietario"> & { proprietario: Proprietario | null };
   cobrancas: CobrancaDaUnidade[];
   creditos: CreditoMovimentacao[];
+  cotacoes: (CotacaoHistorico & { id: string })[];
 };
 
-export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetailTabsProps) {
-  const saldoUsd = creditos.reduce(
-    (acc, c) => acc + (c.tipo === "ENTRADA" ? c.valor_equivalente_usd : -c.valor_equivalente_usd),
-    0,
-  );
+export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: UnidadeDetailTabsProps) {
+  const cotacaoAtual = cotacoes[0] ?? null;
+
+  // saldo em VES é reconvertido pra USD sempre com a cotação MAIS RECENTE (não a do dia em que
+  // o crédito foi gerado) — pedido explícito do usuário, pra refletir o poder de compra atual
+  // do saldo em bolívares (diferente do padrão "congela na data" usado nas outras telas)
+  // saldo acumulado é calculado em ordem cronológica (mais antigo primeiro) e depois relido na
+  // ordem de exibição (mais recente primeiro), já que `creditos` chega ordenado desc por created_at
+  const detalhesPorId = new Map<string, { valorEquivalenteExibido: number; saldoAcumulado: number }>();
+  let saldoRunning = 0;
+  [...creditos].reverse().forEach((credito) => {
+    const valorEquivalenteExibido =
+      credito.moeda === "VES" && cotacaoAtual
+        ? Number((credito.valor / cotacaoAtual.tasa_ves).toFixed(2))
+        : credito.valor;
+    saldoRunning += credito.tipo === "ENTRADA" ? valorEquivalenteExibido : -valorEquivalenteExibido;
+    detalhesPorId.set(credito.id, { valorEquivalenteExibido, saldoAcumulado: Number(saldoRunning.toFixed(2)) });
+  });
+  const saldoUsd = Number(saldoRunning.toFixed(2));
+
+  const linhasCredito = creditos.map((credito) => {
+    const { valorEquivalenteExibido, saldoAcumulado } = detalhesPorId.get(credito.id)!;
+    // ENTRADA: origem é a cobrança que o pagamento (que gerou a sobra) liquidou
+    // SAIDA: destino é a cobrança onde o crédito foi aplicado como abatimento
+    const cobrancaRelacionada = credito.tipo === "SAIDA" ? credito.cobranca : (credito.pagamento?.cobranca ?? null);
+    const dataPagamento = credito.tipo === "ENTRADA" ? (credito.pagamento?.data_pagamento ?? null) : null;
+    return { credito, valorEquivalenteExibido, saldoAcumulado, cobrancaRelacionada, dataPagamento };
+  });
 
   const hojeIso = new Date().toISOString().slice(0, 10);
-  const linhasCobranca = cobrancas.map((cobranca) => ({
-    cobranca,
-    encargos: calcularEncargos(cobranca, hojeIso),
-  }));
+  const linhasCobranca = cobrancas.map((cobranca) => {
+    const encargos = calcularEncargos(cobranca, hojeIso);
+    // já quitada: mostra o que foi de fato pago (histórico), não o saldo dinâmico (que já é 0)
+    const multaJuros =
+      encargos.diasAtraso > 0 ? encargos.valorMulta + encargos.valorJuros : cobranca.valor_juros_pago_usd;
+    const totalAtualizado =
+      encargos.diasAtraso > 0
+        ? encargos.valorTotalComEncargos
+        : cobranca.status === "pendente"
+          ? encargos.saldoDevedor
+          : cobranca.valor_principal_pago_usd + cobranca.valor_juros_pago_usd;
+    // pendente: cotação de hoje (ainda vai pagar); já liquidada: cotação congelada na data do pagamento
+    const tasaVesExibir =
+      cobranca.status === "pendente"
+        ? (cotacaoAtual?.tasa_ves ?? null)
+        : encontrarTasaNaData(
+            cotacoes,
+            (cobranca.data_ultimo_pagamento ?? cobranca.data_vencimento).slice(0, 10),
+          );
+    return { cobranca, encargos, multaJuros, totalAtualizado, tasaVesExibir };
+  });
 
   return (
     <Tabs defaultValue="geral">
@@ -136,7 +180,7 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
               <>
                 {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
                 <div className="flex flex-col gap-3 sm:hidden">
-                  {linhasCobranca.map(({ cobranca, encargos }) => (
+                  {linhasCobranca.map(({ cobranca, encargos, multaJuros, totalAtualizado, tasaVesExibir }) => (
                     <div key={cobranca.id} className="rounded-lg border border-input p-3">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{cobranca.descricao}</span>
@@ -155,7 +199,14 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
                         </div>
                         <div>
                           <dt className="text-xs text-muted-foreground">Valor</dt>
-                          <dd>{currencyFormatter.format(cobranca.valor_usd)}</dd>
+                          <dd>
+                            {currencyFormatter.format(cobranca.valor_usd)}
+                            {cobranca.valor_credito_abatido_usd > 0 && (
+                              <span className="block text-xs text-primary">
+                                Crédito aplicado: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                              </span>
+                            )}
+                          </dd>
                         </div>
                         <div>
                           <dt className="text-xs text-muted-foreground">Vencimento</dt>
@@ -168,21 +219,49 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
                             )}
                           </dd>
                         </div>
-                        {encargos.diasAtraso > 0 && (
-                          <>
-                            <div>
-                              <dt className="text-xs text-muted-foreground">Multa + juros</dt>
-                              <dd>{currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)}</dd>
-                            </div>
-                            <div>
-                              <dt className="text-xs text-muted-foreground">Total atualizado</dt>
-                              <dd className="font-medium">
-                                {currencyFormatter.format(encargos.valorTotalComEncargos)}
-                              </dd>
-                            </div>
-                          </>
+                        {multaJuros > 0 && (
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Multa + juros</dt>
+                            <dd>{currencyFormatter.format(multaJuros)}</dd>
+                          </div>
                         )}
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Total atualizado</dt>
+                          <dd className="font-medium">
+                            {currencyFormatter.format(totalAtualizado)}
+                            {tasaVesExibir != null && (
+                              <span className="block text-xs font-normal text-muted-foreground">
+                                {formatVes(totalAtualizado, tasaVesExibir)}
+                              </span>
+                            )}
+                          </dd>
+                        </div>
                       </dl>
+                      {(cobranca.status === "pendente" || cobranca.pagamentos.length > 0) && (
+                        <div className="mt-3 flex gap-2">
+                          {cobranca.status === "pendente" && (
+                            <LiquidarCobrancaDialog
+                              unidadeId={unidade.id}
+                              cobrancaId={cobranca.id}
+                              descricao={cobranca.descricao}
+                              saldoDevedorUsd={encargos.saldoDevedor}
+                              encargosUsd={encargos.valorMulta + encargos.valorJuros}
+                              cotacaoBcv={cotacaoAtual}
+                              triggerClassName="flex-1"
+                            />
+                          )}
+                          {cobranca.pagamentos.length > 0 && (
+                            <VerPagamentoDialog
+                              descricao={cobranca.descricao}
+                              dataVencimento={cobranca.data_vencimento}
+                              diasGraca={cobranca.dias_graca}
+                              pagamentos={cobranca.pagamentos}
+                              cotacoes={cotacoes}
+                              triggerClassName="flex-1"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -199,15 +278,23 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
                       <TableHead>Multa + juros</TableHead>
                       <TableHead>Total atualizado</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {linhasCobranca.map(({ cobranca, encargos }) => (
+                    {linhasCobranca.map(({ cobranca, encargos, multaJuros, totalAtualizado, tasaVesExibir }) => (
                       <TableRow key={cobranca.id}>
                         <TableCell>{formatDate(cobranca.competencia)}</TableCell>
                         <TableCell>{cobrancaTipoLabel[cobranca.tipo]}</TableCell>
                         <TableCell>{cobranca.descricao}</TableCell>
-                        <TableCell>{currencyFormatter.format(cobranca.valor_usd)}</TableCell>
+                        <TableCell>
+                          {currencyFormatter.format(cobranca.valor_usd)}
+                          {cobranca.valor_credito_abatido_usd > 0 && (
+                            <span className="block text-xs text-primary">
+                              Crédito aplicado: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           {formatDate(cobranca.data_vencimento)}
                           {encargos.diasAtraso > 0 && (
@@ -217,19 +304,43 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
                           )}
                         </TableCell>
                         <TableCell>
-                          {encargos.diasAtraso > 0
-                            ? currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)
-                            : "—"}
+                          {multaJuros > 0 ? currencyFormatter.format(multaJuros) : "—"}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {encargos.diasAtraso > 0
-                            ? currencyFormatter.format(encargos.valorTotalComEncargos)
-                            : currencyFormatter.format(encargos.saldoDevedor)}
+                          {currencyFormatter.format(totalAtualizado)}
+                          {tasaVesExibir != null && (
+                            <span className="block text-xs font-normal text-muted-foreground">
+                              {formatVes(totalAtualizado, tasaVesExibir)}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={cobrancaStatusVariant[cobranca.status]}>
                             {cobrancaStatusLabel[cobranca.status]}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {cobranca.status === "pendente" && (
+                              <LiquidarCobrancaDialog
+                                unidadeId={unidade.id}
+                                cobrancaId={cobranca.id}
+                                descricao={cobranca.descricao}
+                                saldoDevedorUsd={encargos.saldoDevedor}
+                                encargosUsd={encargos.valorMulta + encargos.valorJuros}
+                                cotacaoBcv={cotacaoAtual}
+                              />
+                            )}
+                            {cobranca.pagamentos.length > 0 && (
+                              <VerPagamentoDialog
+                                descricao={cobranca.descricao}
+                                dataVencimento={cobranca.data_vencimento}
+                                diasGraca={cobranca.dias_graca}
+                                pagamentos={cobranca.pagamentos}
+                                cotacoes={cotacoes}
+                              />
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -255,36 +366,65 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
               <>
                 {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
                 <div className="flex flex-col gap-3 sm:hidden">
-                  {creditos.map((credito) => (
-                    <div key={credito.id} className="rounded-lg border border-input p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">
-                          {dateTimeFormatter.format(new Date(credito.created_at))}
-                        </span>
-                        <Badge variant={movimentacaoTipoVariant[credito.tipo]}>
-                          {movimentacaoTipoLabel[credito.tipo]}
-                        </Badge>
+                  {linhasCredito.map(
+                    ({ credito, valorEquivalenteExibido, saldoAcumulado, cobrancaRelacionada, dataPagamento }) => (
+                      <div key={credito.id} className="rounded-lg border border-input p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium">
+                            {dateTimeFormatter.format(new Date(credito.created_at))}
+                          </span>
+                          <Badge variant={movimentacaoTipoVariant[credito.tipo]}>
+                            {movimentacaoTipoLabel[credito.tipo]}
+                          </Badge>
+                        </div>
+                        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Valor</dt>
+                            <dd>
+                              {credito.valor} {credito.moeda}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Equivalente USD</dt>
+                            <dd>
+                              {currencyFormatter.format(valorEquivalenteExibido)}
+                              {credito.moeda === "VES" && cotacaoAtual && (
+                                <span className="block text-xs font-normal text-muted-foreground">
+                                  cotação de hoje: {cotacaoAtual.tasa_ves} VES/USD
+                                </span>
+                              )}
+                            </dd>
+                          </div>
+                          <div className="col-span-2">
+                            <dt className="text-xs text-muted-foreground">
+                              {credito.tipo === "ENTRADA" ? "Origem (pagamento)" : "Aplicado na cobrança"}
+                            </dt>
+                            <dd>
+                              {cobrancaRelacionada ? (
+                                <>
+                                  <span className="block font-medium">{cobrancaRelacionada.descricao}</span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    Competência: {formatDate(cobrancaRelacionada.competencia)}
+                                  </span>
+                                  {dataPagamento && (
+                                    <span className="block text-xs text-muted-foreground">
+                                      Pago em: {dateTimeFormatter.format(new Date(dataPagamento))}
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                (credito.descricao ?? "—")
+                              )}
+                            </dd>
+                          </div>
+                          <div className="col-span-2">
+                            <dt className="text-xs text-muted-foreground">Saldo acumulado</dt>
+                            <dd className="font-medium">{currencyFormatter.format(saldoAcumulado)}</dd>
+                          </div>
+                        </dl>
                       </div>
-                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                        <div>
-                          <dt className="text-xs text-muted-foreground">Moeda</dt>
-                          <dd>{credito.moeda}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-muted-foreground">Valor</dt>
-                          <dd>{credito.valor}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-muted-foreground">Equivalente USD</dt>
-                          <dd>{currencyFormatter.format(credito.valor_equivalente_usd)}</dd>
-                        </div>
-                        <div className="col-span-2">
-                          <dt className="text-xs text-muted-foreground">Descrição</dt>
-                          <dd>{credito.descricao ?? "—"}</dd>
-                        </div>
-                      </dl>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
 
                 {/* sm+: tabela */}
@@ -293,27 +433,54 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos }: UnidadeDetai
                     <TableRow>
                       <TableHead>Data</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Moeda</TableHead>
                       <TableHead>Valor</TableHead>
                       <TableHead>Equivalente USD</TableHead>
-                      <TableHead>Descrição</TableHead>
+                      <TableHead>Origem / Cobrança aplicada</TableHead>
+                      <TableHead>Saldo acumulado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {creditos.map((credito) => (
-                      <TableRow key={credito.id}>
-                        <TableCell>{dateTimeFormatter.format(new Date(credito.created_at))}</TableCell>
-                        <TableCell>
-                          <Badge variant={movimentacaoTipoVariant[credito.tipo]}>
-                            {movimentacaoTipoLabel[credito.tipo]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{credito.moeda}</TableCell>
-                        <TableCell>{credito.valor}</TableCell>
-                        <TableCell>{currencyFormatter.format(credito.valor_equivalente_usd)}</TableCell>
-                        <TableCell>{credito.descricao ?? "—"}</TableCell>
-                      </TableRow>
-                    ))}
+                    {linhasCredito.map(
+                      ({ credito, valorEquivalenteExibido, saldoAcumulado, cobrancaRelacionada, dataPagamento }) => (
+                        <TableRow key={credito.id}>
+                          <TableCell>{dateTimeFormatter.format(new Date(credito.created_at))}</TableCell>
+                          <TableCell>
+                            <Badge variant={movimentacaoTipoVariant[credito.tipo]}>
+                              {movimentacaoTipoLabel[credito.tipo]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {credito.valor} {credito.moeda}
+                          </TableCell>
+                          <TableCell>
+                            {currencyFormatter.format(valorEquivalenteExibido)}
+                            {credito.moeda === "VES" && cotacaoAtual && (
+                              <span className="block text-xs font-normal text-muted-foreground">
+                                cotação de hoje: {cotacaoAtual.tasa_ves} VES/USD
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {cobrancaRelacionada ? (
+                              <>
+                                <span className="block font-medium">{cobrancaRelacionada.descricao}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  Competência: {formatDate(cobrancaRelacionada.competencia)}
+                                </span>
+                                {dataPagamento && (
+                                  <span className="block text-xs text-muted-foreground">
+                                    Pago em: {dateTimeFormatter.format(new Date(dataPagamento))}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              (credito.descricao ?? "—")
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">{currencyFormatter.format(saldoAcumulado)}</TableCell>
+                        </TableRow>
+                      ),
+                    )}
                   </TableBody>
                 </Table>
               </>
