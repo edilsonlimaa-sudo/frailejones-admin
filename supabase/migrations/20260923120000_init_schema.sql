@@ -212,6 +212,8 @@ create index idx_pc_cobranca_id on pagamento_cobrancas(cobranca_id);
 -- CREDITOS_MOVIMENTACOES (livro-razão de crédito por unidade)
 -- ENTRADA: sobra de pagamento ou crédito manual (pagamento_id opcional, sem cobranca_id)
 -- SAIDA: consumo de crédito para abater uma cobrança (cobranca_id obrigatório, sem pagamento_id)
+-- valor fica na moeda original, sem cambio congelado: saldo em VES ainda não consumido
+-- fica exposto à cotação do dia e é revalorizado em USD sempre com a cotacao_bcv mais recente
 -- ============================================================
 create table creditos_movimentacoes (
   id uuid primary key default gen_random_uuid(),
@@ -221,20 +223,12 @@ create table creditos_movimentacoes (
   valor numeric(16,2) not null,
   pagamento_id uuid references pagamentos(id) on delete set null,
   cobranca_id uuid references cobrancas(id) on delete set null,
-  cotacao_bcv_id uuid references cotacao_bcv(id) on delete set null,
-  tasa_bcv_aplicada numeric(16,6),
-  valor_equivalente_usd numeric(12,2) not null,
   descricao text,
   created_at timestamptz not null default now(),
   constraint chk_credito_origem_destino check (
     (tipo = 'ENTRADA' and cobranca_id is null)
     or
     (tipo = 'SAIDA' and cobranca_id is not null and pagamento_id is null)
-  ),
-  constraint chk_credito_cambio check (
-    (moeda = 'USD' and cotacao_bcv_id is null and tasa_bcv_aplicada is null)
-    or
-    (moeda = 'VES' and cotacao_bcv_id is not null and tasa_bcv_aplicada is not null)
   )
 );
 

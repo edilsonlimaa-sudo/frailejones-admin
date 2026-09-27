@@ -1,6 +1,3 @@
-# ERD
-
-```mermaid
 erDiagram
     PROPRIETARIOS ||--o{ UNIDADES : possui
     UNIDADES ||--o{ TAXA_CONDOMINIO_UNIDADES : "vinculada em"
@@ -18,7 +15,6 @@ erDiagram
     UNIDADES ||--o{ CREDITOS_MOVIMENTACOES : possui
     PAGAMENTOS |o--o{ CREDITOS_MOVIMENTACOES : gera
     COBRANCAS |o--o{ CREDITOS_MOVIMENTACOES : consome
-    COTACAO_BCV |o--o{ CREDITOS_MOVIMENTACOES : referencia
 
     PROPRIETARIOS {
         uuid id PK
@@ -143,10 +139,6 @@ erDiagram
         numeric valor "valor na moeda original"
         uuid pagamento_id FK "so em ENTRADA vinda de sobra de pagamento, opcional"
         uuid cobranca_id FK "obrigatorio em SAIDA, nulo em ENTRADA"
-        uuid cotacao_bcv_id FK "obrigatorio so quando moeda=VES"
-        numeric tasa_bcv_aplicada "taxa congelada, so quando moeda=VES"
-        numeric valor_equivalente_usd "valor convertido pra USD nesse momento"
         string descricao "opcional"
         timestamptz created_at
     }
-```
