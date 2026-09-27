@@ -10,6 +10,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
+import { formatVes } from "@/lib/moeda";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,8 +99,11 @@ export default async function Home({
 
   const supabase = await createClient();
 
-  const [{ data: cobrancasRaw, error: cobrancasError }, { data: taxaVinculosRaw, error: taxaVinculosError }] =
-    await Promise.all([
+  const [
+    { data: cobrancasRaw, error: cobrancasError },
+    { data: taxaVinculosRaw, error: taxaVinculosError },
+    { data: cotacaoBcv, error: cotacaoBcvError },
+  ] = await Promise.all([
       supabase
         .from("cobrancas")
         .select(
@@ -110,12 +114,18 @@ export default async function Home({
         .order("data_vencimento", { ascending: true })
         .returns<CobrancaDoMes[]>(),
       supabase.from("taxa_condominio_unidades").select("unidade_id").returns<{ unidade_id: string }[]>(),
+      supabase
+        .from("cotacao_bcv")
+        .select("tasa_ves")
+        .order("data_cotacao", { ascending: false })
+        .limit(1)
+        .maybeSingle<{ tasa_ves: number }>(),
     ]);
 
-  if (cobrancasError || taxaVinculosError) {
+  if (cobrancasError || taxaVinculosError || cotacaoBcvError) {
     return (
       <p className="text-sm text-destructive">
-        Erro ao carregar dados: {cobrancasError?.message ?? taxaVinculosError?.message}
+        Erro ao carregar dados: {cobrancasError?.message ?? taxaVinculosError?.message ?? cotacaoBcvError?.message}
       </p>
     );
   }
@@ -130,7 +140,10 @@ export default async function Home({
     (acc, c) =>
       acc +
       c.valor_credito_abatido_usd +
-      c.pagamento_cobrancas.reduce((sum, p) => sum + p.valor_principal_abatido_usd, 0),
+      c.pagamento_cobrancas.reduce(
+        (sum, p) => sum + p.valor_principal_abatido_usd + p.valor_juros_pago_usd,
+        0,
+      ),
     0,
   );
   const pendentes = ativas.filter((c) => c.status === "pendente");
@@ -253,11 +266,21 @@ export default async function Home({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="font-medium">
-                      {currencyFormatter.format(
-                        encargos.diasAtraso > 0 ? encargos.valorTotalComEncargos : c.valor_usd,
+                    <div className="text-right">
+                      <span className="font-medium">
+                        {currencyFormatter.format(
+                          encargos.diasAtraso > 0 ? encargos.valorTotalComEncargos : c.valor_usd,
+                        )}
+                      </span>
+                      {cotacaoBcv && (
+                        <p className="text-xs text-muted-foreground">
+                          {formatVes(
+                            encargos.diasAtraso > 0 ? encargos.valorTotalComEncargos : c.valor_usd,
+                            cotacaoBcv.tasa_ves,
+                          )}
+                        </p>
                       )}
-                    </span>
+                    </div>
                     <Badge variant={statusVariant[c.status]}>{statusLabel[c.status]}</Badge>
                   </div>
                 </li>

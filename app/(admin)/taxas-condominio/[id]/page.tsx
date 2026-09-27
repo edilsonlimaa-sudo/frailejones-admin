@@ -52,7 +52,11 @@ type CobrancaRow = {
   pct_juros_diario: number;
   status: "pendente" | "pago" | "cancelado";
   unidade: { id: string; identificacao: string } | null;
-  pagamento_cobrancas: { valor_principal_abatido_usd: number; valor_juros_pago_usd: number }[];
+  pagamento_cobrancas: {
+    valor_principal_abatido_usd: number;
+    valor_juros_pago_usd: number;
+    pagamento: { data_pagamento: string } | null;
+  }[];
 };
 
 export default async function TaxaCondominioDetalhePage({
@@ -96,6 +100,7 @@ export default async function TaxaCondominioDetalhePage({
     { data: vinculosRaw, error: vinculosError },
     { data: cobrancasRaw, error: cobrancasError },
     { data: faturamento, error: faturamentoError },
+    { data: cotacoes, error: cotacaoBcvError },
   ] = await Promise.all([
     supabase
       .from("unidades")
@@ -112,7 +117,7 @@ export default async function TaxaCondominioDetalhePage({
     supabase
       .from("cobrancas")
       .select(
-        "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
+        "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
       )
       .eq("taxa_condominio_id", id)
       .eq("competencia", competencia)
@@ -123,13 +128,23 @@ export default async function TaxaCondominioDetalhePage({
       .eq("taxa_condominio_id", id)
       .eq("competencia", competencia)
       .maybeSingle<{ id: string; data_processamento: string }>(),
+    supabase
+      .from("cotacao_bcv")
+      .select("data_cotacao, tasa_ves")
+      .order("data_cotacao", { ascending: false })
+      .limit(366)
+      .returns<{ data_cotacao: string; tasa_ves: number }[]>(),
   ]);
 
-  if (todasUnidadesError || vinculosError || cobrancasError || faturamentoError) {
+  if (todasUnidadesError || vinculosError || cobrancasError || faturamentoError || cotacaoBcvError) {
     return (
       <p className="text-sm text-destructive">
         Erro ao carregar dados:{" "}
-        {todasUnidadesError?.message ?? vinculosError?.message ?? cobrancasError?.message ?? faturamentoError?.message}
+        {todasUnidadesError?.message ??
+          vinculosError?.message ??
+          cobrancasError?.message ??
+          faturamentoError?.message ??
+          cotacaoBcvError?.message}
       </p>
     );
   }
@@ -173,6 +188,13 @@ export default async function TaxaCondominioDetalhePage({
             valor_juros_pago_usd: cobranca.pagamento_cobrancas.reduce(
               (acc, p) => acc + p.valor_juros_pago_usd,
               0,
+            ),
+            data_ultimo_pagamento: cobranca.pagamento_cobrancas.reduce<string | null>(
+              (latest, p) =>
+                p.pagamento && (!latest || p.pagamento.data_pagamento > latest)
+                  ? p.pagamento.data_pagamento
+                  : latest,
+              null,
             ),
           }
         : null,
@@ -218,6 +240,7 @@ export default async function TaxaCondominioDetalhePage({
         unidadesVinculadasIds={unidadesVinculadas.map((u) => u.id)}
         competenciaFaturada={competenciaFaturada}
         dataProcessamento={faturamento?.data_processamento ?? null}
+        cotacoes={cotacoes ?? []}
       />
     </div>
   );

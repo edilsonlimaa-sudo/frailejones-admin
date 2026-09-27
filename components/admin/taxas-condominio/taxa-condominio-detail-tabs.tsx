@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import type { UnidadeCobrancaDoMes } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
+import { encontrarTasaNaData, formatVes, type CotacaoHistorico } from "@/lib/moeda";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +58,7 @@ type TaxaCondominioDetailTabsProps = {
   unidadesVinculadasIds: string[];
   competenciaFaturada: boolean;
   dataProcessamento: string | null;
+  cotacoes: CotacaoHistorico[];
 };
 
 export function TaxaCondominioDetailTabs({
@@ -75,7 +77,9 @@ export function TaxaCondominioDetailTabs({
   unidadesVinculadasIds,
   competenciaFaturada,
   dataProcessamento,
+  cotacoes,
 }: TaxaCondominioDetailTabsProps) {
+  const cotacaoAtual = cotacoes[0] ?? null;
   const emitidas = unidadesDoMes.filter((u) => u.cobranca !== null);
   const naoEmitidas = unidadesDoMes.filter((u) => u.cobranca === null);
   const emitidasAtivas = emitidas.filter((u) => u.cobranca!.status !== "cancelado");
@@ -83,15 +87,36 @@ export function TaxaCondominioDetailTabs({
   const pendentes = emitidas.filter((u) => u.cobranca!.status === "pendente").length;
 
   const hojeIso = new Date().toISOString().slice(0, 10);
-  const linhasEmitidas = emitidas.map((item) => ({
-    item,
-    encargos: calcularEncargos(item.cobranca!, hojeIso),
-  }));
+  const linhasEmitidas = emitidas.map((item) => {
+    const cobranca = item.cobranca!;
+    const encargos = calcularEncargos(cobranca, hojeIso);
+    // já quitada: mostra o que foi de fato pago (histórico), não o saldo dinâmico (que já é 0)
+    const multaJuros =
+      encargos.diasAtraso > 0 ? encargos.valorMulta + encargos.valorJuros : cobranca.valor_juros_pago_usd;
+    const totalAtualizado =
+      encargos.diasAtraso > 0
+        ? encargos.valorTotalComEncargos
+        : cobranca.status === "pendente"
+          ? encargos.saldoDevedor
+          : cobranca.valor_principal_pago_usd + cobranca.valor_juros_pago_usd;
+    // pendente: cotação de hoje (ainda vai pagar); já liquidada: cotação congelada na data do pagamento
+    const tasaVesExibir =
+      cobranca.status === "pendente"
+        ? (cotacaoAtual?.tasa_ves ?? null)
+        : encontrarTasaNaData(
+            cotacoes,
+            (cobranca.data_ultimo_pagamento ?? cobranca.data_vencimento).slice(0, 10),
+          );
+    return { item, encargos, multaJuros, totalAtualizado, tasaVesExibir };
+  });
 
   const valorEmitido = emitidasAtivas.reduce((acc, u) => acc + u.cobranca!.valor_usd, 0);
   const valorArrecadado = emitidasAtivas.reduce(
     (acc, u) =>
-      acc + u.cobranca!.valor_credito_abatido_usd + u.cobranca!.valor_principal_pago_usd,
+      acc +
+      u.cobranca!.valor_credito_abatido_usd +
+      u.cobranca!.valor_principal_pago_usd +
+      u.cobranca!.valor_juros_pago_usd,
     0,
   );
   const progresso = valorEmitido > 0 ? Math.min(100, (valorArrecadado / valorEmitido) * 100) : 0;
@@ -200,10 +225,12 @@ export function TaxaCondominioDetailTabs({
               <div className="flex flex-col gap-4">
                 {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
                 <div className="flex flex-col gap-3 sm:hidden">
-                  {linhasEmitidas.map(({ item, encargos }) => {
+                  {linhasEmitidas.map(({ item, encargos, multaJuros, totalAtualizado, tasaVesExibir }) => {
                     const cobranca = item.cobranca!;
                     const totalAbatido =
-                      cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd;
+                      cobranca.valor_credito_abatido_usd +
+                      cobranca.valor_principal_pago_usd +
+                      cobranca.valor_juros_pago_usd;
 
                     return (
                       <div key={cobranca.id} className="rounded-lg border border-input p-3">
@@ -216,7 +243,14 @@ export function TaxaCondominioDetailTabs({
                         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                           <div>
                             <dt className="text-xs text-muted-foreground">Valor</dt>
-                            <dd>{currencyFormatter.format(cobranca.valor_usd)}</dd>
+                            <dd>
+                              {currencyFormatter.format(cobranca.valor_usd)}
+                              {cobranca.valor_credito_abatido_usd > 0 && (
+                                <span className="block text-xs text-primary">
+                                  Crédito: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                                </span>
+                              )}
+                            </dd>
                           </div>
                           <div>
                             <dt className="text-xs text-muted-foreground">Pago</dt>
@@ -237,22 +271,23 @@ export function TaxaCondominioDetailTabs({
                               )}
                             </dd>
                           </div>
-                          {encargos.diasAtraso > 0 && (
-                            <>
-                              <div>
-                                <dt className="text-xs text-muted-foreground">Multa + juros</dt>
-                                <dd>
-                                  {currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt className="text-xs text-muted-foreground">Total atualizado</dt>
-                                <dd className="font-medium">
-                                  {currencyFormatter.format(encargos.valorTotalComEncargos)}
-                                </dd>
-                              </div>
-                            </>
+                          {multaJuros > 0 && (
+                            <div>
+                              <dt className="text-xs text-muted-foreground">Multa + juros</dt>
+                              <dd>{currencyFormatter.format(multaJuros)}</dd>
+                            </div>
                           )}
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Total atualizado</dt>
+                            <dd className="font-medium">
+                              {currencyFormatter.format(totalAtualizado)}
+                              {tasaVesExibir != null && (
+                                <span className="block text-xs font-normal text-muted-foreground">
+                                  {formatVes(totalAtualizado, tasaVesExibir)}
+                                </span>
+                              )}
+                            </dd>
+                          </div>
                         </dl>
                       </div>
                     );
@@ -274,15 +309,24 @@ export function TaxaCondominioDetailTabs({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {linhasEmitidas.map(({ item, encargos }) => {
+                    {linhasEmitidas.map(({ item, encargos, multaJuros, totalAtualizado, tasaVesExibir }) => {
                       const cobranca = item.cobranca!;
                       const totalAbatido =
-                        cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd;
+                        cobranca.valor_credito_abatido_usd +
+                        cobranca.valor_principal_pago_usd +
+                        cobranca.valor_juros_pago_usd;
 
                       return (
                         <TableRow key={cobranca.id}>
                           <TableCell className="font-medium">{item.unidade_identificacao}</TableCell>
-                          <TableCell>{currencyFormatter.format(cobranca.valor_usd)}</TableCell>
+                          <TableCell>
+                            {currencyFormatter.format(cobranca.valor_usd)}
+                            {cobranca.valor_credito_abatido_usd > 0 && (
+                              <span className="block text-xs text-primary">
+                                Crédito: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                              </span>
+                            )}
+                          </TableCell>
                           <TableCell>{currencyFormatter.format(totalAbatido)}</TableCell>
                           <TableCell>{currencyFormatter.format(encargos.saldoDevedor)}</TableCell>
                           <TableCell>
@@ -294,14 +338,15 @@ export function TaxaCondominioDetailTabs({
                             )}
                           </TableCell>
                           <TableCell>
-                            {encargos.diasAtraso > 0
-                              ? currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)
-                              : "—"}
+                            {multaJuros > 0 ? currencyFormatter.format(multaJuros) : "—"}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {encargos.diasAtraso > 0
-                              ? currencyFormatter.format(encargos.valorTotalComEncargos)
-                              : currencyFormatter.format(encargos.saldoDevedor)}
+                            {currencyFormatter.format(totalAtualizado)}
+                            {tasaVesExibir != null && (
+                              <span className="block text-xs font-normal text-muted-foreground">
+                                {formatVes(totalAtualizado, tasaVesExibir)}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge variant={statusVariant[cobranca.status]}>

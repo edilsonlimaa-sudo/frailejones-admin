@@ -5,6 +5,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaDoRateio, CobrancaStatus } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
+import { encontrarTasaNaData, formatVes } from "@/lib/moeda";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,8 +46,15 @@ const statusVariant: Record<CobrancaStatus, "default" | "outline" | "destructive
   cancelado: "destructive",
 };
 
-type CobrancaRow = Omit<CobrancaDoRateio, "valor_principal_pago_usd" | "valor_juros_pago_usd"> & {
-  pagamento_cobrancas: { valor_principal_abatido_usd: number; valor_juros_pago_usd: number }[];
+type CobrancaRow = Omit<
+  CobrancaDoRateio,
+  "valor_principal_pago_usd" | "valor_juros_pago_usd" | "data_ultimo_pagamento"
+> & {
+  pagamento_cobrancas: {
+    valor_principal_abatido_usd: number;
+    valor_juros_pago_usd: number;
+    pagamento: { data_pagamento: string } | null;
+  }[];
 };
 
 export default async function RateioExtraordinarioDetalhePage({
@@ -73,17 +81,32 @@ export default async function RateioExtraordinarioDetalhePage({
     notFound();
   }
 
-  const { data: cobrancasRaw, error: cobrancasError } = await supabase
-    .from("cobrancas")
-    .select(
-      "id, descricao, competencia, valor_usd, valor_credito_abatido_usd, data_emissao, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
-    )
-    .eq("despesa_extraordinaria_id", id)
-    .order("data_vencimento", { ascending: true })
-    .returns<CobrancaRow[]>();
+  const [
+    { data: cobrancasRaw, error: cobrancasError },
+    { data: cotacoes, error: cotacaoBcvError },
+  ] = await Promise.all([
+    supabase
+      .from("cobrancas")
+      .select(
+        "id, descricao, competencia, valor_usd, valor_credito_abatido_usd, data_emissao, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
+      )
+      .eq("despesa_extraordinaria_id", id)
+      .order("data_vencimento", { ascending: true })
+      .returns<CobrancaRow[]>(),
+    supabase
+      .from("cotacao_bcv")
+      .select("data_cotacao, tasa_ves")
+      .order("data_cotacao", { ascending: false })
+      .limit(366)
+      .returns<{ data_cotacao: string; tasa_ves: number }[]>(),
+  ]);
 
-  if (cobrancasError) {
-    return <p className="text-sm text-destructive">Erro ao carregar dados: {cobrancasError.message}</p>;
+  if (cobrancasError || cotacaoBcvError) {
+    return (
+      <p className="text-sm text-destructive">
+        Erro ao carregar dados: {cobrancasError?.message ?? cotacaoBcvError?.message}
+      </p>
+    );
   }
 
   const cobrancas: CobrancaDoRateio[] = (cobrancasRaw ?? []).map(
@@ -94,6 +117,13 @@ export default async function RateioExtraordinarioDetalhePage({
         0,
       ),
       valor_juros_pago_usd: pagamento_cobrancas.reduce((acc, p) => acc + p.valor_juros_pago_usd, 0),
+      data_ultimo_pagamento: pagamento_cobrancas.reduce<string | null>(
+        (latest, p) =>
+          p.pagamento && (!latest || p.pagamento.data_pagamento > latest)
+            ? p.pagamento.data_pagamento
+            : latest,
+        null,
+      ),
     }),
   );
 
@@ -104,7 +134,8 @@ export default async function RateioExtraordinarioDetalhePage({
 
   const valorTotalEsperado = cobrancasAtivas.reduce((acc, c) => acc + c.valor_usd, 0);
   const valorTotalArrecadado = cobrancasAtivas.reduce(
-    (acc, c) => acc + c.valor_credito_abatido_usd + c.valor_principal_pago_usd,
+    (acc, c) =>
+      acc + c.valor_credito_abatido_usd + c.valor_principal_pago_usd + c.valor_juros_pago_usd,
     0,
   );
   const progresso =
@@ -113,9 +144,29 @@ export default async function RateioExtraordinarioDetalhePage({
       : 0;
 
   const hojeIso = new Date().toISOString().slice(0, 10);
+  const cotacaoAtual = (cotacoes ?? [])[0] ?? null;
   const linhasCobranca = cobrancas.map((cobranca) => {
-    const totalAbatido = cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd;
-    return { cobranca, totalAbatido, encargos: calcularEncargos(cobranca, hojeIso) };
+    const totalAbatido =
+      cobranca.valor_credito_abatido_usd + cobranca.valor_principal_pago_usd + cobranca.valor_juros_pago_usd;
+    const encargos = calcularEncargos(cobranca, hojeIso);
+    // já quitada: mostra o que foi de fato pago (histórico), não o saldo dinâmico (que já é 0)
+    const multaJuros =
+      encargos.diasAtraso > 0 ? encargos.valorMulta + encargos.valorJuros : cobranca.valor_juros_pago_usd;
+    const totalAtualizado =
+      encargos.diasAtraso > 0
+        ? encargos.valorTotalComEncargos
+        : cobranca.status === "pendente"
+          ? encargos.saldoDevedor
+          : cobranca.valor_principal_pago_usd + cobranca.valor_juros_pago_usd;
+    // pendente: cotação de hoje (ainda vai pagar); já liquidada: cotação congelada na data do pagamento
+    const tasaVesExibir =
+      cobranca.status === "pendente"
+        ? (cotacaoAtual?.tasa_ves ?? null)
+        : encontrarTasaNaData(
+            cotacoes ?? [],
+            (cobranca.data_ultimo_pagamento ?? cobranca.data_vencimento).slice(0, 10),
+          );
+    return { cobranca, totalAbatido, encargos, multaJuros, totalAtualizado, tasaVesExibir };
   });
 
   return (
@@ -222,7 +273,7 @@ export default async function RateioExtraordinarioDetalhePage({
             <>
               {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
               <div className="flex flex-col gap-3 sm:hidden">
-                {linhasCobranca.map(({ cobranca, totalAbatido, encargos }) => (
+                {linhasCobranca.map(({ cobranca, totalAbatido, encargos, multaJuros, totalAtualizado, tasaVesExibir }) => (
                   <div key={cobranca.id} className="rounded-lg border border-input p-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{cobranca.unidade?.identificacao ?? "—"}</span>
@@ -233,7 +284,14 @@ export default async function RateioExtraordinarioDetalhePage({
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                       <div>
                         <dt className="text-xs text-muted-foreground">Valor</dt>
-                        <dd>{currencyFormatter.format(cobranca.valor_usd)}</dd>
+                        <dd>
+                          {currencyFormatter.format(cobranca.valor_usd)}
+                          {cobranca.valor_credito_abatido_usd > 0 && (
+                            <span className="block text-xs text-primary">
+                              Crédito: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                            </span>
+                          )}
+                        </dd>
                       </div>
                       <div>
                         <dt className="text-xs text-muted-foreground">Pago</dt>
@@ -254,20 +312,23 @@ export default async function RateioExtraordinarioDetalhePage({
                           )}
                         </dd>
                       </div>
-                      {encargos.diasAtraso > 0 && (
-                        <>
-                          <div>
-                            <dt className="text-xs text-muted-foreground">Multa + juros</dt>
-                            <dd>{currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-xs text-muted-foreground">Total atualizado</dt>
-                            <dd className="font-medium">
-                              {currencyFormatter.format(encargos.valorTotalComEncargos)}
-                            </dd>
-                          </div>
-                        </>
+                      {multaJuros > 0 && (
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Multa + juros</dt>
+                          <dd>{currencyFormatter.format(multaJuros)}</dd>
+                        </div>
                       )}
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Total atualizado</dt>
+                        <dd className="font-medium">
+                          {currencyFormatter.format(totalAtualizado)}
+                          {tasaVesExibir != null && (
+                            <span className="block text-xs font-normal text-muted-foreground">
+                              {formatVes(totalAtualizado, tasaVesExibir)}
+                            </span>
+                          )}
+                        </dd>
+                      </div>
                     </dl>
                   </div>
                 ))}
@@ -288,12 +349,19 @@ export default async function RateioExtraordinarioDetalhePage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {linhasCobranca.map(({ cobranca, totalAbatido, encargos }) => (
+                  {linhasCobranca.map(({ cobranca, totalAbatido, encargos, multaJuros, totalAtualizado, tasaVesExibir }) => (
                     <TableRow key={cobranca.id}>
                       <TableCell className="font-medium">
                         {cobranca.unidade?.identificacao ?? "—"}
                       </TableCell>
-                      <TableCell>{currencyFormatter.format(cobranca.valor_usd)}</TableCell>
+                      <TableCell>
+                        {currencyFormatter.format(cobranca.valor_usd)}
+                        {cobranca.valor_credito_abatido_usd > 0 && (
+                          <span className="block text-xs text-primary">
+                            Crédito: -{currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>{currencyFormatter.format(totalAbatido)}</TableCell>
                       <TableCell>{currencyFormatter.format(encargos.saldoDevedor)}</TableCell>
                       <TableCell>
@@ -305,14 +373,15 @@ export default async function RateioExtraordinarioDetalhePage({
                         )}
                       </TableCell>
                       <TableCell>
-                        {encargos.diasAtraso > 0
-                          ? currencyFormatter.format(encargos.valorMulta + encargos.valorJuros)
-                          : "—"}
+                        {multaJuros > 0 ? currencyFormatter.format(multaJuros) : "—"}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {encargos.diasAtraso > 0
-                          ? currencyFormatter.format(encargos.valorTotalComEncargos)
-                          : currencyFormatter.format(encargos.saldoDevedor)}
+                        {currencyFormatter.format(totalAtualizado)}
+                        {tasaVesExibir != null && (
+                          <span className="block text-xs font-normal text-muted-foreground">
+                            {formatVes(totalAtualizado, tasaVesExibir)}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant[cobranca.status]}>
