@@ -207,6 +207,26 @@
     "bankReference": "Referência bancária",
     "observation": "Observação"
   },
+  "portal": {
+    "brandName": "Urbanismos Los Frailejones",
+    "brandTagline": "Portal do Condômino",
+    "footer": "Consulta exclusiva para proprietários de Urbanismos Los Frailejones.",
+    "backToSearch": "Consultar outra unidade",
+    "greeting": "Olá, {name}",
+    "unitNotFound": "Unidade não encontrada.",
+    "lookup": {
+      "title": "Consulte sua unidade",
+      "subtitle": "Informe sua cédula para ver a situação da sua unidade.",
+      "cardTitle": "Identifique-se",
+      "cardDescription": "Usamos sua cédula só para localizar sua unidade — você não precisa criar conta nem senha.",
+      "cedulaLabel": "Cédula de identidade",
+      "cedulaPlaceholder": "V-12345678",
+      "submit": "Consultar",
+      "searching": "Buscando...",
+      "notFound": "Não encontramos nenhuma unidade com essa cédula. Verifique o número ou fale com a administração.",
+      "multipleFound": "Encontramos mais de uma unidade em seu nome. Selecione qual deseja ver:"
+    }
+  },
   "taxasCondominio": {
     "title": "Taxas de Condomínio",
     "description": "Regras de valor, vencimento, multa e juros usadas na emissão das cobranças ordinárias.",
