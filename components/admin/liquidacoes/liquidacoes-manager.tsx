@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MoreHorizontalIcon } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
 import type { Liquidacao } from "@/lib/types/pagamentos";
@@ -6,6 +7,7 @@ import type { CobrancaTipo } from "@/lib/types/cobrancas";
 import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -15,6 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const vesNumberFormatter = new Intl.NumberFormat("es-VE", {
   minimumFractionDigits: 2,
@@ -27,6 +35,7 @@ type LiquidacoesManagerProps = {
 
 export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProps) {
   const t = await getTranslations("liquidacoes");
+  const tCommon = await getTranslations("common");
   const tCobrancas = await getTranslations("cobrancas.tipo");
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
@@ -68,19 +77,31 @@ export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProp
               {liquidacoes.map((liquidacao) => (
                 <div key={liquidacao.id} className="rounded-lg border border-input p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">
-                      {liquidacao.unidade ? (
-                        <Link
-                          href={`/unidades/${liquidacao.unidade.id}`}
-                          className="underline-offset-2 hover:underline"
+                    {liquidacao.unidade ? (
+                      <Link
+                        href={`/unidades/${liquidacao.unidade.id}`}
+                        className="font-medium underline-offset-2 hover:underline"
+                      >
+                        {liquidacao.unidade.identificacao}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">—</span>
+                    )}
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline">{formaPagamentoLabel[liquidacao.forma_pagamento]}</Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={<Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />}
                         >
-                          {liquidacao.unidade.identificacao}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </span>
-                    <Badge variant="outline">{formaPagamentoLabel[liquidacao.forma_pagamento]}</Badge>
+                          <MoreHorizontalIcon />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem render={<Link href={`/liquidacoes/${liquidacao.id}`} />}>
+                            {t("viewDetails")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div>
@@ -120,6 +141,7 @@ export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProp
                   <TableHead>{t("equivalentUsd")}</TableHead>
                   <TableHead>{t("paymentMethodLabel")}</TableHead>
                   <TableHead>{t("reference")}</TableHead>
+                  <TableHead className="w-9" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -149,6 +171,20 @@ export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProp
                     </TableCell>
                     <TableCell>{formaPagamentoLabel[liquidacao.forma_pagamento]}</TableCell>
                     <TableCell>{liquidacao.referencia_bancaria ?? "—"}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={<Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />}
+                        >
+                          <MoreHorizontalIcon />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem render={<Link href={`/liquidacoes/${liquidacao.id}`} />}>
+                            {t("viewDetails")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

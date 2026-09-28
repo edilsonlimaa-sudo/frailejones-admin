@@ -24,6 +24,16 @@ import {
 
 const formasPagamento: FormaPagamentoTipo[] = ["pago_movil", "transferencia", "efectivo_usd", "zelle"];
 
+// a data é escolhida pelo usuário (permite backdating), mas a hora usa o momento exato do
+// registro — sem isso, todo pagamento gravava meia-noite UTC e a UI sempre mostrava o mesmo
+// horário, mesmo pagamentos registrados em momentos bem diferentes do dia
+function combinarDataComHoraAtual(dataIso: string): Date {
+  const agora = new Date();
+  const dataCompleta = new Date(`${dataIso}T00:00:00`);
+  dataCompleta.setHours(agora.getHours(), agora.getMinutes(), agora.getSeconds(), agora.getMilliseconds());
+  return dataCompleta;
+}
+
 type LiquidarCobrancaDialogProps = {
   unidadeId: string;
   cobrancaId: string;
@@ -172,7 +182,7 @@ function LiquidarCobrancaForm({
           cotacao_bcv_id: moeda === "VES" ? cotacaoBcv!.id : null,
           tasa_bcv_aplicada: moeda === "VES" ? cotacaoBcv!.tasa_ves : null,
           valor_equivalente_usd: valorEquivalenteUsd,
-          data_pagamento: new Date(`${dataPagamento}T00:00:00Z`).toISOString(),
+          data_pagamento: combinarDataComHoraAtual(dataPagamento).toISOString(),
           forma_pagamento: formaPagamento,
           referencia_bancaria: referenciaBancaria.trim() || null,
           observacao: observacao.trim() || null,

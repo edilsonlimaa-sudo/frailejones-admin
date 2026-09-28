@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { LiquidacoesManager } from "@/components/admin/liquidacoes/liquidacoes-manager";
 import type { Liquidacao } from "@/lib/types/pagamentos";
 
+// pagamento_cobrancas.pagamento_id é UNIQUE, então o embed reverso (a partir de pagamentos)
+// vem como objeto único (ou null), não array
 type PagamentoRow = Omit<Liquidacao, "cobranca"> & {
-  pagamento_cobrancas: { cobranca: Liquidacao["cobranca"] }[];
+  pagamento_cobrancas: { cobranca: Liquidacao["cobranca"] } | null;
 };
 
 export default async function LiquidacoesPage() {
@@ -27,7 +29,7 @@ export default async function LiquidacoesPage() {
   const liquidacoes: Liquidacao[] = (pagamentos ?? []).map(
     ({ pagamento_cobrancas, ...pagamento }) => ({
       ...pagamento,
-      cobranca: pagamento_cobrancas[0]?.cobranca ?? null,
+      cobranca: pagamento_cobrancas?.cobranca ?? null,
     }),
   );
 

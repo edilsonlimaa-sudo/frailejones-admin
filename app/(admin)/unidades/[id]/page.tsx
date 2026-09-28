@@ -26,12 +26,14 @@ type CobrancaRow = Omit<
   }[];
 };
 
+// pagamento_cobrancas.pagamento_id é UNIQUE, então o embed reverso (a partir de pagamentos)
+// vem como objeto único (ou null), não array
 type CreditoRow = Omit<CreditoMovimentacao, "pagamento"> & {
   pagamento:
     | {
         id: string;
         data_pagamento: string;
-        pagamento_cobrancas: { cobranca: CreditoOrigemCobranca | null }[];
+        pagamento_cobrancas: { cobranca: CreditoOrigemCobranca | null } | null;
       }
     | null;
 };
@@ -117,7 +119,7 @@ export default async function UnidadeDetailPage({
       ? {
           id: pagamento.id,
           data_pagamento: pagamento.data_pagamento,
-          cobranca: pagamento.pagamento_cobrancas[0]?.cobranca ?? null,
+          cobranca: pagamento.pagamento_cobrancas?.cobranca ?? null,
         }
       : null,
   }));
