@@ -31,7 +31,12 @@
     "taxasCondominio": "Cuotas de Condominio",
     "rateiosExtraordinarios": "Prorrateos Extraordinarios",
     "liquidacoes": "Liquidaciones",
-    "cotacaoBcv": "Cotización BCV"
+    "cotacaoBcv": "Cotización BCV",
+    "groups": {
+      "cadastros": "Registros",
+      "financeiro": "Financiero"
+    },
+    "account": "Cuenta"
   },
   "cobrancas": {
     "tipo": {

@@ -6,15 +6,19 @@ import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 
-export function LogoutButton() {
+export function useLogout() {
   const router = useRouter()
-  const t = useTranslations('auth.logout')
 
-  const logout = async () => {
+  return async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/auth/login')
   }
+}
+
+export function LogoutButton() {
+  const logout = useLogout()
+  const t = useTranslations('auth.logout')
 
   return <Button onClick={logout}>{t('signOut')}</Button>
 }

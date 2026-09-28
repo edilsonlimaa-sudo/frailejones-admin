@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
 
 import { AppSidebar } from "@/components/admin/app-sidebar";
+import { HeaderTitle } from "@/components/admin/header-title";
 import { createClient } from "@/lib/supabase/server";
 import { ModeToggle } from "@/components/mode-toggle";
 import { LocaleSwitcher } from "@/components/locale-switcher";
@@ -18,7 +18,6 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const t = await getTranslations("nav");
 
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims) {
@@ -32,7 +31,7 @@ export default async function AdminLayout({
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
-          <span className="text-sm font-medium">{t("painel")}</span>
+          <HeaderTitle />
           <div className="ml-auto flex items-center gap-1">
             <LocaleSwitcher />
             <ModeToggle />
