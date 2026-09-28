@@ -79,6 +79,8 @@
     "description": "Registro de las unidades del condominio.",
     "newUnit": "Nueva unidad",
     "noUnits": "Ninguna unidad registrada.",
+    "searchPlaceholder": "Buscar por identificación o propietario...",
+    "noSearchResults": "No se encontró ninguna unidad para esa búsqueda.",
     "identification": "Identificación",
     "owner": "Propietario",
     "viewDetails": "Ver detalles",

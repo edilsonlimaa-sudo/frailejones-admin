@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardAction,
@@ -53,6 +54,7 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
   const tCommon = useTranslations("common");
   const [unidadesList, setUnidadesList] = useState(unidades);
   const [proprietariosList, setProprietariosList] = useState(proprietarios);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingUnidade, setEditingUnidade] = useState<Unidade | null>(null);
@@ -105,6 +107,15 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
     }
   };
 
+  const normalizedSearch = searchTerm.trim().toLocaleLowerCase();
+  const filteredUnidades = normalizedSearch
+    ? unidadesList.filter(
+        (unidade) =>
+          unidade.identificacao.toLocaleLowerCase().includes(normalizedSearch) ||
+          (unidade.proprietario?.nome.toLocaleLowerCase().includes(normalizedSearch) ?? false),
+      )
+    : unidadesList;
+
   return (
     <>
       <Card>
@@ -119,8 +130,18 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
           </CardAction>
         </CardHeader>
         <CardContent>
+          <Input
+            type="search"
+            placeholder={t("searchPlaceholder")}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mb-4"
+            aria-label={t("searchPlaceholder")}
+          />
           {unidadesList.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noUnits")}</p>
+          ) : filteredUnidades.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("noSearchResults")}</p>
           ) : (
             <Table>
               <TableHeader>
@@ -131,7 +152,7 @@ export function UnidadesManager({ unidades, proprietarios }: UnidadesManagerProp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {unidadesList.map((unidade) => (
+                {filteredUnidades.map((unidade) => (
                   <TableRow key={unidade.id}>
                     <TableCell className="font-medium">
                       <Link href={`/unidades/${unidade.id}`} className="hover:underline">

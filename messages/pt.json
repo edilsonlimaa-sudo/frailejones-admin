@@ -79,6 +79,8 @@
     "description": "Cadastro das unidades do condomínio.",
     "newUnit": "Nova unidade",
     "noUnits": "Nenhuma unidade cadastrada.",
+    "searchPlaceholder": "Buscar por identificação ou proprietário...",
+    "noSearchResults": "Nenhuma unidade encontrada para essa busca.",
     "identification": "Identificação",
     "owner": "Proprietário",
     "viewDetails": "Ver detalhes",
