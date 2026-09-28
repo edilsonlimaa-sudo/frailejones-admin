@@ -292,6 +292,7 @@
     "penaltyInterest": "Multa + juros",
     "updatedTotal": "Total atualizado",
     "unit": "Unidade",
+    "owner": "Proprietário",
     "status": "Status",
     "creditApplied": "Crédito: -{value}",
     "linkedUnitsDescription": "Unidades marcadas recebem cobrança ordinária desta taxa a cada emissão mensal."

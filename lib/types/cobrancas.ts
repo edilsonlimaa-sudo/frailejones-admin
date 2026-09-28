@@ -42,6 +42,7 @@ export type CobrancaDoRateio = {
 export type UnidadeCobrancaDoMes = {
   unidade_id: string;
   unidade_identificacao: string;
+  unidade_proprietario_nome: string | null;
   cobranca: {
     id: string;
     valor_usd: number;

@@ -292,6 +292,7 @@
     "penaltyInterest": "Multa + intereses",
     "updatedTotal": "Total actualizado",
     "unit": "Unidad",
+    "owner": "Propietario",
     "status": "Estado",
     "creditApplied": "Crédito: -{value}",
     "linkedUnitsDescription": "Las unidades marcadas reciben cobro ordinario de esta cuota en cada emisión mensual."

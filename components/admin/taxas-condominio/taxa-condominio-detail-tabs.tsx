@@ -233,7 +233,19 @@ export async function TaxaCondominioDetailTabs({
                     return (
                       <div key={cobranca.id} className="rounded-lg border border-input p-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium">{item.unidade_identificacao}</span>
+                          <div>
+                            <Link
+                              href={`/unidades/${item.unidade_id}`}
+                              className="font-medium underline-offset-2 hover:underline"
+                            >
+                              {item.unidade_identificacao}
+                            </Link>
+                            {item.unidade_proprietario_nome && (
+                              <span className="block text-xs text-muted-foreground">
+                                {item.unidade_proprietario_nome}
+                              </span>
+                            )}
+                          </div>
                           <Badge variant={statusVariant[cobranca.status]}>
                             {statusLabel[cobranca.status]}
                           </Badge>
@@ -297,6 +309,7 @@ export async function TaxaCondominioDetailTabs({
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("unit")}</TableHead>
+                      <TableHead>{t("owner")}</TableHead>
                       <TableHead>{t("value")}</TableHead>
                       <TableHead>{t("paidValue")}</TableHead>
                       <TableHead>{t("balance")}</TableHead>
@@ -316,7 +329,15 @@ export async function TaxaCondominioDetailTabs({
 
                       return (
                         <TableRow key={cobranca.id}>
-                          <TableCell className="font-medium">{item.unidade_identificacao}</TableCell>
+                          <TableCell className="font-medium">
+                            <Link
+                              href={`/unidades/${item.unidade_id}`}
+                              className="underline-offset-2 hover:underline"
+                            >
+                              {item.unidade_identificacao}
+                            </Link>
+                          </TableCell>
+                          <TableCell>{item.unidade_proprietario_nome ?? "—"}</TableCell>
                           <TableCell>
                             {currencyFormatter.format(cobranca.valor_usd)}
                             {cobranca.valor_credito_abatido_usd > 0 && (

@@ -42,7 +42,7 @@ type CobrancaRow = {
   pct_multa_atraso: number;
   pct_juros_diario: number;
   status: "pendente" | "pago" | "cancelado";
-  unidade: { id: string; identificacao: string } | null;
+  unidade: { id: string; identificacao: string; proprietario: { nome: string } | null } | null;
   pagamento_cobrancas: {
     valor_principal_abatido_usd: number;
     valor_juros_pago_usd: number;
@@ -112,13 +112,15 @@ export default async function TaxaCondominioDetalhePage({
       >(),
     supabase
       .from("taxa_condominio_unidades")
-      .select("unidade:unidades(id, identificacao)")
+      .select("unidade:unidades(id, identificacao, proprietario:proprietarios(nome))")
       .eq("taxa_condominio_id", id)
-      .returns<{ unidade: { id: string; identificacao: string } | null }[]>(),
+      .returns<
+        { unidade: { id: string; identificacao: string; proprietario: { nome: string } | null } | null }[]
+      >(),
     supabase
       .from("cobrancas")
       .select(
-        "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
+        "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
       )
       .eq("taxa_condominio_id", id)
       .eq("competencia", competencia)
@@ -155,7 +157,9 @@ export default async function TaxaCondominioDetalhePage({
 
   const unidadesVinculadas = (vinculosRaw ?? [])
     .map((v) => v.unidade)
-    .filter((u): u is { id: string; identificacao: string } => u !== null)
+    .filter(
+      (u): u is { id: string; identificacao: string; proprietario: { nome: string } | null } => u !== null,
+    )
     .sort((a, b) => a.identificacao.localeCompare(b.identificacao));
 
   const cobrancasPorUnidade = new Map((cobrancasRaw ?? []).map((c) => [c.unidade?.id, c]));
@@ -166,7 +170,9 @@ export default async function TaxaCondominioDetalhePage({
   const unidadesEscopo = competenciaFaturada
     ? (cobrancasRaw ?? [])
         .map((c) => c.unidade)
-        .filter((u): u is { id: string; identificacao: string } => u !== null)
+        .filter(
+          (u): u is { id: string; identificacao: string; proprietario: { nome: string } | null } => u !== null,
+        )
         .sort((a, b) => a.identificacao.localeCompare(b.identificacao))
     : unidadesVinculadas;
 
@@ -175,6 +181,7 @@ export default async function TaxaCondominioDetalhePage({
     return {
       unidade_id: unidade.id,
       unidade_identificacao: unidade.identificacao,
+      unidade_proprietario_nome: unidade.proprietario?.nome ?? null,
       cobranca: cobranca
         ? {
             id: cobranca.id,
