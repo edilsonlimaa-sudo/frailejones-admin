@@ -285,6 +285,8 @@
     "pending": "Pendentes",
     "notIssued": "Não emitidas",
     "issuedChargesTitle": "Cobranças emitidas — {month}",
+    "searchPlaceholder": "Buscar por unidade ou proprietário...",
+    "noSearchResults": "Nenhuma cobrança encontrada para essa busca.",
     "noLinkedUnits": "Nenhuma unidade vinculada a esta taxa no momento.",
     "noChargesYet": "Nenhuma cobrança emitida ainda para {month}.",
     "value": "Valor",
