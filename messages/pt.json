@@ -134,7 +134,8 @@
       "document": "Documento",
       "phone": "Telefone (WhatsApp)",
       "email": "Email",
-      "creditBalance": "Saldo a favor (USD)",
+      "creditBalanceUsd": "Saldo a favor (USD)",
+      "creditBalanceVes": "Saldo a favor (VES)",
       "createdAt": "Criada em"
     },
     "charges": {
@@ -151,12 +152,13 @@
       "actions": "Ações"
     },
     "credits": {
-      "empty": "Nenhuma movimentação de crédito para esta unidade.",
+      "walletUsd": "Carteira USD",
+      "walletVes": "Carteira VES",
+      "emptyUsd": "Nenhuma movimentação na carteira USD.",
+      "emptyVes": "Nenhuma movimentação na carteira VES.",
       "date": "Data",
       "type": "Tipo",
       "value": "Valor",
-      "equivalentUsd": "Equivalente USD",
-      "todayRate": "cotação de hoje: {rate} VES/USD",
       "origin": "Origem (pagamento)",
       "appliedTo": "Aplicado na cobrança",
       "originHeader": "Origem / Cobrança aplicada",

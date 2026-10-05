@@ -9,18 +9,20 @@ type AplicarSaldoAFavorParams = {
   descricaoCobranca: string;
 };
 
-// abatimento direto do principal (não é um pagamento): soma ENTRADA - SAIDA de creditos_movimentacoes
-// da unidade e aplica o que houver disponível na cobrança recém-emitida, registrando a contrapartida
-// como SAIDA vinculada à cobrança. Devolve o valor efetivamente aplicado (0 se não havia saldo).
-// saldo em VES não congela tasa: é revalorizado em USD sempre pela cotação BCV mais recente,
-// pra não distorcer o poder de compra de um saldo ainda não consumido.
+// Calcula o saldo disponível de cada carteira (USD e VES convertido para USD pela cotação atual),
+// aplica o crédito disponível na cobrança recém-emitida e registra SAÍDAs na moeda correta de
+// cada carteira — nunca mistura moedas. Devolve o valor efetivamente aplicado em USD (0 se não
+// havia saldo). Estratégia: consome primeiro a carteira USD e complementa com VES se necessário.
 export async function aplicarSaldoAFavor(
   supabase: SupabaseClient,
   { unidadeId, cobrancaId, valorCobrancaUsd, descricaoCobranca }: AplicarSaldoAFavorParams,
 ): Promise<number> {
   const [{ data: movimentacoes, error: saldoError }, { data: cotacaoAtual, error: cotacaoError }] =
     await Promise.all([
-      supabase.from("creditos_movimentacoes").select("tipo, moeda, valor").eq("unidade_id", unidadeId),
+      supabase
+        .from("creditos_movimentacoes")
+        .select("tipo, moeda, valor")
+        .eq("unidade_id", unidadeId),
       supabase
         .from("cotacao_bcv")
         .select("tasa_ves")
@@ -31,21 +33,31 @@ export async function aplicarSaldoAFavor(
   if (saldoError) throw saldoError;
   if (cotacaoError) throw cotacaoError;
 
-  const saldoDisponivel = (movimentacoes ?? []).reduce((acc, movimentacao) => {
-    const valorUsd =
-      movimentacao.moeda === "VES"
-        ? cotacaoAtual
-          ? movimentacao.valor / cotacaoAtual.tasa_ves
-          : 0
-        : movimentacao.valor;
-    return acc + (movimentacao.tipo === "ENTRADA" ? valorUsd : -valorUsd);
-  }, 0);
+  const lista = movimentacoes ?? [];
 
-  const valorAplicado = Number(Math.max(Math.min(saldoDisponivel, valorCobrancaUsd), 0).toFixed(2));
+  // Saldo líquido de cada carteira na própria moeda
+  const saldoUsd = lista
+    .filter((m) => m.moeda === "USD")
+    .reduce((acc, m) => acc + (m.tipo === "ENTRADA" ? m.valor : -m.valor), 0);
+
+  const saldoVes = lista
+    .filter((m) => m.moeda === "VES")
+    .reduce((acc, m) => acc + (m.tipo === "ENTRADA" ? m.valor : -m.valor), 0);
+
+  // Converte o saldo VES para USD (sem congelar tasa — é saldo ainda não consumido)
+  const saldoVesEmUsd =
+    cotacaoAtual && saldoVes > 0 ? saldoVes / cotacaoAtual.tasa_ves : 0;
+
+  const saldoTotalDisponivel = Math.max(saldoUsd, 0) + Math.max(saldoVesEmUsd, 0);
+  const valorAplicado = Number(
+    Math.max(Math.min(saldoTotalDisponivel, valorCobrancaUsd), 0).toFixed(2),
+  );
+
   if (valorAplicado <= 0) return 0;
 
   const quitaIntegralmente = valorAplicado >= valorCobrancaUsd - 0.01;
 
+  // Atualiza a cobrança
   const { error: updateError } = await supabase
     .from("cobrancas")
     .update({
@@ -55,15 +67,42 @@ export async function aplicarSaldoAFavor(
     .eq("id", cobrancaId);
   if (updateError) throw updateError;
 
-  const { error: creditoError } = await supabase.from("creditos_movimentacoes").insert({
-    unidade_id: unidadeId,
-    tipo: "SAIDA",
-    moeda: "USD",
-    valor: valorAplicado,
-    cobranca_id: cobrancaId,
-    descricao: `Aplicado na cobrança "${descricaoCobranca}"`,
-  });
-  if (creditoError) throw creditoError;
+  // Registra as SAÍDAs — primeiro esgota USD, depois complementa com VES
+  let restanteUsd = valorAplicado;
+
+  // SAÍDA da carteira USD
+  const saidaUsd = Number(Math.min(Math.max(saldoUsd, 0), restanteUsd).toFixed(2));
+  if (saidaUsd > 0) {
+    const { error } = await supabase.from("creditos_movimentacoes").insert({
+      unidade_id: unidadeId,
+      tipo: "SAIDA",
+      moeda: "USD",
+      valor: saidaUsd,
+      cobranca_id: cobrancaId,
+      descricao: `Aplicado na cobrança "${descricaoCobranca}"`,
+    });
+    if (error) throw error;
+    restanteUsd -= saidaUsd;
+  }
+
+  // SAÍDA da carteira VES (complemento, se necessário)
+  if (restanteUsd > 0.001 && cotacaoAtual && saldoVes > 0) {
+    // reconverte o restante em VES usando a cotação atual
+    const saidaVes = Number(
+      Math.min(saldoVes, restanteUsd * cotacaoAtual.tasa_ves).toFixed(2),
+    );
+    if (saidaVes > 0) {
+      const { error } = await supabase.from("creditos_movimentacoes").insert({
+        unidade_id: unidadeId,
+        tipo: "SAIDA",
+        moeda: "VES",
+        valor: saidaVes,
+        cobranca_id: cobrancaId,
+        descricao: `Aplicado na cobrança "${descricaoCobranca}"`,
+      });
+      if (error) throw error;
+    }
+  }
 
   return valorAplicado;
 }
