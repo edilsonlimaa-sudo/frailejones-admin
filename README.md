@@ -47,7 +47,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Publishable key do db:status>
 ```
 
 Apague o arquivo para voltar a usar o projeto remoto. O seed cria só as 288
-unidades (`supabase/snippets/seed_288_unidades.sql`) e um usuário admin (`supabase/seed.sql` — as
+unidades (`supabase/seeds/unidades.sql`) e um usuário admin (`supabase/seed.sql` — as
 credenciais estão no topo do arquivo). Taxas, cotações BCV e créditos são cadastrados pelo app.
 
 Migrations novas vão em `supabase/migrations/`. Teste localmente com `npm run db:reset` e depois

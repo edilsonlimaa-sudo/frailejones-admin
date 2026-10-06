@@ -1,10 +1,12 @@
--- Seed do ambiente LOCAL (supabase start / supabase db reset). Nunca rode no projeto remoto.
--- Roda depois de snippets/seed_288_unidades.sql (ver [db.seed] em config.toml).
+-- Seed de desenvolvimento e teste: roda no `supabase db reset` local e no `db reset --linked` do
+-- projeto remoto de teste. Roda depois de seeds/unidades.sql (ver [db.seed] em config.toml).
 --
--- Só cria o usuário admin e a URL usada pelo cron da cotação BCV; taxas, cotações e créditos são
--- cadastrados pelo app.
+-- Só cria o usuário admin; taxas, cotações e créditos são cadastrados pelo app.
 --
--- Usuário admin de desenvolvimento (só existe no banco local):
+-- ATENÇÃO: a senha está no repositório. Quando o remoto virar produção de verdade, tire este
+-- arquivo do [db.seed] e apague esse usuário lá.
+--
+-- Usuário admin de desenvolvimento:
 --   e-mail: admin@frailejones.test
 --   senha:  admin-local-123
 
@@ -42,9 +44,3 @@ values (
   now(),
   now()
 );
-
--- ============================================================
--- URL DO PROJETO PRO CRON DA COTAÇÃO BCV (ver migration agendar_atualizacao_cotacao_bcv)
--- kong é o gateway da API dentro da rede Docker do Supabase local
--- ============================================================
-select vault.create_secret('http://kong:8000', 'project_url');
