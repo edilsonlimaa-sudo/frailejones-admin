@@ -83,6 +83,7 @@ export type PagamentoDaCobranca = {
   observacao: string | null;
   valor_principal_abatido_usd: number;
   valor_juros_pago_usd: number;
-  // sobra do pagamento que virou crédito da unidade (creditos_movimentacoes ENTRADA vinculada a este pagamento)
-  creditoGeradoUsd: number;
+  // sobra do pagamento que virou saldo a favor da unidade, na moeda da carteira onde entrou
+  // (creditos_movimentacoes ENTRADA vinculadas a este pagamento)
+  creditosGerados: { valor: number; moeda: MoedaTipo }[];
 };

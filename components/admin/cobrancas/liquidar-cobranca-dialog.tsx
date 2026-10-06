@@ -3,12 +3,20 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import type { MoedaTipo } from "@/lib/types/creditos";
 import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
-import { INTL_LOCALE } from "@/lib/intl-locale";
+import {
+  SIMBOLO_MOEDA,
+  SOBRA_MINIMA_USD,
+  formatBs,
+  formatMoeda,
+  formatTasa,
+  formatUsd,
+} from "@/lib/moeda";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +30,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const formasPagamento: FormaPagamentoTipo[] = ["pago_movil", "transferencia", "efectivo_usd", "zelle"];
+// cada forma de pagamento só existe numa moeda (pago móvil é sempre em bolívares, Zelle e
+// efectivo sempre em dólares); transferência existe nas duas. A primeira da lista é o padrão.
+const formasPorMoeda: Record<MoedaTipo, FormaPagamentoTipo[]> = {
+  VES: ["pago_movil", "transferencia"],
+  USD: ["zelle", "efectivo_usd", "transferencia"],
+};
 
 // a data é escolhida pelo usuário (permite backdating), mas a hora usa o momento exato do
 // registro — sem isso, todo pagamento gravava meia-noite UTC e a UI sempre mostrava o mesmo
@@ -34,8 +47,14 @@ function combinarDataComHoraAtual(dataIso: string): Date {
   return dataCompleta;
 }
 
+function hojeLocalIso() {
+  const hoje = new Date();
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+}
+
+const round2 = (valor: number) => Math.round(valor * 100) / 100;
+
 type LiquidarCobrancaDialogProps = {
-  unidadeId: string;
   cobrancaId: string;
   descricao: string;
   saldoDevedorUsd: number;
@@ -45,7 +64,6 @@ type LiquidarCobrancaDialogProps = {
 };
 
 export function LiquidarCobrancaDialog({
-  unidadeId,
   cobrancaId,
   descricao,
   saldoDevedorUsd,
@@ -63,11 +81,16 @@ export function LiquidarCobrancaDialog({
         {t("trigger")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex max-h-[85dvh] max-w-lg flex-col">
+        {/* no celular vira um painel preso na base da tela (mais fácil de alcançar com o polegar) */}
+        <DialogContent
+          className={cn(
+            "flex max-h-[90dvh] flex-col gap-5 sm:max-w-lg",
+            "max-sm:top-auto max-sm:bottom-0 max-sm:max-w-full max-sm:translate-y-0 max-sm:rounded-b-none max-sm:px-4 max-sm:pb-[max(1rem,env(safe-area-inset-bottom))]",
+          )}
+        >
           {/* remount com estado limpo sempre que o dialog abre (evita setState em effect) */}
           <LiquidarCobrancaForm
             key={open ? "open" : "closed"}
-            unidadeId={unidadeId}
             cobrancaId={cobrancaId}
             descricao={descricao}
             saldoDevedorUsd={saldoDevedorUsd}
@@ -83,7 +106,6 @@ export function LiquidarCobrancaDialog({
 }
 
 type LiquidarCobrancaFormProps = {
-  unidadeId: string;
   cobrancaId: string;
   descricao: string;
   saldoDevedorUsd: number;
@@ -94,7 +116,6 @@ type LiquidarCobrancaFormProps = {
 };
 
 function LiquidarCobrancaForm({
-  unidadeId,
   cobrancaId,
   descricao,
   saldoDevedorUsd,
@@ -103,58 +124,62 @@ function LiquidarCobrancaForm({
   onClose,
   onSaved,
 }: LiquidarCobrancaFormProps) {
-  const totalDevidoUsd = Number((saldoDevedorUsd + encargosUsd).toFixed(2));
+  const totalDevidoUsd = round2(saldoDevedorUsd + encargosUsd);
   const t = useTranslations("liquidarCobranca");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
-  const currencyFormatter = new Intl.NumberFormat(INTL_LOCALE[locale as keyof typeof INTL_LOCALE], {
-    style: "currency",
-    currency: "USD",
-  });
-  const formaPagamentoLabel: Record<FormaPagamentoTipo, string> = {
-    pago_movil: t("paymentMethod.pago_movil"),
-    transferencia: t("paymentMethod.transferencia"),
-    efectivo_usd: t("paymentMethod.efectivo_usd"),
-    zelle: t("paymentMethod.zelle"),
-  };
 
-  const [moeda, setMoeda] = useState<MoedaTipo>("USD");
-  const [valorRecebido, setValorRecebido] = useState(totalDevidoUsd.toFixed(2));
-  const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoTipo>("pago_movil");
-  const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().slice(0, 10));
-  const [showDetalhes, setShowDetalhes] = useState(false);
+  // total devido convertido pra moeda do pagamento: é a sugestão do campo de valor
+  const totalNaMoeda = (moeda: MoedaTipo) =>
+    moeda === "VES" && cotacaoBcv ? round2(totalDevidoUsd * cotacaoBcv.tasa_ves) : totalDevidoUsd;
+
+  // a maioria dos pagamentos é em bolívares; sem cotação, só dá pra receber em dólares
+  const moedaInicial: MoedaTipo = cotacaoBcv ? "VES" : "USD";
+  const [moeda, setMoeda] = useState<MoedaTipo>(moedaInicial);
+  const [valorRecebido, setValorRecebido] = useState(totalNaMoeda(moedaInicial).toFixed(2));
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoTipo>(formasPorMoeda[moedaInicial][0]);
+  const [dataPagamento, setDataPagamento] = useState(hojeLocalIso);
   const [referenciaBancaria, setReferenciaBancaria] = useState("");
+  const [showObservacao, setShowObservacao] = useState(false);
   const [observacao, setObservacao] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleMoedaChange = (novaMoeda: MoedaTipo) => {
+    if (novaMoeda === moeda) return;
     setMoeda(novaMoeda);
     // ao trocar de moeda, sugere de novo o total devido já convertido (usuário pode ajustar depois)
-    const sugestao =
-      novaMoeda === "VES" && cotacaoBcv
-        ? totalDevidoUsd * cotacaoBcv.tasa_ves
-        : totalDevidoUsd;
-    setValorRecebido(sugestao.toFixed(2));
+    setValorRecebido(totalNaMoeda(novaMoeda).toFixed(2));
+    if (!formasPorMoeda[novaMoeda].includes(formaPagamento)) {
+      setFormaPagamento(formasPorMoeda[novaMoeda][0]);
+    }
   };
 
+  // prévia da alocação com as mesmas regras e arredondamentos de liquidar_cobranca (a função
+  // recalcula tudo no banco; aqui é só pra mostrar o resultado antes de confirmar)
   const valorRecebidoNumero = Number(valorRecebido) || 0;
   const valorEquivalenteUsd =
     moeda === "USD"
       ? valorRecebidoNumero
       : cotacaoBcv
-        ? Number((valorRecebidoNumero / cotacaoBcv.tasa_ves).toFixed(2))
+        ? round2(valorRecebidoNumero / cotacaoBcv.tasa_ves)
         : 0;
-
   const valorJurosPago = Math.min(valorEquivalenteUsd, encargosUsd);
-  const valorPrincipalAbatido = Math.min(
-    Math.max(valorEquivalenteUsd - valorJurosPago, 0),
-    saldoDevedorUsd,
-  );
-  const sobraUsd = Number(
-    Math.max(valorEquivalenteUsd - valorJurosPago - valorPrincipalAbatido, 0).toFixed(2),
-  );
-  const quitaCobranca = valorPrincipalAbatido >= saldoDevedorUsd - 0.01;
+  const valorPrincipalAbatido = Math.min(Math.max(valorEquivalenteUsd - valorJurosPago, 0), saldoDevedorUsd);
+  const valorAlocadoUsd = valorJurosPago + valorPrincipalAbatido;
+  // o que sobra depois de quitar, na MESMA moeda do pagamento; em bolívares é calculado sobre os
+  // Bs. recebidos, não convertido de volta a partir do equivalente em dólares
+  const sobraUsd = round2(valorEquivalenteUsd - valorAlocadoUsd);
+  const faltandoUsd = round2(totalDevidoUsd - valorAlocadoUsd);
+  const sobraNaMoeda =
+    faltandoUsd > 0
+      ? 0
+      : moeda === "VES" && cotacaoBcv
+        ? round2(valorRecebidoNumero - round2(valorAlocadoUsd * cotacaoBcv.tasa_ves))
+        : sobraUsd;
+  // como no banco: só vira saldo a favor a partir de SOBRA_MINIMA_USD (equivalente em dólar);
+  // abaixo disso fica absorvida no pagamento e o modal avisa antes de confirmar
+  const sobraViraSaldo = sobraUsd >= SOBRA_MINIMA_USD;
+  const precisaReferencia = formaPagamento !== "efectivo_usd";
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -173,60 +198,22 @@ function LiquidarCobrancaForm({
     setError(null);
 
     try {
-      const { data: pagamento, error: pagamentoError } = await supabase
-        .from("pagamentos")
-        .insert({
-          unidade_id: unidadeId,
-          moeda,
-          valor_recebido: valorRecebidoNumero,
-          cotacao_bcv_id: moeda === "VES" ? cotacaoBcv!.id : null,
-          tasa_bcv_aplicada: moeda === "VES" ? cotacaoBcv!.tasa_ves : null,
-          valor_equivalente_usd: valorEquivalenteUsd,
-          data_pagamento: combinarDataComHoraAtual(dataPagamento).toISOString(),
-          forma_pagamento: formaPagamento,
-          referencia_bancaria: referenciaBancaria.trim() || null,
-          observacao: observacao.trim() || null,
-        })
-        .select("id")
-        .single();
-
-      if (pagamentoError) throw pagamentoError;
-
-      const { error: alocacaoError } = await supabase.from("pagamento_cobrancas").insert({
-        pagamento_id: pagamento.id,
-        cobranca_id: cobrancaId,
-        valor_principal_abatido_usd: valorPrincipalAbatido,
-        valor_juros_pago_usd: valorJurosPago,
+      // pagamento, alocação, sobra na carteira e status numa única transação (ver
+      // liquidar_cobranca na migration). Os valores calculados aqui são só prévia da tela: a
+      // função recalcula a alocação a partir do saldo devedor atual da cobrança
+      const { error: liquidarError } = await supabase.rpc("liquidar_cobranca", {
+        p_cobranca_id: cobrancaId,
+        p_moeda: moeda,
+        p_valor_recebido: valorRecebidoNumero,
+        p_cotacao_bcv_id: moeda === "VES" ? cotacaoBcv!.id : null,
+        p_encargos_usd: encargosUsd,
+        p_data_pagamento: combinarDataComHoraAtual(dataPagamento).toISOString(),
+        p_forma_pagamento: formaPagamento,
+        p_referencia_bancaria: (precisaReferencia && referenciaBancaria.trim()) || null,
+        p_observacao: observacao.trim() || null,
       });
 
-      if (alocacaoError) throw alocacaoError;
-
-      if (sobraUsd > 0) {
-        // sobra registrada na MESMA moeda do pagamento (evita perder a referência de que o
-        // excedente foi de fato recebido em VES, mesmo convertendo pra USD internamente)
-        const sobraNaMoedaOriginal =
-          moeda === "VES" ? Number((sobraUsd * cotacaoBcv!.tasa_ves).toFixed(2)) : sobraUsd;
-
-        const { error: creditoError } = await supabase.from("creditos_movimentacoes").insert({
-          unidade_id: unidadeId,
-          tipo: "ENTRADA",
-          moeda,
-          valor: sobraNaMoedaOriginal,
-          pagamento_id: pagamento.id,
-          descricao: `Sobra do pagamento da cobrança "${descricao}"`,
-        });
-
-        if (creditoError) throw creditoError;
-      }
-
-      if (quitaCobranca) {
-        const { error: statusError } = await supabase
-          .from("cobrancas")
-          .update({ status: "pago" })
-          .eq("id", cobrancaId);
-
-        if (statusError) throw statusError;
-      }
+      if (liquidarError) throw liquidarError;
 
       toast.success(t("successMessage"));
       onSaved();
@@ -240,149 +227,231 @@ function LiquidarCobrancaForm({
 
   return (
     <>
-      <DialogHeader>
+      <DialogHeader className="pr-8">
         <DialogTitle>{t("title")}</DialogTitle>
         <DialogDescription>{descricao}</DialogDescription>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
-        <div className="-m-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-1">
-          <div className="rounded-lg border border-input bg-muted/30 p-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("totalDueToday")}</span>
-              <span className="font-medium">{currencyFormatter.format(totalDevidoUsd)}</span>
-            </div>
-            {encargosUsd > 0 && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("includesPenalty", { value: currencyFormatter.format(encargosUsd) })}
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-5">
+        <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-1 pb-1">
+          {/* resumo do que é devido */}
+          <section className="rounded-2xl bg-muted/50 p-4">
+            <p className="text-xs text-muted-foreground">{t("totalDueToday")}</p>
+            <p className="text-2xl font-semibold tabular-nums">{formatUsd(totalDevidoUsd)}</p>
+            {cotacaoBcv && (
+              <p className="text-sm text-muted-foreground tabular-nums">
+                {t("approxInBs", { value: formatBs(totalDevidoUsd * cotacaoBcv.tasa_ves) })}
               </p>
             )}
-          </div>
-
-          <div className="grid gap-2">
-            <Label>{t("currencyReceived")}</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant={moeda === "USD" ? "default" : "outline"}
-                onClick={() => handleMoedaChange("USD")}
-              >
-                USD
-              </Button>
-              <Button
-                type="button"
-                variant={moeda === "VES" ? "default" : "outline"}
-                disabled={!cotacaoBcv}
-                onClick={() => handleMoedaChange("VES")}
-              >
-                VES
-              </Button>
-            </div>
-            {!cotacaoBcv && (
-              <p className="text-xs text-muted-foreground">{t("noRateHint")}</p>
+            {encargosUsd > 0 && (
+              <dl className="mt-3 grid gap-1 border-t border-border pt-3 text-xs">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-foreground">{t("baseAmount")}</dt>
+                  <dd className="tabular-nums">{formatUsd(saldoDevedorUsd)}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-foreground">{t("penalty")}</dt>
+                  <dd className="tabular-nums">{formatUsd(encargosUsd)}</dd>
+                </div>
+              </dl>
             )}
-          </div>
+          </section>
 
+          {/* moeda */}
+          <fieldset className="grid gap-2">
+            <legend className="mb-2 text-sm font-medium">{t("currencyReceived")}</legend>
+            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted/50 p-1" role="radiogroup">
+              {(["VES", "USD"] as const).map((opcao) => {
+                const ativa = moeda === opcao;
+                const desabilitada = opcao === "VES" && !cotacaoBcv;
+                return (
+                  <button
+                    key={opcao}
+                    type="button"
+                    role="radio"
+                    aria-checked={ativa}
+                    aria-label={t(`currency.${opcao}`)}
+                    disabled={desabilitada}
+                    onClick={() => handleMoedaChange(opcao)}
+                    className={cn(
+                      "flex h-12 flex-col items-center justify-center rounded-xl text-sm transition-colors disabled:opacity-50",
+                      ativa
+                        ? "bg-background font-medium shadow-sm ring-1 ring-border"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <span>{t(`currency.${opcao}`)}</span>
+                    <span aria-hidden className="text-xs text-muted-foreground">
+                      {SIMBOLO_MOEDA[opcao]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {!cotacaoBcv && <p className="text-xs text-muted-foreground">{t("noRateHint")}</p>}
+          </fieldset>
+
+          {/* valor recebido + prévia do resultado */}
           <div className="grid gap-2">
-            <Label htmlFor="valor_recebido">{t("amountReceived", { moeda })}</Label>
-            <Input
-              id="valor_recebido"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0"
-              required
-              value={valorRecebido}
-              onChange={(e) => setValorRecebido(e.target.value)}
-            />
-            {moeda === "VES" && cotacaoBcv && (
-              <p className="text-xs text-muted-foreground">
-                {t("approxEquivalent", {
-                  value: currencyFormatter.format(valorEquivalenteUsd),
-                  rate: cotacaoBcv.tasa_ves,
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="valor_recebido">{t("amountReceived")}</Label>
+              {Number(valorRecebido) !== totalNaMoeda(moeda) && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0"
+                  onClick={() => setValorRecebido(totalNaMoeda(moeda).toFixed(2))}
+                >
+                  {t("useTotal")}
+                </Button>
+              )}
+            </div>
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-muted-foreground">
+                {SIMBOLO_MOEDA[moeda]}
+              </span>
+              <Input
+                id="valor_recebido"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                required
+                value={valorRecebido}
+                onChange={(e) => setValorRecebido(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                className={cn("h-12 text-lg tabular-nums", moeda === "VES" ? "pl-12" : "pl-9")}
+              />
+            </div>
+            {moeda === "VES" && cotacaoBcv && valorRecebidoNumero > 0 && (
+              <p className="text-xs text-muted-foreground tabular-nums">
+                {t("equivalentInUsd", {
+                  value: formatUsd(valorEquivalenteUsd),
+                  rate: formatTasa(cotacaoBcv.tasa_ves),
                 })}
               </p>
             )}
-            {sobraUsd > 0 && (
-              <p className="text-xs text-primary">
-                {t("surplusHint", { value: currencyFormatter.format(sobraUsd) })}
-              </p>
+            {valorRecebidoNumero > 0 && (
+              <div
+                className={cn(
+                  "grid gap-1 rounded-xl px-3 py-2 text-xs",
+                  faltandoUsd > 0 ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary",
+                )}
+              >
+                <p>
+                  {faltandoUsd > 0
+                    ? t("remaining", { value: formatUsd(faltandoUsd) })
+                    : sobraViraSaldo
+                      ? t(moeda === "VES" ? "surplusVes" : "surplusUsd", {
+                          value: formatMoeda(sobraNaMoeda, moeda),
+                        })
+                      : t("coversTotal")}
+                </p>
+                {!sobraViraSaldo && sobraNaMoeda > 0 && (
+                  <p className="text-muted-foreground">
+                    {t("surplusBelowMinimum", {
+                      value: formatMoeda(sobraNaMoeda, moeda),
+                      minimum: formatUsd(SOBRA_MINIMA_USD),
+                    })}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
-          <div className="grid gap-2">
-            <Label>{t("paymentMethodLabel")}</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {formasPagamento.map((forma) => (
+          {/* forma de pagamento: só as que existem na moeda escolhida */}
+          <fieldset className="grid gap-2">
+            <legend className="mb-2 text-sm font-medium">{t("paymentMethodLabel")}</legend>
+            <div className="flex flex-wrap gap-2">
+              {formasPorMoeda[moeda].map((forma) => (
                 <Button
                   key={forma}
                   type="button"
                   variant={formaPagamento === forma ? "default" : "outline"}
+                  aria-pressed={formaPagamento === forma}
+                  className="h-10 flex-1 basis-[calc(50%-0.25rem)] sm:basis-0"
                   onClick={() => setFormaPagamento(forma)}
                 >
-                  {formaPagamentoLabel[forma]}
+                  {t(`paymentMethod.${forma}`)}
                 </Button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
-          <div className="grid gap-2">
-            <Label htmlFor="data_pagamento">{t("paymentDateLabel")}</Label>
-            <Input
-              id="data_pagamento"
-              type="date"
-              required
-              value={dataPagamento}
-              onChange={(e) => setDataPagamento(e.target.value)}
-            />
-          </div>
-
-          {showDetalhes ? (
-            <>
+          <div className={cn("grid gap-4", precisaReferencia && "sm:grid-cols-2")}>
+            <div className="grid gap-2">
+              <Label htmlFor="data_pagamento">{t("paymentDateLabel")}</Label>
+              <Input
+                id="data_pagamento"
+                type="date"
+                required
+                max={hojeLocalIso()}
+                value={dataPagamento}
+                onChange={(e) => setDataPagamento(e.target.value)}
+                className="h-10"
+              />
+            </div>
+            {precisaReferencia && (
               <div className="grid gap-2">
-                <Label htmlFor="referencia_bancaria">{t("bankReferenceLabel")}</Label>
+                <Label htmlFor="referencia_bancaria">
+                  {t("bankReferenceLabel")}{" "}
+                  <span className="font-normal text-muted-foreground">({t("optional")})</span>
+                </Label>
                 <Input
                   id="referencia_bancaria"
+                  inputMode="numeric"
+                  autoComplete="off"
                   value={referenciaBancaria}
                   onChange={(e) => setReferenciaBancaria(e.target.value)}
+                  className="h-10"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="observacao">{t("observationLabel")}</Label>
-                <Textarea
-                  id="observacao"
-                  value={observacao}
-                  onChange={(e) => setObservacao(e.target.value)}
-                />
-              </div>
-            </>
+            )}
+          </div>
+
+          {showObservacao ? (
+            <div className="grid gap-2">
+              <Label htmlFor="observacao">{t("observationLabel")}</Label>
+              <Textarea
+                id="observacao"
+                autoFocus
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+              />
+            </div>
           ) : (
             <Button
               type="button"
               variant="link"
-              className="w-fit px-0"
-              onClick={() => setShowDetalhes(true)}
+              size="sm"
+              className="h-auto w-fit px-0"
+              onClick={() => setShowObservacao(true)}
             >
-              {t("showDetails")}
+              {t("addObservation")}
             </Button>
           )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-row gap-2">
           <Button
             type="button"
             variant="outline"
-            className="flex-1"
+            className="h-11 flex-1"
             onClick={onClose}
             disabled={isSubmitting}
           >
             {tCommon("cancel")}
           </Button>
-          <Button type="submit" className="flex-1" disabled={isSubmitting}>
+          <Button type="submit" className="h-11 flex-[2]" disabled={isSubmitting || valorRecebidoNumero <= 0}>
             {isSubmitting
               ? t("submitting")
-              : t("confirmButton", { value: currencyFormatter.format(valorEquivalenteUsd) })}
+              : t("confirmButton", { value: formatMoeda(valorRecebidoNumero, moeda) })}
           </Button>
         </DialogFooter>
       </form>

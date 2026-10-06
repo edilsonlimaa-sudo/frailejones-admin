@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
-import { aplicarSaldoAFavor } from "@/lib/creditos";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
 import type { Unidade } from "@/lib/types/unidades";
 import { Button } from "@/components/ui/button";
@@ -128,83 +127,31 @@ function RateioExtraordinarioFormFields({
     setError(null);
 
     try {
-      const payload = {
-        titulo: titulo.trim(),
-        descricao: descricao.trim() || null,
-        valor_total_usd: Number(valorTotalUsd),
-        valor_por_unidade_usd: valorPorUnidadeUsd,
-        data_vencimento: dataVencimento,
-        pct_multa_atraso: Number(pctMultaAtraso || 0),
-        pct_juros_diario: Number(pctJurosDiario || 0),
-        dias_graca: Number(diasGraca || 0),
-      };
-
-      const query = isEditing
-        ? supabase.from("despesas_extraordinarias").update(payload).eq("id", despesa!.id)
-        : supabase.from("despesas_extraordinarias").insert(payload);
-
-      const { data, error: saveError } = await query
-        .select(
-          "id, titulo, descricao, valor_total_usd, valor_por_unidade_usd, data_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, created_at",
-        )
-        .single();
+      // salva a despesa, sincroniza as unidades participantes e, na criação, emite uma cobrança
+      // por unidade já aplicando o saldo a favor — tudo numa única transação (ver
+      // salvar_rateio_extraordinario na migration)
+      const { data, error: saveError } = await supabase
+        .rpc("salvar_rateio_extraordinario", {
+          p_id: despesa?.id ?? null,
+          p_titulo: titulo.trim(),
+          p_descricao: descricao.trim() || null,
+          p_valor_total_usd: Number(valorTotalUsd),
+          p_valor_por_unidade_usd: valorPorUnidadeUsd,
+          p_data_vencimento: dataVencimento,
+          p_pct_multa_atraso: Number(pctMultaAtraso || 0),
+          p_pct_juros_diario: Number(pctJurosDiario || 0),
+          p_dias_graca: Number(diasGraca || 0),
+          p_unidade_ids: unidadeIds,
+        })
+        .single<Omit<DespesaExtraordinaria, "unidade_ids">>();
 
       if (saveError) throw saveError;
-
-      // sincroniza as unidades participantes: remove o vínculo anterior e recria com a seleção atual
-      const { error: deleteVinculosError } = await supabase
-        .from("despesa_extraordinaria_unidades")
-        .delete()
-        .eq("despesa_extraordinaria_id", data.id);
-      if (deleteVinculosError) throw deleteVinculosError;
-
-      const { error: insertVinculosError } = await supabase
-        .from("despesa_extraordinaria_unidades")
-        .insert(unidadeIds.map((unidadeId) => ({ despesa_extraordinaria_id: data.id, unidade_id: unidadeId })));
-      if (insertVinculosError) throw insertVinculosError;
-
-      let cobrancasGeradas = 0;
-      if (!isEditing) {
-        // diferente da taxa de condomínio, o rateio extraordinário já emite as cobranças no cadastro,
-        // uma para cada unidade participante selecionada
-        const { data: cobrancasCriadas, error: cobrancasError } = await supabase
-          .from("cobrancas")
-          .insert(
-            unidadeIds.map((unidadeId) => ({
-              unidade_id: unidadeId,
-              tipo: "extraordinaria" as const,
-              descricao: data.titulo,
-              competencia: data.data_vencimento,
-              valor_usd: data.valor_por_unidade_usd,
-              data_vencimento: data.data_vencimento,
-              pct_multa_atraso: data.pct_multa_atraso,
-              pct_juros_diario: data.pct_juros_diario,
-              dias_graca: data.dias_graca,
-              despesa_extraordinaria_id: data.id,
-            })),
-          )
-          .select("id, unidade_id");
-        if (cobrancasError) throw cobrancasError;
-        cobrancasGeradas = unidadeIds.length;
-
-        // aplica saldo a favor disponível (se houver) direto na emissão de cada cobrança
-        await Promise.all(
-          (cobrancasCriadas ?? []).map((cobranca) =>
-            aplicarSaldoAFavor(supabase, {
-              unidadeId: cobranca.unidade_id,
-              cobrancaId: cobranca.id,
-              valorCobrancaUsd: data.valor_por_unidade_usd,
-              descricaoCobranca: data.titulo,
-            }),
-          ),
-        );
-      }
 
       onSaved({ ...data, unidade_ids: unidadeIds });
       toast.success(
         isEditing
           ? t("updateSuccess")
-          : t("createSuccess", { count: cobrancasGeradas }),
+          : t("createSuccess", { count: unidadeIds.length }),
       );
       onClose();
     } catch (err: unknown) {

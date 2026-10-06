@@ -4,7 +4,7 @@ import { getTranslations, getLocale } from "next-intl/server";
 
 import type { UnidadeCobrancaDoMes } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
-import { encontrarTasaNaData, type CotacaoHistorico } from "@/lib/moeda";
+import { formatUsd, encontrarTasaNaData, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,6 @@ export async function TaxaCondominioDetailTabs({
   const t = await getTranslations("taxaCondominioDetail");
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
   const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short" });
   const cotacaoAtual = cotacoes[0] ?? null;
   const emitidas = unidadesDoMes.filter((u) => u.cobranca !== null);
@@ -162,11 +161,11 @@ export async function TaxaCondominioDetailTabs({
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
               <div>
                 <p className="text-xs text-muted-foreground">{t("collected")}</p>
-                <p className="font-medium">{currencyFormatter.format(valorArrecadado)}</p>
+                <p className="font-medium">{formatUsd(valorArrecadado)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t("issued")}</p>
-                <p className="font-medium">{currencyFormatter.format(valorEmitido)}</p>
+                <p className="font-medium">{formatUsd(valorEmitido)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t("paid")}</p>

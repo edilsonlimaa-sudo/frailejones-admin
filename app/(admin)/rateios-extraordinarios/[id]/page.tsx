@@ -6,7 +6,7 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaDoRateio, CobrancaStatus } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
-import { encontrarTasaNaData, formatVes } from "@/lib/moeda";
+import { formatUsd, encontrarTasaNaData, formatVes } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,6 @@ export default async function RateioExtraordinarioDetalhePage({
   const tCobrancas = await getTranslations("cobrancas.status");
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
   const statusLabel: Record<CobrancaStatus, string> = {
@@ -196,12 +195,12 @@ export default async function RateioExtraordinarioDetalhePage({
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <dt className="text-xs text-muted-foreground">{tRateio("totalValue")}</dt>
-              <dd className="font-medium">{currencyFormatter.format(despesa.valor_total_usd)}</dd>
+              <dd className="font-medium">{formatUsd(despesa.valor_total_usd)}</dd>
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">{tRateio("valuePerUnit")}</dt>
               <dd className="font-medium">
-                {currencyFormatter.format(despesa.valor_por_unidade_usd)}
+                {formatUsd(despesa.valor_por_unidade_usd)}
               </dd>
             </div>
             <div>
@@ -241,11 +240,11 @@ export default async function RateioExtraordinarioDetalhePage({
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <p className="text-xs text-muted-foreground">{tRateio("collected")}</p>
-              <p className="font-medium">{currencyFormatter.format(valorTotalArrecadado)}</p>
+              <p className="font-medium">{formatUsd(valorTotalArrecadado)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">{tRateio("expected")}</p>
-              <p className="font-medium">{currencyFormatter.format(valorTotalEsperado)}</p>
+              <p className="font-medium">{formatUsd(valorTotalEsperado)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">{tRateio("pending")}</p>
@@ -282,21 +281,21 @@ export default async function RateioExtraordinarioDetalhePage({
                       <div>
                         <dt className="text-xs text-muted-foreground">{tRateio("value")}</dt>
                         <dd>
-                          {currencyFormatter.format(cobranca.valor_usd)}
+                          {formatUsd(cobranca.valor_usd)}
                           {cobranca.valor_credito_abatido_usd > 0 && (
                             <span className="block text-xs text-primary">
-                              {tRateio("creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
+                              {tRateio("creditApplied", { value: formatUsd(cobranca.valor_credito_abatido_usd) })}
                             </span>
                           )}
                         </dd>
                       </div>
                       <div>
                         <dt className="text-xs text-muted-foreground">{tRateio("paidValue")}</dt>
-                        <dd>{currencyFormatter.format(totalAbatido)}</dd>
+                        <dd>{formatUsd(totalAbatido)}</dd>
                       </div>
                       <div>
                         <dt className="text-xs text-muted-foreground">{tRateio("balance")}</dt>
-                        <dd>{currencyFormatter.format(encargos.saldoDevedor)}</dd>
+                        <dd>{formatUsd(encargos.saldoDevedor)}</dd>
                       </div>
                       <div>
                         <dt className="text-xs text-muted-foreground">{tRateio("dueDate")}</dt>
@@ -312,13 +311,13 @@ export default async function RateioExtraordinarioDetalhePage({
                       {multaJuros > 0 && (
                         <div>
                           <dt className="text-xs text-muted-foreground">{tRateio("penaltyInterest")}</dt>
-                          <dd>{currencyFormatter.format(multaJuros)}</dd>
+                          <dd>{formatUsd(multaJuros)}</dd>
                         </div>
                       )}
                       <div>
                         <dt className="text-xs text-muted-foreground">{tRateio("updatedTotal")}</dt>
                         <dd className="font-medium">
-                          {currencyFormatter.format(totalAtualizado)}
+                          {formatUsd(totalAtualizado)}
                           {tasaVesExibir != null && (
                             <span className="block text-xs font-normal text-muted-foreground">
                               {formatVes(totalAtualizado, tasaVesExibir)}
@@ -352,15 +351,15 @@ export default async function RateioExtraordinarioDetalhePage({
                         {cobranca.unidade?.identificacao ?? "—"}
                       </TableCell>
                       <TableCell>
-                        {currencyFormatter.format(cobranca.valor_usd)}
+                        {formatUsd(cobranca.valor_usd)}
                         {cobranca.valor_credito_abatido_usd > 0 && (
                           <span className="block text-xs text-primary">
-                            {tRateio("creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
+                            {tRateio("creditApplied", { value: formatUsd(cobranca.valor_credito_abatido_usd) })}
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>{currencyFormatter.format(totalAbatido)}</TableCell>
-                      <TableCell>{currencyFormatter.format(encargos.saldoDevedor)}</TableCell>
+                      <TableCell>{formatUsd(totalAbatido)}</TableCell>
+                      <TableCell>{formatUsd(encargos.saldoDevedor)}</TableCell>
                       <TableCell>
                         {formatDate(cobranca.data_vencimento)}
                         {encargos.diasAtraso > 0 && (
@@ -370,10 +369,10 @@ export default async function RateioExtraordinarioDetalhePage({
                         )}
                       </TableCell>
                       <TableCell>
-                        {multaJuros > 0 ? currencyFormatter.format(multaJuros) : "—"}
+                        {multaJuros > 0 ? formatUsd(multaJuros) : "—"}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {currencyFormatter.format(totalAtualizado)}
+                        {formatUsd(totalAtualizado)}
                         {tasaVesExibir != null && (
                           <span className="block text-xs font-normal text-muted-foreground">
                             {formatVes(totalAtualizado, tasaVesExibir)}

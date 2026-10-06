@@ -4,11 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
-import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +43,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TaxaCondominioFormDialog } from "@/components/admin/taxas-condominio/taxa-condominio-form-dialog";
+import { formatUsd } from "@/lib/moeda";
 
 type TaxasCondominioManagerProps = {
   taxas: TaxaCondominio[];
@@ -52,11 +52,6 @@ type TaxasCondominioManagerProps = {
 export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
   const t = useTranslations("taxasCondominio");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
-  const currencyFormatter = new Intl.NumberFormat(INTL_LOCALE[locale as keyof typeof INTL_LOCALE], {
-    style: "currency",
-    currency: "USD",
-  });
   const [taxasList, setTaxasList] = useState(taxas);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -169,7 +164,7 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                       <div>
                         <dt className="text-xs text-muted-foreground">{t("value")}</dt>
-                        <dd>{currencyFormatter.format(taxa.valor_usd)}</dd>
+                        <dd>{formatUsd(taxa.valor_usd)}</dd>
                       </div>
                       <div>
                         <dt className="text-xs text-muted-foreground">{t("dueDate")}</dt>
@@ -214,7 +209,7 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
                           {taxa.titulo}
                         </Link>
                       </TableCell>
-                      <TableCell>{currencyFormatter.format(taxa.valor_usd)}</TableCell>
+                      <TableCell>{formatUsd(taxa.valor_usd)}</TableCell>
                       <TableCell>{t("dueDay", { day: taxa.dia_vencimento })}</TableCell>
                       <TableCell>{taxa.pct_multa_atraso}%</TableCell>
                       <TableCell>{taxa.pct_juros_diario}%</TableCell>

@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RateioExtraordinarioFormDialog } from "@/components/admin/rateios-extraordinarios/rateio-extraordinario-form-dialog";
 import { INTL_LOCALE } from "@/lib/intl-locale";
+import { formatUsd } from "@/lib/moeda";
 
 type RateiosExtraordinariosManagerProps = {
   despesas: DespesaExtraordinaria[];
@@ -59,7 +60,6 @@ export function RateiosExtraordinariosManager({
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const [despesasList, setDespesasList] = useState(despesas);
 
@@ -154,8 +154,8 @@ export function RateiosExtraordinariosManager({
                         {despesa.titulo}
                       </Link>
                     </TableCell>
-                    <TableCell>{currencyFormatter.format(despesa.valor_total_usd)}</TableCell>
-                    <TableCell>{currencyFormatter.format(despesa.valor_por_unidade_usd)}</TableCell>
+                    <TableCell>{formatUsd(despesa.valor_total_usd)}</TableCell>
+                    <TableCell>{formatUsd(despesa.valor_por_unidade_usd)}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{despesa.unidade_ids.length}</Badge>
                     </TableCell>

@@ -23,11 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const vesNumberFormatter = new Intl.NumberFormat("es-VE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+import { formatMoeda, formatUsd } from "@/lib/moeda";
 
 type LiquidacoesManagerProps = {
   liquidacoes: Liquidacao[];
@@ -39,7 +35,6 @@ export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProp
   const tCobrancas = await getTranslations("cobrancas.tipo");
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
   const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short" });
   const cobrancaTipoLabel: Record<CobrancaTipo, string> = {
     ordinaria: tCobrancas("ordinaria"),
@@ -53,9 +48,7 @@ export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProp
   };
   // valor_recebido já vem na moeda original do pagamento (não precisa converter)
   function formatValorRecebido(liquidacao: Liquidacao): string {
-    return liquidacao.moeda === "VES"
-      ? `Bs. ${vesNumberFormatter.format(liquidacao.valor_recebido)}`
-      : currencyFormatter.format(liquidacao.valor_recebido);
+    return formatMoeda(liquidacao.valor_recebido, liquidacao.moeda);
   }
   const totalArrecadadoUsd = liquidacoes.reduce((acc, l) => acc + l.valor_equivalente_usd, 0);
 
@@ -64,7 +57,7 @@ export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProp
       <CardHeader>
         <CardTitle>{t("title")}</CardTitle>
         <CardDescription>
-          {t("summary", { count: liquidacoes.length, total: currencyFormatter.format(totalArrecadadoUsd) })}
+          {t("summary", { count: liquidacoes.length, total: formatUsd(totalArrecadadoUsd) })}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -121,7 +114,7 @@ export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProp
                       <dd className="font-medium">
                         {formatValorRecebido(liquidacao)}
                         <span className="block text-xs font-normal text-muted-foreground">
-                          {currencyFormatter.format(liquidacao.valor_equivalente_usd)}
+                          {formatUsd(liquidacao.valor_equivalente_usd)}
                         </span>
                       </dd>
                     </div>
@@ -167,7 +160,7 @@ export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProp
                     </TableCell>
                     <TableCell>{formatValorRecebido(liquidacao)}</TableCell>
                     <TableCell className="font-medium">
-                      {currencyFormatter.format(liquidacao.valor_equivalente_usd)}
+                      {formatUsd(liquidacao.valor_equivalente_usd)}
                     </TableCell>
                     <TableCell>{formaPagamentoLabel[liquidacao.forma_pagamento]}</TableCell>
                     <TableCell>{liquidacao.referencia_bancaria ?? "—"}</TableCell>

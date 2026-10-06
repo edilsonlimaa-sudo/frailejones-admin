@@ -14,7 +14,7 @@ import type {
 } from "@/lib/types/pagamentos";
 import type { MoedaTipo } from "@/lib/types/creditos";
 import { calcularDiasAtrasoNaData } from "@/lib/encargos";
-import { encontrarTasaNaData, type CotacaoHistorico } from "@/lib/moeda";
+import { formatMoeda, formatTasa, formatUsd, encontrarTasaNaData, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const vesNumberFormatter = new Intl.NumberFormat("es-VE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 
 // pagamento_cobrancas.pagamento_id é UNIQUE, então o embed reverso (a partir de pagamentos)
 // vem como objeto único (ou null), não array
@@ -72,7 +67,6 @@ export default async function LiquidacaoDetalhePage({
   const tCobrancas = await getTranslations("cobrancas");
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short" });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
@@ -186,7 +180,7 @@ export default async function LiquidacaoDetalhePage({
     : 0;
 
   function formatValorRecebido(moeda: MoedaTipo, valor: number): string {
-    return moeda === "VES" ? `Bs. ${vesNumberFormatter.format(valor)}` : currencyFormatter.format(valor);
+    return formatMoeda(valor, moeda);
   }
 
   return (
@@ -235,14 +229,14 @@ export default async function LiquidacaoDetalhePage({
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">{tDetail("equivalentUsd")}</dt>
-              <dd className="font-medium">{currencyFormatter.format(pagamentoRow.valor_equivalente_usd)}</dd>
+              <dd className="font-medium">{formatUsd(pagamentoRow.valor_equivalente_usd)}</dd>
             </div>
             {cotacaoDoPagamento != null && (
               <div>
                 <dt className="text-xs text-muted-foreground">
                   {pagamentoRow.moeda === "VES" ? tDetail("rateApplied") : tDetail("rateOfTheDay")}
                 </dt>
-                <dd className="font-medium">{tDetail("rateValue", { rate: cotacaoDoPagamento })}</dd>
+                <dd className="font-medium">{tDetail("rateValue", { rate: formatTasa(cotacaoDoPagamento) })}</dd>
               </div>
             )}
             <div>
@@ -325,11 +319,11 @@ export default async function LiquidacaoDetalhePage({
               <div>
                 <dt className="text-xs text-muted-foreground">{tDetail("originalValue")}</dt>
                 <dd className="font-medium">
-                  {currencyFormatter.format(cobranca.valor_usd)}
+                  {formatUsd(cobranca.valor_usd)}
                   {cobranca.valor_credito_abatido_usd > 0 && (
                     <span className="block text-xs font-normal text-muted-foreground">
                       {tDetail("creditAppliedAtIssuance")}: -
-                      {currencyFormatter.format(cobranca.valor_credito_abatido_usd)}
+                      {formatUsd(cobranca.valor_credito_abatido_usd)}
                     </span>
                   )}
                 </dd>
@@ -345,12 +339,12 @@ export default async function LiquidacaoDetalhePage({
               <div>
                 <dt className="text-xs text-muted-foreground">{tDetail("totalPaidSoFar")}</dt>
                 <dd className="font-medium">
-                  {currencyFormatter.format(totalPrincipalPago + totalJurosPago)}
+                  {formatUsd(totalPrincipalPago + totalJurosPago)}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{tDetail("balanceLabel")}</dt>
-                <dd className="font-medium">{currencyFormatter.format(saldoRestante)}</dd>
+                <dd className="font-medium">{formatUsd(saldoRestante)}</dd>
               </div>
             </dl>
           )}
@@ -367,13 +361,13 @@ export default async function LiquidacaoDetalhePage({
               <div>
                 <dt className="text-xs text-muted-foreground">{tDetail("principalPaid")}</dt>
                 <dd className="font-medium">
-                  {currencyFormatter.format(pagamentoCobranca?.valor_principal_abatido_usd ?? 0)}
+                  {formatUsd(pagamentoCobranca?.valor_principal_abatido_usd ?? 0)}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{tDetail("penaltyInterest")}</dt>
                 <dd className="font-medium">
-                  {currencyFormatter.format(pagamentoCobranca?.valor_juros_pago_usd ?? 0)}
+                  {formatUsd(pagamentoCobranca?.valor_juros_pago_usd ?? 0)}
                   {(pagamentoCobranca?.valor_juros_pago_usd ?? 0) > 0 && diasAtrasoNoPagamento > 0 && (
                     <span className="block text-xs font-normal text-muted-foreground">
                       {tDetail("daysOverdueAtPayment", { count: diasAtrasoNoPagamento })}
@@ -393,7 +387,7 @@ export default async function LiquidacaoDetalhePage({
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <p className="text-sm">
-              {tDetail("creditGenerated", { value: currencyFormatter.format(creditoGeradoUsd) })}
+              {tDetail("creditGenerated", { value: formatUsd(creditoGeradoUsd) })}
             </p>
             {pagamentoRow.unidade && (
               <Link
@@ -434,7 +428,7 @@ export default async function LiquidacaoDetalhePage({
                     </div>
                     <div>
                       <dt className="text-xs text-muted-foreground">{tDetail("equivalentUsd")}</dt>
-                      <dd>{currencyFormatter.format(pagamento.valor_equivalente_usd)}</dd>
+                      <dd>{formatUsd(pagamento.valor_equivalente_usd)}</dd>
                     </div>
                   </dl>
                 </div>
@@ -456,9 +450,9 @@ export default async function LiquidacaoDetalhePage({
                   <TableRow key={pagamento.id}>
                     <TableCell>{dateTimeFormatter.format(new Date(pagamento.data_pagamento))}</TableCell>
                     <TableCell>{formatValorRecebido(pagamento.moeda, pagamento.valor_recebido)}</TableCell>
-                    <TableCell>{currencyFormatter.format(pagamento.valor_equivalente_usd)}</TableCell>
-                    <TableCell>{currencyFormatter.format(pagamento.valor_principal_abatido_usd)}</TableCell>
-                    <TableCell>{currencyFormatter.format(pagamento.valor_juros_pago_usd)}</TableCell>
+                    <TableCell>{formatUsd(pagamento.valor_equivalente_usd)}</TableCell>
+                    <TableCell>{formatUsd(pagamento.valor_principal_abatido_usd)}</TableCell>
+                    <TableCell>{formatUsd(pagamento.valor_juros_pago_usd)}</TableCell>
                     <TableCell>
                       <Link
                         href={`/liquidacoes/${pagamento.id}`}

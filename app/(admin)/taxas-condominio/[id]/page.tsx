@@ -10,6 +10,7 @@ import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TaxaCondominioDetailTabs } from "@/components/admin/taxas-condominio/taxa-condominio-detail-tabs";
+import { formatUsd } from "@/lib/moeda";
 
 function parseMes(mes: string | undefined) {
   const hoje = new Date();
@@ -64,7 +65,6 @@ export default async function TaxaCondominioDetalhePage({
   const tTaxa = await getTranslations("taxaCondominioDetail");
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
   const mesLabelFormatter = new Intl.DateTimeFormat(intlLocale, {
     month: "long",
     year: "numeric",
@@ -227,7 +227,7 @@ export default async function TaxaCondominioDetalhePage({
         <div>
           <h1 className="text-lg font-medium">{taxa.titulo}</h1>
           <p className="text-sm text-muted-foreground">
-            {tTaxa("headerSubtitle", { value: currencyFormatter.format(taxa.valor_usd), day: taxa.dia_vencimento })}
+            {tTaxa("headerSubtitle", { value: formatUsd(taxa.valor_usd), day: taxa.dia_vencimento })}
           </p>
         </div>
         <Badge variant={taxa.ativo ? "default" : "outline"} className="ml-auto">

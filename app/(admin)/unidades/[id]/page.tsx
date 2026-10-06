@@ -19,7 +19,7 @@ type CobrancaRow = Omit<
     valor_principal_abatido_usd: number;
     valor_juros_pago_usd: number;
     pagamento:
-      | (Omit<PagamentoDaCobranca, "valor_principal_abatido_usd" | "valor_juros_pago_usd" | "creditoGeradoUsd"> & {
+      | (Omit<PagamentoDaCobranca, "valor_principal_abatido_usd" | "valor_juros_pago_usd" | "creditosGerados"> & {
           creditos_movimentacoes: { valor: number; moeda: MoedaTipo }[];
         })
       | null;
@@ -144,18 +144,11 @@ export default async function UnidadeDetailPage({
         .filter((p) => p.pagamento !== null)
         .map((p) => {
           const { creditos_movimentacoes, ...pagamento } = p.pagamento!;
-          // sobra convertida na mesma tasa congelada do pagamento que a gerou (fato histórico,
-          // não o saldo disponível hoje, que é revalorizado à parte com a cotação atual)
-          const creditoGeradoUsd = creditos_movimentacoes.reduce(
-            (acc, c) =>
-              acc + (c.moeda === "VES" && pagamento.tasa_bcv_aplicada ? c.valor / pagamento.tasa_bcv_aplicada : c.valor),
-            0,
-          );
           return {
             ...pagamento,
             valor_principal_abatido_usd: p.valor_principal_abatido_usd,
             valor_juros_pago_usd: p.valor_juros_pago_usd,
-            creditoGeradoUsd,
+            creditosGerados: creditos_movimentacoes,
           };
         }),
     }),

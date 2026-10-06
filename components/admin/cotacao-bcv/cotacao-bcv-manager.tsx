@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
 import type { CotacaoBcv } from "@/lib/types/cotacao-bcv";
 import { INTL_LOCALE } from "@/lib/intl-locale";
+import { formatBs, formatTasa } from "@/lib/moeda";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,12 +28,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// API pública usada pelo botão "Atualizar cotação agora" (taxa oficial BCV, sem chave de acesso)
-const DOLAR_API_URL = "https://ve.dolarapi.com/v1/dolares/oficial";
-
-type DolarApiResponse = {
-  promedio: number | null;
-  fechaActualizacion: string;
+// Resposta da Edge Function atualizar-cotacao-bcv (a mesma que o pg_cron chama)
+type AtualizarCotacaoResponse = {
+  cotacao: { dataCotacao: string; tasaVes: number; fuente: string };
 };
 
 type CotacaoBcvManagerProps = {
@@ -57,34 +56,19 @@ export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
     setIsUpdating(true);
 
     try {
-      const response = await fetch(DOLAR_API_URL);
-      if (!response.ok) throw new Error(t("errorFetchApi"));
-
-      const data: DolarApiResponse = await response.json();
-      if (typeof data.promedio !== "number") {
-        throw new Error(t("errorInvalidRate"));
-      }
-
-      const dataCotacao = data.fechaActualizacion.slice(0, 10);
       const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke<AtualizarCotacaoResponse>(
+        "atualizar-cotacao-bcv",
+      );
 
-      const { error } = await supabase
-        .from("cotacao_bcv")
-        .upsert(
-          {
-            data_cotacao: dataCotacao,
-            tasa_ves: data.promedio,
-            fuente: "oficial",
-            // created_at não é atualizado automaticamente em upsert (default só vale na inserção);
-            // enviamos explicitamente pra "Atualizada em" refletir a última atualização do dia.
-            created_at: new Date().toISOString(),
-          },
-          { onConflict: "data_cotacao" },
-        );
+      if (error) {
+        // a função responde { error } com o motivo (fontes fora do ar, variação suspeita etc.)
+        const body = error instanceof FunctionsHttpError ? await error.context.json().catch(() => null) : null;
+        throw new Error(body?.error ?? t("errorFetchApi"));
+      }
+      if (!data) throw new Error(t("errorInvalidRate"));
 
-      if (error) throw error;
-
-      toast.success(t("updateSuccess", { rate: data.promedio }));
+      toast.success(t("updateSuccess", { rate: formatTasa(data.cotacao.tasaVes) }));
       router.refresh();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t("updateError"));
@@ -114,7 +98,7 @@ export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t("rate")}</dt>
-                <dd className="font-medium">{atual.tasa_ves}</dd>
+                <dd className="font-medium">{formatBs(atual.tasa_ves)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t("source")}</dt>
@@ -148,7 +132,7 @@ export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
                 {cotacoes.map((cotacao) => (
                   <TableRow key={cotacao.id}>
                     <TableCell>{formatDate(cotacao.data_cotacao)}</TableCell>
-                    <TableCell>{cotacao.tasa_ves}</TableCell>
+                    <TableCell>{formatBs(cotacao.tasa_ves)}</TableCell>
                     <TableCell>{cotacao.fuente}</TableCell>
                     <TableCell>{dateTimeFormatter.format(new Date(cotacao.created_at))}</TableCell>
                   </TableRow>

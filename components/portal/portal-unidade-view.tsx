@@ -4,7 +4,7 @@ import type { Proprietario, Unidade } from "@/lib/types/unidades";
 import type { CobrancaDaUnidade, CobrancaStatus, CobrancaTipo } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao, MovimentacaoTipo } from "@/lib/types/creditos";
 import { calcularEncargos } from "@/lib/encargos";
-import { encontrarTasaNaData, formatVes, type CotacaoHistorico } from "@/lib/moeda";
+import { formatUsd, formatBs, encontrarTasaNaData, formatVes, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -33,12 +33,6 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
   const tCobrancas = useTranslations("cobrancas");
   const locale = useLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
-  const vesFormatter = new Intl.NumberFormat(intlLocale, {
-    style: "currency",
-    currency: "VES",
-    maximumFractionDigits: 2,
-  });
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, {
     dateStyle: "short",
@@ -144,7 +138,7 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
     empty: string;
   }) {
     const formatValor = (v: number) =>
-      moeda === "USD" ? currencyFormatter.format(v) : vesFormatter.format(v);
+      moeda === "USD" ? formatUsd(v) : formatBs(v);
 
     if (linhas.length === 0) {
       return <p className="text-sm text-muted-foreground">{empty}</p>;
@@ -292,11 +286,11 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t("general.creditBalanceUsd")}</dt>
-                <dd className="font-medium">{currencyFormatter.format(saldoUsd)}</dd>
+                <dd className="font-medium">{formatUsd(saldoUsd)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t("general.creditBalanceVes")}</dt>
-                <dd className="font-medium">{vesFormatter.format(saldoVes)}</dd>
+                <dd className="font-medium">{formatBs(saldoVes)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t("general.createdAt")}</dt>
@@ -339,11 +333,11 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
                         <div>
                           <dt className="text-xs text-muted-foreground">{t("charges.value")}</dt>
                           <dd>
-                            {currencyFormatter.format(cobranca.valor_usd)}
+                            {formatUsd(cobranca.valor_usd)}
                             {cobranca.valor_credito_abatido_usd > 0 && (
                               <span className="block text-xs text-primary">
                                 {t("charges.creditApplied", {
-                                  value: currencyFormatter.format(cobranca.valor_credito_abatido_usd),
+                                  value: formatUsd(cobranca.valor_credito_abatido_usd),
                                 })}
                               </span>
                             )}
@@ -363,13 +357,13 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
                         {multaJuros > 0 && (
                           <div>
                             <dt className="text-xs text-muted-foreground">{t("charges.penaltyInterest")}</dt>
-                            <dd>{currencyFormatter.format(multaJuros)}</dd>
+                            <dd>{formatUsd(multaJuros)}</dd>
                           </div>
                         )}
                         <div>
                           <dt className="text-xs text-muted-foreground">{t("charges.updatedTotal")}</dt>
                           <dd className="font-medium">
-                            {currencyFormatter.format(totalAtualizado)}
+                            {formatUsd(totalAtualizado)}
                             {tasaVesExibir != null && (
                               <span className="block text-xs font-normal text-muted-foreground">
                                 {formatVes(totalAtualizado, tasaVesExibir)}
@@ -381,9 +375,7 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
                       {cobranca.pagamentos.length > 0 && (
                         <div className="mt-3">
                           <VerPagamentoDialog
-                            descricao={cobranca.descricao}
-                            dataVencimento={cobranca.data_vencimento}
-                            diasGraca={cobranca.dias_graca}
+                            cobranca={cobranca}
                             pagamentos={cobranca.pagamentos}
                             cotacoes={cotacoes}
                             triggerClassName="w-full"
@@ -416,11 +408,11 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
                         <TableCell>{cobrancaTipoLabel[cobranca.tipo]}</TableCell>
                         <TableCell>{cobranca.descricao}</TableCell>
                         <TableCell>
-                          {currencyFormatter.format(cobranca.valor_usd)}
+                          {formatUsd(cobranca.valor_usd)}
                           {cobranca.valor_credito_abatido_usd > 0 && (
                             <span className="block text-xs text-primary">
                               {t("charges.creditApplied", {
-                                value: currencyFormatter.format(cobranca.valor_credito_abatido_usd),
+                                value: formatUsd(cobranca.valor_credito_abatido_usd),
                               })}
                             </span>
                           )}
@@ -433,9 +425,9 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
                             </span>
                           )}
                         </TableCell>
-                        <TableCell>{multaJuros > 0 ? currencyFormatter.format(multaJuros) : "—"}</TableCell>
+                        <TableCell>{multaJuros > 0 ? formatUsd(multaJuros) : "—"}</TableCell>
                         <TableCell className="font-medium">
-                          {currencyFormatter.format(totalAtualizado)}
+                          {formatUsd(totalAtualizado)}
                           {tasaVesExibir != null && (
                             <span className="block text-xs font-normal text-muted-foreground">
                               {formatVes(totalAtualizado, tasaVesExibir)}
@@ -450,9 +442,7 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
                         <TableCell>
                           {cobranca.pagamentos.length > 0 ? (
                             <VerPagamentoDialog
-                              descricao={cobranca.descricao}
-                              dataVencimento={cobranca.data_vencimento}
-                              diasGraca={cobranca.dias_graca}
+                              cobranca={cobranca}
                               pagamentos={cobranca.pagamentos}
                               cotacoes={cotacoes}
                             />
@@ -481,13 +471,13 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
               <div className="rounded-lg border border-input bg-muted/30 p-4">
                 <p className="text-xs text-muted-foreground">{t("credits.walletUsd")}</p>
                 <p className="mt-1 text-xl font-semibold tabular-nums">
-                  {currencyFormatter.format(saldoUsd)}
+                  {formatUsd(saldoUsd)}
                 </p>
               </div>
               <div className="rounded-lg border border-input bg-muted/30 p-4">
                 <p className="text-xs text-muted-foreground">{t("credits.walletVes")}</p>
                 <p className="mt-1 text-xl font-semibold tabular-nums">
-                  {vesFormatter.format(saldoVes)}
+                  {formatBs(saldoVes)}
                 </p>
               </div>
             </div>

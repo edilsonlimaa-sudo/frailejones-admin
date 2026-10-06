@@ -5,13 +5,14 @@ import {
   ChevronRightIcon,
   HardHat,
   Receipt,
+  TriangleAlert,
 } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
-import { formatVes } from "@/lib/moeda";
+import { formatUsd, formatVes } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,6 @@ export default async function Home({
   const tStatus = await getTranslations("cobrancas.status");
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
   const mesLabelFormatter = new Intl.DateTimeFormat(intlLocale, {
@@ -112,10 +112,10 @@ export default async function Home({
       supabase.from("taxa_condominio_unidades").select("unidade_id").returns<{ unidade_id: string }[]>(),
       supabase
         .from("cotacao_bcv")
-        .select("tasa_ves")
+        .select("data_cotacao, tasa_ves")
         .order("data_cotacao", { ascending: false })
         .limit(1)
-        .maybeSingle<{ tasa_ves: number }>(),
+        .maybeSingle<{ data_cotacao: string; tasa_ves: number }>(),
     ]);
 
   if (cobrancasError || taxaVinculosError || cotacaoBcvError) {
@@ -161,6 +161,12 @@ export default async function Home({
   const emAtraso = linhasPendentes.filter((l) => l.encargos.diasAtraso > 0);
   const progresso = valorEmitido > 0 ? Math.min(100, (valorArrecadado / valorEmitido) * 100) : 0;
 
+  // a cotação é atualizada pelo cron; se a mais recente for anterior a hoje (no fuso de Caracas),
+  // a atualização falhou e liquidações em VES usariam uma taxa vencida. Em fim de semana e feriado
+  // não há aviso falso: a taxa publicada na sexta já vem com a data do próximo dia útil.
+  const hojeCaracas = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(hoje);
+  const cotacaoDesatualizada = !cotacaoBcv || cotacaoBcv.data_cotacao < hojeCaracas;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-2">
@@ -195,17 +201,36 @@ export default async function Home({
         </div>
       </div>
 
+      {cotacaoDesatualizada && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/50 px-4 py-3 text-sm"
+        >
+          <div className="flex items-start gap-2">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+            <p>
+              {cotacaoBcv
+                ? t("staleRate", { date: formatDate(cotacaoBcv.data_cotacao) })
+                : t("missingRate")}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/cotacao-bcv" />}>
+            {t("updateRate")}
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card size="sm">
           <CardHeader>
             <CardDescription>{t("issuedThisMonth")}</CardDescription>
-            <CardTitle className="text-xl">{currencyFormatter.format(valorEmitido)}</CardTitle>
+            <CardTitle className="text-xl">{formatUsd(valorEmitido)}</CardTitle>
           </CardHeader>
         </Card>
         <Card size="sm">
           <CardHeader>
             <CardDescription>{t("collectedThisMonth")}</CardDescription>
-            <CardTitle className="text-xl">{currencyFormatter.format(valorArrecadado)}</CardTitle>
+            <CardTitle className="text-xl">{formatUsd(valorArrecadado)}</CardTitle>
           </CardHeader>
         </Card>
         <Card size="sm">
@@ -262,7 +287,7 @@ export default async function Home({
                   <div className="flex shrink-0 items-center gap-2">
                     <div className="text-right">
                       <span className="font-medium">
-                        {currencyFormatter.format(
+                        {formatUsd(
                           encargos.diasAtraso > 0 ? encargos.valorTotalComEncargos : c.valor_usd,
                         )}
                       </span>

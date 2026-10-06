@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import type { UnidadeCobrancaDoMes } from "@/lib/types/cobrancas";
 import type { Encargos } from "@/lib/encargos";
-import { formatVes, type CotacaoHistorico } from "@/lib/moeda";
+import { formatUsd, formatVes, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -58,7 +58,6 @@ export function CobrancasEmitidasList({
   const tCobrancas = useTranslations("cobrancas.status");
   const locale = useLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const currencyFormatter = new Intl.NumberFormat(intlLocale, { style: "currency", currency: "USD" });
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
   const statusLabel = { pendente: tCobrancas("pendente"), pago: tCobrancas("pago"), cancelado: tCobrancas("cancelado") } as const;
@@ -124,21 +123,21 @@ export function CobrancasEmitidasList({
                     <div>
                       <dt className="text-xs text-muted-foreground">{t("value")}</dt>
                       <dd>
-                        {currencyFormatter.format(cobranca.valor_usd)}
+                        {formatUsd(cobranca.valor_usd)}
                         {cobranca.valor_credito_abatido_usd > 0 && (
                           <span className="block text-xs text-primary">
-                            {t("creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
+                            {t("creditApplied", { value: formatUsd(cobranca.valor_credito_abatido_usd) })}
                           </span>
                         )}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-xs text-muted-foreground">{t("paidValue")}</dt>
-                      <dd>{currencyFormatter.format(totalAbatido)}</dd>
+                      <dd>{formatUsd(totalAbatido)}</dd>
                     </div>
                     <div>
                       <dt className="text-xs text-muted-foreground">{t("balance")}</dt>
-                      <dd>{currencyFormatter.format(encargos.saldoDevedor)}</dd>
+                      <dd>{formatUsd(encargos.saldoDevedor)}</dd>
                     </div>
                     <div>
                       <dt className="text-xs text-muted-foreground">{t("dueDate")}</dt>
@@ -154,13 +153,13 @@ export function CobrancasEmitidasList({
                     {multaJuros > 0 && (
                       <div>
                         <dt className="text-xs text-muted-foreground">{t("penaltyInterest")}</dt>
-                        <dd>{currencyFormatter.format(multaJuros)}</dd>
+                        <dd>{formatUsd(multaJuros)}</dd>
                       </div>
                     )}
                     <div>
                       <dt className="text-xs text-muted-foreground">{t("updatedTotal")}</dt>
                       <dd className="font-medium">
-                        {currencyFormatter.format(totalAtualizado)}
+                        {formatUsd(totalAtualizado)}
                         {tasaVesExibir != null && (
                           <span className="block text-xs font-normal text-muted-foreground">
                             {formatVes(totalAtualizado, tasaVesExibir)}
@@ -208,15 +207,15 @@ export function CobrancasEmitidasList({
                     </TableCell>
                     <TableCell>{unidadeProprietarioNome ?? "—"}</TableCell>
                     <TableCell>
-                      {currencyFormatter.format(cobranca.valor_usd)}
+                      {formatUsd(cobranca.valor_usd)}
                       {cobranca.valor_credito_abatido_usd > 0 && (
                         <span className="block text-xs text-primary">
-                          {t("creditApplied", { value: currencyFormatter.format(cobranca.valor_credito_abatido_usd) })}
+                          {t("creditApplied", { value: formatUsd(cobranca.valor_credito_abatido_usd) })}
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>{currencyFormatter.format(totalAbatido)}</TableCell>
-                    <TableCell>{currencyFormatter.format(encargos.saldoDevedor)}</TableCell>
+                    <TableCell>{formatUsd(totalAbatido)}</TableCell>
+                    <TableCell>{formatUsd(encargos.saldoDevedor)}</TableCell>
                     <TableCell>
                       {formatDate(cobranca.data_vencimento)}
                       {encargos.diasAtraso > 0 && (
@@ -226,10 +225,10 @@ export function CobrancasEmitidasList({
                       )}
                     </TableCell>
                     <TableCell>
-                      {multaJuros > 0 ? currencyFormatter.format(multaJuros) : "—"}
+                      {multaJuros > 0 ? formatUsd(multaJuros) : "—"}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {currencyFormatter.format(totalAtualizado)}
+                      {formatUsd(totalAtualizado)}
                       {tasaVesExibir != null && (
                         <span className="block text-xs font-normal text-muted-foreground">
                           {formatVes(totalAtualizado, tasaVesExibir)}
