@@ -22,7 +22,12 @@
     "no": "No",
     "add": "Agregar",
     "search": "Buscar",
-    "noResults": "No se encontraron resultados"
+    "noResults": "No se encontraron resultados",
+    "monthNavigation": {
+      "previous": "Mes anterior",
+      "next": "Mes siguiente",
+      "current": "Mes actual"
+    }
   },
   "nav": {
     "menu": "Menú",
@@ -60,9 +65,6 @@
     "staleRate": "La cotización BCV más reciente es del {date}. La actualización automática pudo haber fallado; los pagos en bolívares usarían una tasa vencida.",
     "missingRate": "No hay ninguna cotización BCV registrada. Los pagos en bolívares no estarán disponibles hasta registrar una.",
     "updateRate": "Actualizar cotización",
-    "previousMonth": "Mes anterior",
-    "nextMonth": "Mes siguiente",
-    "today": "Hoy",
     "issuedThisMonth": "Emitido",
     "pending": "Pendientes",
     "overdue": "En atraso",
@@ -462,7 +464,7 @@
   "liquidacoes": {
     "title": "Liquidaciones",
     "summary": "{count, plural, one {# pago registrado, totalizando {total}.} other {# pagos registrados, totalizando {total}.}}",
-    "noLiquidations": "Ninguna liquidación registrada todavía.",
+    "noLiquidations": "Ningún pago recibido este mes.",
     "date": "Fecha",
     "unit": "Unidad",
     "charge": "Cobro",
@@ -477,8 +479,7 @@
       "efectivo_usd": "Efectivo en dólares",
       "zelle": "Zelle"
     },
-    "filteredByMonth": "Pagos recibidos en {month}",
-    "clearFilter": "Ver todos"
+    "filteredByMonth": "Pagos recibidos en {month}"
   },
   "liquidacaoDetail": {
     "title": "Detalles de la liquidación",

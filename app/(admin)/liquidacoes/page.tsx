@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { inicioDoMesCaracas } from "@/lib/arrecadacao";
+import { mesAdjacente, parseMes } from "@/lib/mes";
 import { LiquidacoesManager } from "@/components/admin/liquidacoes/liquidacoes-manager";
 import type { Liquidacao } from "@/lib/types/pagamentos";
 
@@ -11,36 +12,26 @@ type PagamentoRow = Omit<Liquidacao, "cobranca"> & {
   pagamento_cobrancas: { cobranca: Liquidacao["cobranca"] } | null;
 };
 
-// ?mes=YYYY-MM filtra pelos pagamentos recebidos naquele mês (data de caixa, fuso de Caracas):
-// é o destino do "Ver pagamentos" do bloco de entradas do Painel
-function parseMes(mes: string | undefined) {
-  if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return null;
-  const [ano, mesNumero] = mes.split("-").map(Number);
-  if (mesNumero < 1 || mesNumero > 12) return null;
-  return { ano, mes: mesNumero };
-}
-
+// lista sempre um mês de caixa por vez (?mes=YYYY-MM, padrão o mês atual), pela data do
+// pagamento no fuso de Caracas: o total da tela bate com o extrato do banco daquele mês
 export default async function LiquidacoesPage({
   searchParams,
 }: {
   searchParams: Promise<{ mes?: string }>;
 }) {
   const { mes: mesParam } = await searchParams;
-  const filtroMes = parseMes(mesParam);
+  const { ano, mes } = parseMes(mesParam);
+  const seguinte = mesAdjacente(ano, mes, 1);
   const supabase = await createClient();
   const t = await getTranslations("common");
 
-  let query = supabase
+  const { data: pagamentos, error } = await supabase
     .from("pagamentos")
     .select(
       "id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, forma_pagamento, referencia_bancaria, observacao, unidade:unidades(id, identificacao), pagamento_cobrancas(cobranca:cobrancas(id, descricao, tipo))",
-    );
-  if (filtroMes) {
-    query = query
-      .gte("data_pagamento", inicioDoMesCaracas(filtroMes.ano, filtroMes.mes))
-      .lt("data_pagamento", inicioDoMesCaracas(filtroMes.ano, filtroMes.mes + 1));
-  }
-  const { data: pagamentos, error } = await query
+    )
+    .gte("data_pagamento", inicioDoMesCaracas(ano, mes))
+    .lt("data_pagamento", inicioDoMesCaracas(seguinte.ano, seguinte.mes))
     .order("data_pagamento", { ascending: false })
     .returns<PagamentoRow[]>();
 
@@ -55,5 +46,5 @@ export default async function LiquidacoesPage({
     }),
   );
 
-  return <LiquidacoesManager liquidacoes={liquidacoes} filtroMes={filtroMes} />;
+  return <LiquidacoesManager liquidacoes={liquidacoes} ano={ano} mes={mes} />;
 }

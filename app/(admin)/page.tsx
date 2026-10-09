@@ -1,12 +1,5 @@
 import Link from "next/link";
-import {
-  Building2,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  HardHat,
-  Receipt,
-  TriangleAlert,
-} from "lucide-react";
+import { Building2, HardHat, Receipt, TriangleAlert } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
@@ -18,6 +11,8 @@ import {
   type PagamentoDoPeriodo,
 } from "@/lib/arrecadacao";
 import { calcularEncargos } from "@/lib/encargos";
+import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
+import { NavegadorMes } from "@/components/admin/navegador-mes";
 import { EntradasDoMes } from "@/components/admin/painel/entradas-do-mes";
 import {
   EvolucaoArrecadacaoChart,
@@ -35,24 +30,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-
-function parseMes(mes: string | undefined) {
-  const hoje = new Date();
-  if (mes && /^\d{4}-\d{2}$/.test(mes)) {
-    const [ano, mesNumero] = mes.split("-").map(Number);
-    return { ano, mes: mesNumero };
-  }
-  return { ano: hoje.getUTCFullYear(), mes: hoje.getUTCMonth() + 1 };
-}
-
-function formatMes(ano: number, mes: number) {
-  return `${ano}-${String(mes).padStart(2, "0")}`;
-}
-
-function mesAdjacente(ano: number, mes: number, delta: number) {
-  const data = new Date(Date.UTC(ano, mes - 1 + delta, 1));
-  return { ano: data.getUTCFullYear(), mes: data.getUTCMonth() + 1 };
-}
 
 const statusVariant: Record<CobrancaStatus, "outline" | "default" | "destructive"> = {
   pendente: "outline",
@@ -84,7 +61,6 @@ export default async function Home({
   const { mes: mesParam } = await searchParams;
   const { ano, mes } = parseMes(mesParam);
   const hoje = new Date();
-  const isMesAtual = ano === hoje.getUTCFullYear() && mes === hoje.getUTCMonth() + 1;
   const hojeIso = hoje.toISOString().slice(0, 10);
 
   const t = await getTranslations("dashboard");
@@ -102,8 +78,6 @@ export default async function Home({
   const inicioMes = `${ano}-${String(mes).padStart(2, "0")}-01`;
   const { ano: anoSeguinte, mes: mesSeguinteNumero } = mesAdjacente(ano, mes, 1);
   const inicioMesSeguinte = `${anoSeguinte}-${String(mesSeguinteNumero).padStart(2, "0")}-01`;
-  const mesAnterior = mesAdjacente(ano, mes, -1);
-  const mesSeguinte = mesAdjacente(ano, mes, 1);
   const mesLabel = mesLabelFormatter.format(new Date(`${inicioMes}T00:00:00Z`));
   const mesLabelCapitalizado = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
   const mesRotuloCurtoFormatter = new Intl.DateTimeFormat(intlLocale, {
@@ -245,31 +219,7 @@ export default async function Home({
           <h1 className="text-lg font-medium">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">{mesLabelCapitalizado}</p>
         </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={t("previousMonth")}
-            nativeButton={false}
-            render={<Link href={`/?mes=${formatMes(mesAnterior.ano, mesAnterior.mes)}`} />}
-          >
-            <ChevronLeftIcon />
-          </Button>
-          {!isMesAtual && (
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/" />}>
-              {t("today")}
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={t("nextMonth")}
-            nativeButton={false}
-            render={<Link href={`/?mes=${formatMes(mesSeguinte.ano, mesSeguinte.mes)}`} />}
-          >
-            <ChevronRightIcon />
-          </Button>
-        </div>
+        <NavegadorMes ano={ano} mes={mes} basePath="/" />
       </div>
 
       {cotacaoDesatualizada && (
