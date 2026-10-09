@@ -23,7 +23,6 @@ export type PagamentoDoPeriodo = {
   data_pagamento: string;
   moeda: MoedaTipo;
   valor_recebido: number;
-  valor_equivalente_usd: number;
   forma_pagamento: FormaPagamentoTipo;
   // pagamento_cobrancas.pagamento_id é UNIQUE: o embed reverso vem como objeto único (ou null)
   pagamento_cobrancas: {
@@ -35,27 +34,56 @@ export type PagamentoDoPeriodo = {
 
 export type CanalDeEntrada = {
   forma: FormaPagamentoTipo;
-  moeda: MoedaTipo;
   quantidade: number;
-  valorRecebido: number;
-  valorUsd: number;
+  valor: number;
 };
 
-export type ResumoEntradas = {
+// caixa de uma moeda, sempre na moeda em que o dinheiro entrou
+export type EntradasNaMoeda = {
   quantidade: number;
-  totalUsd: number;
-  recebidoUsd: number;
-  recebidoVes: number;
-  recebidoVesEmUsd: number;
-  // composição do que entrou (soma = totalUsd)
+  total: number;
+  canais: CanalDeEntrada[];
+};
+
+// quanto os pagamentos abateram das cobranças, em dólares. Pagamento em bolívar entra pelo
+// valor que abateu da dívida, convertido na tasa BCV congelada no dia da liquidação.
+// A sobra (que vira saldo a favor na moeda do pagamento) não é dívida quitada e fica de fora.
+export type QuitacaoDoMes = {
   principalDoMes: number;
   principalAtrasado: number;
   principalAdiantado: number;
   encargos: number;
-  // sobra que virou saldo a favor (>= $1) ou ficou absorvida no pagamento (< $1)
-  sobra: number;
-  canais: CanalDeEntrada[];
+  total: number;
 };
+
+export type ResumoEntradas = {
+  // caixa: dólar e bolívar nunca são somados nem convertidos
+  usd: EntradasNaMoeda;
+  ves: EntradasNaMoeda;
+  quitacao: QuitacaoDoMes;
+};
+
+function resumirMoeda(pagamentos: PagamentoDoPeriodo[]): EntradasNaMoeda {
+  const canais = new Map<FormaPagamentoTipo, CanalDeEntrada>();
+  let total = 0;
+  for (const p of pagamentos) {
+    total += p.valor_recebido;
+    const canal = canais.get(p.forma_pagamento) ?? { forma: p.forma_pagamento, quantidade: 0, valor: 0 };
+    canal.quantidade += 1;
+    canal.valor += p.valor_recebido;
+    canais.set(p.forma_pagamento, canal);
+  }
+  return {
+    quantidade: pagamentos.length,
+    total,
+    canais: [...canais.values()].sort((a, b) => b.valor - a.valor),
+  };
+}
+
+// principal abatido por um pagamento (base do "quitado" no gráfico de evolução)
+export function principalQuitado(p: PagamentoDoPeriodo): number {
+  return p.pagamento_cobrancas?.valor_principal_abatido_usd ?? 0;
+}
 
 // resume os pagamentos recebidos num mês de caixa. `competenciaDoMes` é o primeiro dia do mês
 // ("YYYY-MM-01"), usado pra separar o que quitou cobrança do próprio mês do que recuperou atraso.
@@ -63,59 +91,32 @@ export function resumirEntradas(
   pagamentos: PagamentoDoPeriodo[],
   competenciaDoMes: string,
 ): ResumoEntradas {
-  const resumo: ResumoEntradas = {
-    quantidade: pagamentos.length,
-    totalUsd: 0,
-    recebidoUsd: 0,
-    recebidoVes: 0,
-    recebidoVesEmUsd: 0,
+  const quitacao: QuitacaoDoMes = {
     principalDoMes: 0,
     principalAtrasado: 0,
     principalAdiantado: 0,
     encargos: 0,
-    sobra: 0,
-    canais: [],
+    total: 0,
   };
-  const canais = new Map<string, CanalDeEntrada>();
 
   for (const p of pagamentos) {
-    resumo.totalUsd += p.valor_equivalente_usd;
-    if (p.moeda === "USD") {
-      resumo.recebidoUsd += p.valor_recebido;
-    } else {
-      resumo.recebidoVes += p.valor_recebido;
-      resumo.recebidoVesEmUsd += p.valor_equivalente_usd;
-    }
-
-    const alocacao = p.pagamento_cobrancas;
-    const principal = alocacao?.valor_principal_abatido_usd ?? 0;
-    const encargos = alocacao?.valor_juros_pago_usd ?? 0;
-    const competencia = alocacao?.cobranca?.competencia;
+    const principal = principalQuitado(p);
+    const competencia = p.pagamento_cobrancas?.cobranca?.competencia;
     if (competencia && competencia < competenciaDoMes) {
-      resumo.principalAtrasado += principal;
+      quitacao.principalAtrasado += principal;
     } else if (competencia && competencia > competenciaDoMes) {
-      resumo.principalAdiantado += principal;
+      quitacao.principalAdiantado += principal;
     } else {
-      resumo.principalDoMes += principal;
+      quitacao.principalDoMes += principal;
     }
-    resumo.encargos += encargos;
-    resumo.sobra += Math.max(0, p.valor_equivalente_usd - principal - encargos);
-
-    // transferência pode ser em dólar ou em bolívar: cada combinação é uma conta diferente
-    const chave = `${p.forma_pagamento}:${p.moeda}`;
-    const canal = canais.get(chave) ?? {
-      forma: p.forma_pagamento,
-      moeda: p.moeda,
-      quantidade: 0,
-      valorRecebido: 0,
-      valorUsd: 0,
-    };
-    canal.quantidade += 1;
-    canal.valorRecebido += p.valor_recebido;
-    canal.valorUsd += p.valor_equivalente_usd;
-    canais.set(chave, canal);
+    quitacao.encargos += p.pagamento_cobrancas?.valor_juros_pago_usd ?? 0;
   }
+  quitacao.total =
+    quitacao.principalDoMes + quitacao.principalAtrasado + quitacao.principalAdiantado + quitacao.encargos;
 
-  resumo.canais = [...canais.values()].sort((a, b) => b.valorUsd - a.valorUsd);
-  return resumo;
+  return {
+    usd: resumirMoeda(pagamentos.filter((p) => p.moeda === "USD")),
+    ves: resumirMoeda(pagamentos.filter((p) => p.moeda === "VES")),
+    quitacao,
+  };
 }

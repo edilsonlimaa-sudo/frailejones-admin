@@ -16,12 +16,12 @@ export type PontoEvolucao = {
   mes: string;
   rotulo: string;
   emitido: number;
-  recebido: number;
+  quitado: number;
 };
 
 type EvolucaoArrecadacaoChartProps = {
   dados: PontoEvolucao[];
-  labels: { emitido: string; recebido: string };
+  labels: { emitido: string; quitado: string };
 };
 
 const formatEixo = new Intl.NumberFormat("es-VE", { notation: "compact", maximumFractionDigits: 1 });
@@ -29,7 +29,7 @@ const formatEixo = new Intl.NumberFormat("es-VE", { notation: "compact", maximum
 export function EvolucaoArrecadacaoChart({ dados, labels }: EvolucaoArrecadacaoChartProps) {
   const config = {
     emitido: { label: labels.emitido, color: "var(--chart-2)" },
-    recebido: { label: labels.recebido, color: "var(--primary)" },
+    quitado: { label: labels.quitado, color: "var(--primary)" },
   } satisfies ChartConfig;
 
   return (
@@ -65,7 +65,7 @@ export function EvolucaoArrecadacaoChart({ dados, labels }: EvolucaoArrecadacaoC
         />
         <ChartLegend content={<ChartLegendContent />} />
         <Bar dataKey="emitido" fill="var(--color-emitido)" radius={4} />
-        <Bar dataKey="recebido" fill="var(--color-recebido)" radius={4} />
+        <Bar dataKey="quitado" fill="var(--color-quitado)" radius={4} />
       </BarChart>
     </ChartContainer>
   );

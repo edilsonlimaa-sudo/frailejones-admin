@@ -31,7 +31,7 @@
   },
   "nav": {
     "menu": "Menú",
-    "painel": "Panel",
+    "painel": "Dashboard",
     "unidades": "Unidades",
     "taxasCondominio": "Cuotas de Condominio",
     "rateiosExtraordinarios": "Prorrateos Extraordinarios",
@@ -60,7 +60,7 @@
     }
   },
   "dashboard": {
-    "title": "Panel",
+    "title": "Dashboard",
     "loadError": "Error al cargar los datos: {message}",
     "staleRate": "La cotización BCV más reciente es del {date}. La actualización automática pudo haber fallado; los pagos en bolívares usarían una tasa vencida.",
     "missingRate": "No hay ninguna cotización BCV registrada. Los pagos en bolívares no estarán disponibles hasta registrar una.",
@@ -90,32 +90,30 @@
     "billingTitle": "Cobranza del mes",
     "billingDescription": "Cobros del período seleccionado",
     "evolutionTitle": "Evolución de la recaudación",
-    "evolutionDescription": "Emitido por período y recibido por fecha de pago, últimos {count} meses",
+    "evolutionDescription": "Emitido × saldado en dólares, últimos {count} meses",
     "chartIssued": "Emitido",
-    "chartReceived": "Recibido",
     "entries": {
       "title": "Ingresos del mes",
-      "description": "Pagos recibidos en el mes, según la fecha de pago",
+      "description": "Dinero recibido en el mes, en la moneda en que entró, según la fecha de pago",
       "viewPayments": "Ver pagos",
-      "totalReceived": "Total recibido",
       "paymentsCount": "{count, plural, =0 {Ningún pago} one {# pago} other {# pagos}}",
       "receivedUsd": "Recibido en dólares",
-      "receivedUsdDescription": "Zelle, efectivo y transferencia",
       "receivedVes": "Recibido en bolívares",
-      "approxUsd": "≈ {value}",
-      "recoveredOverdue": "Recuperado de atrasos",
-      "recoveredOverdueDescription": "Cobros de meses anteriores",
-      "byMethodTitle": "Por forma de pago",
-      "byMethodDescription": "Monto en la moneda recibida, para conciliar con cada cuenta",
-      "compositionTitle": "Composición de los ingresos",
-      "compositionDescription": "A dónde fue el dinero recibido, en dólares",
-      "noEntries": "Ningún pago recibido este mes.",
-      "composition": {
+      "noEntriesUsd": "Ningún pago en dólares este mes.",
+      "noEntriesVes": "Ningún pago en bolívares este mes."
+    },
+    "chartSettled": "Saldado",
+    "evolutionNote": "Los cobros son en dólares, así que el gráfico mide deuda, no caja. \"Saldado\" es cuánto abonaron los pagos del mes a los cobros: un pago en bolívares cuenta por el monto que abonó, a la tasa BCV del día en que se liquidó. Lo emitido cuenta por el mes del cobro y lo saldado por la fecha de pago, así que un mes puede saldar más de lo que emitió cuando se pagan atrasos. Multa, intereses y saldo a favor no se incluyen. El dinero que entró, en cada moneda, está en \"Ingresos del mes\".",
+    "settlement": {
+      "title": "Deuda saldada en el mes",
+      "description": "Cuánto abonaron a los cobros los pagos recibidos en el mes, en dólares (pagos en bolívares a la tasa BCV del día de la liquidación)",
+      "empty": "Ningún cobro saldado con pagos este mes.",
+      "total": "Total saldado",
+      "rows": {
         "doMes": "Cobros del mes",
         "atrasado": "Cobros de meses anteriores",
         "adiantado": "Cobros de meses futuros",
-        "encargos": "Multa e intereses",
-        "sobra": "Excedente y saldo a favor"
+        "encargos": "Multa e intereses"
       }
     }
   },
@@ -463,7 +461,7 @@
   },
   "liquidacoes": {
     "title": "Liquidaciones",
-    "summary": "{count, plural, one {# pago registrado, totalizando {total}.} other {# pagos registrados, totalizando {total}.}}",
+    "summary": "{count, plural, one {# pago registrado} other {# pagos registrados}}: {usd} en dólares y {ves} en bolívares.",
     "noLiquidations": "Ningún pago recibido este mes.",
     "date": "Fecha",
     "unit": "Unidad",

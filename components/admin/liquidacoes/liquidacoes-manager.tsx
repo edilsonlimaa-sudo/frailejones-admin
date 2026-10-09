@@ -32,7 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatMoeda, formatUsd } from "@/lib/moeda";
+import { formatBs, formatMoeda, formatUsd } from "@/lib/moeda";
 
 type LiquidacoesManagerProps = {
   liquidacoes: Liquidacao[];
@@ -59,7 +59,10 @@ export async function LiquidacoesManager({ liquidacoes, ano, mes }: LiquidacoesM
   function formatValorRecebido(liquidacao: Liquidacao): string {
     return formatMoeda(liquidacao.valor_recebido, liquidacao.moeda);
   }
-  const totalArrecadadoUsd = liquidacoes.reduce((acc, l) => acc + l.valor_equivalente_usd, 0);
+  // caixa: total por moeda, sem converter bolívar em dólar (o equivalente de cada linha é só o
+  // quanto aquele pagamento abateu da dívida, na tasa do dia)
+  const totalPorMoeda = (moeda: Liquidacao["moeda"]) =>
+    liquidacoes.filter((l) => l.moeda === moeda).reduce((acc, l) => acc + l.valor_recebido, 0);
   const mesLabel = new Intl.DateTimeFormat(intlLocale, {
     month: "long",
     year: "numeric",
@@ -72,7 +75,11 @@ export async function LiquidacoesManager({ liquidacoes, ano, mes }: LiquidacoesM
         <CardTitle>{t("title")}</CardTitle>
         <CardDescription>
           {t("filteredByMonth", { month: mesLabel })}.{" "}
-          {t("summary", { count: liquidacoes.length, total: formatUsd(totalArrecadadoUsd) })}
+          {t("summary", {
+            count: liquidacoes.length,
+            usd: formatUsd(totalPorMoeda("USD")),
+            ves: formatBs(totalPorMoeda("VES")),
+          })}
         </CardDescription>
         <CardAction>
           <NavegadorMes ano={ano} mes={mes} basePath="/liquidacoes" />

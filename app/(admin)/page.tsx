@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, HardHat, Receipt, TriangleAlert } from "lucide-react";
+import { Building2, HardHat, InfoIcon, Receipt, TriangleAlert } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
@@ -7,6 +7,7 @@ import type { CobrancaStatus } from "@/lib/types/cobrancas";
 import {
   inicioDoMesCaracas,
   mesCaixaCaracas,
+  principalQuitado,
   resumirEntradas,
   type PagamentoDoPeriodo,
 } from "@/lib/arrecadacao";
@@ -14,6 +15,7 @@ import { calcularEncargos } from "@/lib/encargos";
 import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
 import { NavegadorMes } from "@/components/admin/navegador-mes";
 import { EntradasDoMes } from "@/components/admin/painel/entradas-do-mes";
+import { QuitacaoDoMes } from "@/components/admin/painel/quitacao-do-mes";
 import {
   EvolucaoArrecadacaoChart,
   type PontoEvolucao,
@@ -26,6 +28,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -119,7 +122,7 @@ export default async function Home({
       supabase
         .from("pagamentos")
         .select(
-          "id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, forma_pagamento, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, cobranca:cobrancas(competencia))",
+          "id, data_pagamento, moeda, valor_recebido, forma_pagamento, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, cobranca:cobrancas(competencia))",
         )
         .gte("data_pagamento", inicioDoMesCaracas(inicioEvolucao.ano, inicioEvolucao.mes))
         .lt("data_pagamento", inicioDoMesCaracas(anoSeguinte, mesSeguinteNumero))
@@ -153,7 +156,7 @@ export default async function Home({
       mes: chave,
       rotulo: mesRotuloCurtoFormatter.format(new Date(`${chave}-01T00:00:00Z`)).replace(".", ""),
       emitido: 0,
-      recebido: 0,
+      quitado: 0,
     };
   });
   const pontoPorMes = new Map(evolucao.map((p) => [p.mes, p]));
@@ -161,9 +164,11 @@ export default async function Home({
     const ponto = pontoPorMes.get(c.competencia.slice(0, 7));
     if (ponto) ponto.emitido += c.valor_usd;
   }
+  // quitado = principal abatido pelos pagamentos do mês (em dólar, a moeda da dívida), e não o
+  // valor recebido: somar bolívar convertido como se fosse caixa em dólar seria enganoso
   for (const p of pagamentos) {
     const ponto = pontoPorMes.get(mesCaixaCaracas(p.data_pagamento));
-    if (ponto) ponto.recebido += p.valor_equivalente_usd;
+    if (ponto) ponto.quitado += principalQuitado(p);
   }
 
   // conta unidades distintas vinculadas a alguma taxa (uma unidade pode estar em N taxas)
@@ -241,7 +246,7 @@ export default async function Home({
         </div>
       )}
 
-      <EntradasDoMes resumo={resumoEntradas} mes={mesSelecionado} />
+      <EntradasDoMes usd={resumoEntradas.usd} ves={resumoEntradas.ves} mes={mesSelecionado} />
 
       <section className="flex flex-col gap-3">
         <div>
@@ -291,16 +296,20 @@ export default async function Home({
           </Card>
         </div>
 
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>{t("collectionTitle")}</CardTitle>
-            <CardDescription>{t("activeUnitsDescription", { count: unidadesAtivas })}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Progress value={progresso} />
-            <p className="mt-2 text-xs text-muted-foreground">{t("collectedPercent", { percent: progresso.toFixed(0) })}</p>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>{t("collectionTitle")}</CardTitle>
+              <CardDescription>{t("activeUnitsDescription", { count: unidadesAtivas })}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Progress value={progresso} />
+              <p className="mt-2 text-xs text-muted-foreground">{t("collectedPercent", { percent: progresso.toFixed(0) })}</p>
+            </CardContent>
+          </Card>
+
+          <QuitacaoDoMes quitacao={resumoEntradas.quitacao} />
+        </div>
       </section>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
@@ -312,9 +321,13 @@ export default async function Home({
           <CardContent>
             <EvolucaoArrecadacaoChart
               dados={evolucao}
-              labels={{ emitido: t("chartIssued"), recebido: t("chartReceived") }}
+              labels={{ emitido: t("chartIssued"), quitado: t("chartSettled") }}
             />
           </CardContent>
+          <CardFooter className="items-start gap-2 text-xs text-muted-foreground">
+            <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
+            <p>{t("evolutionNote")}</p>
+          </CardFooter>
         </Card>
 
         <Card size="sm" className="lg:col-span-2">
