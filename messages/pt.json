@@ -63,8 +63,7 @@
     "previousMonth": "Mês anterior",
     "nextMonth": "Próximo mês",
     "today": "Hoje",
-    "issuedThisMonth": "Emitido no mês",
-    "collectedThisMonth": "Arrecadado no mês",
+    "issuedThisMonth": "Emitido",
     "pending": "Pendentes",
     "overdue": "Em atraso",
     "collectionTitle": "Arrecadação do mês",
@@ -80,7 +79,43 @@
     "shortcutTaxas": "Taxas de Condomínio",
     "shortcutTaxasDescription": "Cobrança ordinária mensal",
     "shortcutRateios": "Rateios Extraordinários",
-    "shortcutRateiosDescription": "Despesas rateadas entre unidades"
+    "shortcutRateiosDescription": "Despesas rateadas entre unidades",
+    "settledThisMonth": "Quitado",
+    "settledSplit": "{payment} com pagamento · {credit} com crédito",
+    "chargesCount": "{count, plural, =0 {Nenhuma cobrança} one {# cobrança} other {# cobranças}}",
+    "openAmount": "{value} em aberto",
+    "withCharges": "{value} com multa e juros",
+    "billingTitle": "Cobrança do mês",
+    "billingDescription": "Cobranças com competência no mês selecionado",
+    "evolutionTitle": "Evolução da arrecadação",
+    "evolutionDescription": "Emitido por competência e recebido por data de pagamento, últimos {count} meses",
+    "chartIssued": "Emitido",
+    "chartReceived": "Recebido",
+    "entries": {
+      "title": "Entradas do mês",
+      "description": "Pagamentos recebidos no mês, pela data do pagamento",
+      "viewPayments": "Ver pagamentos",
+      "totalReceived": "Total recebido",
+      "paymentsCount": "{count, plural, =0 {Nenhum pagamento} one {# pagamento} other {# pagamentos}}",
+      "receivedUsd": "Recebido em dólares",
+      "receivedUsdDescription": "Zelle, dinheiro e transferência",
+      "receivedVes": "Recebido em bolívares",
+      "approxUsd": "≈ {value}",
+      "recoveredOverdue": "Recuperado de atrasos",
+      "recoveredOverdueDescription": "Cobranças de meses anteriores",
+      "byMethodTitle": "Por forma de pagamento",
+      "byMethodDescription": "Valor na moeda em que entrou, para conferir com cada conta",
+      "compositionTitle": "Composição das entradas",
+      "compositionDescription": "Para onde foi o dinheiro recebido, em dólares",
+      "noEntries": "Nenhum pagamento recebido neste mês.",
+      "composition": {
+        "doMes": "Cobranças do mês",
+        "atrasado": "Cobranças de meses anteriores",
+        "adiantado": "Cobranças de meses futuros",
+        "encargos": "Multa e juros",
+        "sobra": "Sobra e saldo a favor"
+      }
+    }
   },
   "unidades": {
     "title": "Unidades",
@@ -441,7 +476,9 @@
       "transferencia": "Transferência",
       "efectivo_usd": "Dinheiro em dólares",
       "zelle": "Zelle"
-    }
+    },
+    "filteredByMonth": "Pagamentos recebidos em {month}",
+    "clearFilter": "Ver todos"
   },
   "liquidacaoDetail": {
     "title": "Detalhes da liquidação",

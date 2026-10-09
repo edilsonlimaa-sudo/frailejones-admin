@@ -8,7 +8,14 @@ import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -27,9 +34,11 @@ import { formatMoeda, formatUsd } from "@/lib/moeda";
 
 type LiquidacoesManagerProps = {
   liquidacoes: Liquidacao[];
+  // mês de caixa filtrado (?mes=YYYY-MM), ou null pra listar tudo
+  filtroMes: { ano: number; mes: number } | null;
 };
 
-export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProps) {
+export async function LiquidacoesManager({ liquidacoes, filtroMes }: LiquidacoesManagerProps) {
   const t = await getTranslations("liquidacoes");
   const tCommon = await getTranslations("common");
   const tCobrancas = await getTranslations("cobrancas.tipo");
@@ -51,14 +60,27 @@ export async function LiquidacoesManager({ liquidacoes }: LiquidacoesManagerProp
     return formatMoeda(liquidacao.valor_recebido, liquidacao.moeda);
   }
   const totalArrecadadoUsd = liquidacoes.reduce((acc, l) => acc + l.valor_equivalente_usd, 0);
+  const filtroMesLabel = filtroMes
+    ? new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+        new Date(Date.UTC(filtroMes.ano, filtroMes.mes - 1, 1)),
+      )
+    : null;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t("title")}</CardTitle>
         <CardDescription>
+          {filtroMesLabel && <>{t("filteredByMonth", { month: filtroMesLabel })}. </>}
           {t("summary", { count: liquidacoes.length, total: formatUsd(totalArrecadadoUsd) })}
         </CardDescription>
+        {filtroMesLabel && (
+          <CardAction>
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/liquidacoes" />}>
+              {t("clearFilter")}
+            </Button>
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent>
         {liquidacoes.length === 0 ? (
