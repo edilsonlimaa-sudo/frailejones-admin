@@ -27,6 +27,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 export function AppSidebar({ userEmail }: { userEmail: string }) {
@@ -34,6 +35,7 @@ export function AppSidebar({ userEmail }: { userEmail: string }) {
   const t = useTranslations("nav");
   const tAuth = useTranslations("auth.logout");
   const logout = useLogout();
+  const { setOpenMobile } = useSidebar();
 
   return (
     <Sidebar collapsible="icon">
@@ -54,6 +56,9 @@ export function AppSidebar({ userEmail }: { userEmail: string }) {
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
                       render={<Link href={item.url} />}
+                      // no mobile a sidebar é um Sheet sobreposto: fecha ao navegar (inclusive
+                      // ao clicar na rota atual, que não muda o pathname)
+                      onClick={() => setOpenMobile(false)}
                       isActive={isNavItemActive(pathname, item.url)}
                       tooltip={t(item.titleKey)}
                     >
