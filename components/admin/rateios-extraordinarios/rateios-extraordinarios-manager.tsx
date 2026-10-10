@@ -46,6 +46,7 @@ import {
 import { RateioExtraordinarioFormDialog } from "@/components/admin/rateios-extraordinarios/rateio-extraordinario-form-dialog";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { formatUsd } from "@/lib/moeda";
+import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
 
 type RateiosExtraordinariosManagerProps = {
   despesas: DespesaExtraordinaria[];
@@ -144,7 +145,13 @@ export function RateiosExtraordinariosManager({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {despesasList.map((despesa) => (
+                {despesasList.map((despesa) => {
+                  const diferenca = diferencaArredondamento(
+                    despesa.valor_total_usd,
+                    despesa.valor_por_unidade_usd,
+                    despesa.unidade_ids.length,
+                  );
+                  return (
                   <TableRow key={despesa.id}>
                     <TableCell className="font-medium">
                       <Link
@@ -155,7 +162,14 @@ export function RateiosExtraordinariosManager({
                       </Link>
                     </TableCell>
                     <TableCell>{formatUsd(despesa.valor_total_usd)}</TableCell>
-                    <TableCell>{formatUsd(despesa.valor_por_unidade_usd)}</TableCell>
+                    <TableCell>
+                      {formatUsd(despesa.valor_por_unidade_usd)}
+                      {diferenca !== 0 && (
+                        <span className="block text-xs text-muted-foreground">
+                          {t("roundingShort", { diff: formatDiferenca(diferenca) })}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{despesa.unidade_ids.length}</Badge>
                     </TableCell>
@@ -191,7 +205,8 @@ export function RateiosExtraordinariosManager({
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}

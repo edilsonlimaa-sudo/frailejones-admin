@@ -16,6 +16,7 @@ import {
   type Pontualidade,
 } from "@/lib/arrecadacao";
 import { calcularEncargos } from "@/lib/encargos";
+import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
 import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
 import { NavegadorMes } from "@/components/admin/navegador-mes";
 import { EntradasDoMes } from "@/components/admin/painel/entradas-do-mes";
@@ -59,7 +60,7 @@ type CobrancaDoMes = {
   // título da origem: a descrição das ordinárias é sempre "Taxa de condomínio", então sem isto
   // a lista de pendentes não distingue a cuota do fundo de reserva
   taxa: { titulo: string } | null;
-  despesa: { titulo: string } | null;
+  despesa: { id: string; titulo: string; valor_total_usd: number; valor_por_unidade_usd: number } | null;
   pagamento_cobrancas: {
     valor_principal_abatido_usd: number;
     valor_juros_pago_usd: number;
@@ -133,7 +134,7 @@ export default async function Home({
       supabase
         .from("cobrancas")
         .select(
-          "id, descricao, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(titulo), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
+          "id, descricao, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(id, titulo, valor_total_usd, valor_por_unidade_usd), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
         )
         .gte("competencia", inicioMes)
         .lt("competencia", inicioMesSeguinte)
@@ -231,6 +232,24 @@ export default async function Home({
   const cobrancas = cobrancasRaw ?? [];
   const ativas = cobrancas.filter((c) => c.status !== "cancelado");
   const valorEmitido = ativas.reduce((acc, c) => acc + c.valor_usd, 0);
+  // centavos que os rateios do mês cobram a mais (ou a menos) que o total da despesa por causa do
+  // arredondamento do valor por unidade: o emitido soma as cobranças, não o total das despesas.
+  // Todas as cobranças de um rateio têm a mesma competência (o vencimento), então caem neste mês
+  const cobrancasPorRateio = new Map<string, { despesa: NonNullable<CobrancaDoMes["despesa"]>; qtd: number }>();
+  for (const c of cobrancas) {
+    if (!c.despesa) continue;
+    const item = cobrancasPorRateio.get(c.despesa.id) ?? { despesa: c.despesa, qtd: 0 };
+    item.qtd += 1;
+    cobrancasPorRateio.set(c.despesa.id, item);
+  }
+  const diferencaRedondeo =
+    Math.round(
+      [...cobrancasPorRateio.values()].reduce(
+        (acc, { despesa, qtd }) =>
+          acc + diferencaArredondamento(despesa.valor_total_usd, despesa.valor_por_unidade_usd, qtd),
+        0,
+      ) * 100,
+    ) / 100;
   // quitado com crédito não é dinheiro novo entrando no mês: fica separado do quitado com pagamento
   const valorQuitadoComCredito = ativas.reduce((acc, c) => acc + c.valor_credito_abatido_usd, 0);
   // só principal: o emitido não inclui multa/juros, então somá-los aqui faria o quitado passar do
@@ -338,6 +357,8 @@ export default async function Home({
               <CardTitle className="text-xl">{formatUsd(valorEmitido)}</CardTitle>
               <p className="text-xs text-muted-foreground">
                 {t("chargesCount", { count: ativas.length })}
+                {diferencaRedondeo !== 0 &&
+                  ` · ${t("issuedRounding", { diff: formatDiferenca(diferencaRedondeo) })}`}
               </p>
             </CardHeader>
           </Card>

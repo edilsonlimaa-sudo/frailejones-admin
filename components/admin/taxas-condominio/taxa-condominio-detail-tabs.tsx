@@ -103,14 +103,13 @@ export async function TaxaCondominioDetailTabs({
   });
 
   const valorEmitido = emitidasAtivas.reduce((acc, u) => acc + u.cobranca!.valor_usd, 0);
+  // só principal (pago ou abatido com saldo a favor): o emitido não inclui multa/juros, então
+  // somá-los aqui inflaria o progresso. Os encargos pagos aparecem à parte
   const valorArrecadado = emitidasAtivas.reduce(
-    (acc, u) =>
-      acc +
-      u.cobranca!.valor_credito_abatido_usd +
-      u.cobranca!.valor_principal_pago_usd +
-      u.cobranca!.valor_juros_pago_usd,
+    (acc, u) => acc + u.cobranca!.valor_credito_abatido_usd + u.cobranca!.valor_principal_pago_usd,
     0,
   );
+  const encargosCobrados = emitidasAtivas.reduce((acc, u) => acc + u.cobranca!.valor_juros_pago_usd, 0);
   const progresso = valorEmitido > 0 ? Math.min(100, (valorArrecadado / valorEmitido) * 100) : 0;
 
   return (
@@ -162,6 +161,11 @@ export async function TaxaCondominioDetailTabs({
               <div>
                 <p className="text-xs text-muted-foreground">{t("collected")}</p>
                 <p className="font-medium">{formatUsd(valorArrecadado)}</p>
+                {encargosCobrados > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("collectedCharges", { value: formatUsd(encargosCobrados) })}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t("issued")}</p>

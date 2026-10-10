@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { CobrancaDoRateio, CobrancaStatus } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
 import { formatUsd, encontrarTasaNaData, formatVes } from "@/lib/moeda";
+import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -131,11 +132,19 @@ export default async function RateioExtraordinarioDetalhePage({
   const canceladas = cobrancas.filter((c) => c.status === "cancelado").length;
 
   const valorTotalEsperado = cobrancasAtivas.reduce((acc, c) => acc + c.valor_usd, 0);
+  // uma cobrança por unidade participante, emitida no cadastro do rateio
+  const diferencaRedondeo = diferencaArredondamento(
+    despesa.valor_total_usd,
+    despesa.valor_por_unidade_usd,
+    cobrancas.length,
+  );
+  // só principal (pago ou abatido com saldo a favor): o esperado não inclui multa/juros, então
+  // somá-los aqui inflaria o progresso. Os encargos pagos aparecem à parte
   const valorTotalArrecadado = cobrancasAtivas.reduce(
-    (acc, c) =>
-      acc + c.valor_credito_abatido_usd + c.valor_principal_pago_usd + c.valor_juros_pago_usd,
+    (acc, c) => acc + c.valor_credito_abatido_usd + c.valor_principal_pago_usd,
     0,
   );
+  const encargosCobrados = cobrancasAtivas.reduce((acc, c) => acc + c.valor_juros_pago_usd, 0);
   const progresso =
     valorTotalEsperado > 0
       ? Math.min(100, (valorTotalArrecadado / valorTotalEsperado) * 100)
@@ -196,6 +205,14 @@ export default async function RateioExtraordinarioDetalhePage({
             <div>
               <dt className="text-xs text-muted-foreground">{tRateio("totalValue")}</dt>
               <dd className="font-medium">{formatUsd(despesa.valor_total_usd)}</dd>
+              {diferencaRedondeo !== 0 && (
+                <dd className="text-xs text-muted-foreground">
+                  {tRateio("roundingNote", {
+                    charged: formatUsd(despesa.valor_total_usd + diferencaRedondeo),
+                    diff: formatDiferenca(diferencaRedondeo),
+                  })}
+                </dd>
+              )}
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">{tRateio("valuePerUnit")}</dt>
@@ -241,6 +258,11 @@ export default async function RateioExtraordinarioDetalhePage({
             <div>
               <p className="text-xs text-muted-foreground">{tRateio("collected")}</p>
               <p className="font-medium">{formatUsd(valorTotalArrecadado)}</p>
+              {encargosCobrados > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {tRateio("collectedCharges", { value: formatUsd(encargosCobrados) })}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-xs text-muted-foreground">{tRateio("expected")}</p>
