@@ -11,6 +11,7 @@ import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
 import { Button } from "@/components/ui/button";
 import { UnidadeDetailTabs } from "@/components/admin/unidades/unidade-detail-tabs";
 import { resolverAbaUnidade } from "@/lib/abas-unidade";
+import { resolverFiltroCobrancas } from "@/lib/lista-cobrancas";
 
 type CobrancaRow = Omit<
   CobrancaDaUnidade,
@@ -46,10 +47,12 @@ export default async function UnidadeDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ aba?: string | string[] }>;
+  searchParams: Promise<{ aba?: string | string[]; filtro?: string | string[] }>;
 }) {
   const { id } = await params;
-  const aba = resolverAbaUnidade((await searchParams).aba);
+  const { aba: abaParam, filtro: filtroParam } = await searchParams;
+  const aba = resolverAbaUnidade(abaParam);
+  const filtro = resolverFiltroCobrancas(filtroParam);
   const supabase = await createClient();
   const t = await getTranslations("common");
   const tUnidades = await getTranslations("unidades");
@@ -183,6 +186,7 @@ export default async function UnidadeDetailPage({
 
       <UnidadeDetailTabs
         abaInicial={aba}
+        filtroInicial={filtro}
         unidade={unidade}
         cobrancas={cobrancas}
         creditos={creditos}

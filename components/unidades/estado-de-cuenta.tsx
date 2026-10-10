@@ -12,6 +12,7 @@ import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { COR_ESTADO_COBRANCA } from "@/components/unidades/cores-estado";
 
 // Estado de conta da unidade: situação, dívida, antiguidade, últimos 12 meses, comportamento de
 // pagamento e composição do que deve. Compartilhado entre a tela da unidade (admin) e o portal do
@@ -31,14 +32,7 @@ const situacaoVariant: Record<SituacaoConta, "default" | "outline" | "destructiv
   enAtraso: "destructive",
 };
 
-// cores da linha do tempo e da antiguidade: verde = em dia, âmbar = atrasou, vermelho = vencido
-const corDoMes: Record<EstadoMesConta, string> = {
-  enDia: "bg-primary",
-  conAtraso: "bg-amber-500",
-  vencido: "bg-destructive",
-  porVencer: "bg-muted border border-muted-foreground/40",
-  sinCobros: "border border-dashed border-border",
-};
+const corDoMes: Record<EstadoMesConta, string> = COR_ESTADO_COBRANCA;
 
 const corDaFaixa: Record<FaixaAntiguidade, string> = {
   porVencer: "bg-muted-foreground/40",

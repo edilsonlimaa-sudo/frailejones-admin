@@ -1,14 +1,14 @@
 import { useTranslations, useLocale } from "next-intl";
 
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
-import type { CobrancaDaUnidade, CobrancaStatus, CobrancaTipo } from "@/lib/types/cobrancas";
+import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao, MovimentacaoTipo } from "@/lib/types/creditos";
-import { calcularEncargos } from "@/lib/encargos";
-import { formatUsd, formatBs, encontrarTasaNaData, formatVes, type CotacaoHistorico } from "@/lib/moeda";
+import { formatUsd, formatBs, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
-import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-dialog";
 import { EstadoDeCuenta } from "@/components/unidades/estado-de-cuenta";
 import { TabsNaUrl } from "@/components/tabs-na-url";
+import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
+import { organizarCobrancas, type FiltroCobrancas } from "@/lib/lista-cobrancas";
 import { ABA_UNIDADE_PADRAO, type AbaUnidade } from "@/lib/abas-unidade";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,8 @@ import {
 type PortalUnidadeViewProps = {
   // aba aberta ao carregar, vinda de ?aba= (recarregar a página não volta pra visão geral)
   abaInicial: AbaUnidade;
+  // filtro da lista de cobranças, vindo de ?filtro=
+  filtroInicial: FiltroCobrancas;
   unidade: Omit<Unidade, "proprietario"> & { proprietario: Proprietario | null };
   cobrancas: CobrancaDaUnidade[];
   creditos: CreditoMovimentacao[];
@@ -33,7 +35,7 @@ type PortalUnidadeViewProps = {
 
 // versão só-leitura de UnidadeDetailTabs pro portal público do condômino: mesma UI/dados, mas
 // sem LiquidarCobrancaDialog (ação exclusiva do admin) — reusa os mesmos namespaces de i18n
-export function PortalUnidadeView({ abaInicial, unidade, cobrancas, creditos, cotacoes }: PortalUnidadeViewProps) {
+export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobrancas, creditos, cotacoes }: PortalUnidadeViewProps) {
   const t = useTranslations("unidadeDetail");
   const tCobrancas = useTranslations("cobrancas");
   const locale = useLocale();
@@ -45,23 +47,9 @@ export function PortalUnidadeView({ abaInicial, unidade, cobrancas, creditos, co
   });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
 
-  const cobrancaTipoLabel: Record<CobrancaTipo, string> = {
-    ordinaria: tCobrancas("tipo.ordinaria"),
-    extraordinaria: tCobrancas("tipo.extraordinaria"),
-  };
-  const cobrancaStatusLabel: Record<CobrancaStatus, string> = {
-    pendente: tCobrancas("status.pendente"),
-    pago: tCobrancas("status.pago"),
-    cancelado: tCobrancas("status.cancelado"),
-  };
   const movimentacaoTipoLabel: Record<MovimentacaoTipo, string> = {
     ENTRADA: tCobrancas("creditType.ENTRADA"),
     SAIDA: tCobrancas("creditType.SAIDA"),
-  };
-  const cobrancaStatusVariant: Record<CobrancaStatus, "default" | "outline" | "destructive"> = {
-    pendente: "outline",
-    pago: "default",
-    cancelado: "destructive",
   };
   const movimentacaoTipoVariant: Record<MovimentacaoTipo, "default" | "secondary"> = {
     ENTRADA: "default",
@@ -109,28 +97,6 @@ export function PortalUnidadeView({ abaInicial, unidade, cobrancas, creditos, co
 
   const linhasUsd = buildLinhas(creditosUsd, detalhesUsd);
   const linhasVes = buildLinhas(creditosVes, detalhesVes);
-
-  // ─── Cobranças ─────────────────────────────────────────────────────────────
-  const hojeIso = new Date().toISOString().slice(0, 10);
-  const linhasCobranca = cobrancas.map((cobranca) => {
-    const encargos = calcularEncargos(cobranca, hojeIso);
-    const multaJuros =
-      encargos.diasAtraso > 0 ? encargos.valorMulta + encargos.valorJuros : cobranca.valor_juros_pago_usd;
-    const totalAtualizado =
-      encargos.diasAtraso > 0
-        ? encargos.valorTotalComEncargos
-        : cobranca.status === "pendente"
-          ? encargos.saldoDevedor
-          : cobranca.valor_principal_pago_usd + cobranca.valor_juros_pago_usd;
-    const tasaVesExibir =
-      cobranca.status === "pendente"
-        ? (cotacaoAtual?.tasa_ves ?? null)
-        : encontrarTasaNaData(
-            cotacoes,
-            (cobranca.data_ultimo_pagamento ?? cobranca.data_vencimento).slice(0, 10),
-          );
-    return { cobranca, encargos, multaJuros, totalAtualizado, tasaVesExibir };
-  });
 
   // ─── Extrato reutilizável ──────────────────────────────────────────────────
   function ExtratoTabela({
@@ -310,155 +276,13 @@ export function PortalUnidadeView({ abaInicial, unidade, cobrancas, creditos, co
             <CardTitle>{t("tabs.charges")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {cobrancas.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("charges.empty")}</p>
-            ) : (
-              <>
-                {/* mobile: lista de cards (tabela com 6 colunas não cabe bem em telas pequenas) */}
-                <div className="flex flex-col gap-3 sm:hidden">
-                  {linhasCobranca.map(({ cobranca, encargos, multaJuros, totalAtualizado, tasaVesExibir }) => (
-                    <div key={cobranca.id} className="rounded-lg border border-input p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">{cobranca.descricao}</span>
-                        <Badge variant={cobrancaStatusVariant[cobranca.status]}>
-                          {cobrancaStatusLabel[cobranca.status]}
-                        </Badge>
-                      </div>
-                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                        <div>
-                          <dt className="text-xs text-muted-foreground">{t("charges.competencia")}</dt>
-                          <dd>{formatDate(cobranca.competencia)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-muted-foreground">{t("charges.type")}</dt>
-                          <dd>{cobrancaTipoLabel[cobranca.tipo]}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-muted-foreground">{t("charges.value")}</dt>
-                          <dd>
-                            {formatUsd(cobranca.valor_usd)}
-                            {cobranca.valor_credito_abatido_usd > 0 && (
-                              <span className="block text-xs text-primary">
-                                {t("charges.creditApplied", {
-                                  value: formatUsd(cobranca.valor_credito_abatido_usd),
-                                })}
-                              </span>
-                            )}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-muted-foreground">{t("charges.dueDate")}</dt>
-                          <dd>
-                            {formatDate(cobranca.data_vencimento)}
-                            {encargos.diasAtraso > 0 && (
-                              <span className="block text-xs text-destructive">
-                                {tCobrancas("status.daysOverdue", { count: encargos.diasAtraso })}
-                              </span>
-                            )}
-                          </dd>
-                        </div>
-                        {multaJuros > 0 && (
-                          <div>
-                            <dt className="text-xs text-muted-foreground">{t("charges.penaltyInterest")}</dt>
-                            <dd>{formatUsd(multaJuros)}</dd>
-                          </div>
-                        )}
-                        <div>
-                          <dt className="text-xs text-muted-foreground">{t("charges.updatedTotal")}</dt>
-                          <dd className="font-medium">
-                            {formatUsd(totalAtualizado)}
-                            {tasaVesExibir != null && (
-                              <span className="block text-xs font-normal text-muted-foreground">
-                                {formatVes(totalAtualizado, tasaVesExibir)}
-                              </span>
-                            )}
-                          </dd>
-                        </div>
-                      </dl>
-                      {cobranca.pagamentos.length > 0 && (
-                        <div className="mt-3">
-                          <VerPagamentoDialog
-                            cobranca={cobranca}
-                            pagamentos={cobranca.pagamentos}
-                            cotacoes={cotacoes}
-                            triggerClassName="w-full"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* sm+: tabela */}
-                <Table className="hidden sm:table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("charges.competencia")}</TableHead>
-                      <TableHead>{t("charges.type")}</TableHead>
-                      <TableHead>{t("charges.description")}</TableHead>
-                      <TableHead>{t("charges.value")}</TableHead>
-                      <TableHead>{t("charges.dueDate")}</TableHead>
-                      <TableHead>{t("charges.penaltyInterest")}</TableHead>
-                      <TableHead>{t("charges.updatedTotal")}</TableHead>
-                      <TableHead>{t("charges.status")}</TableHead>
-                      <TableHead>{t("charges.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {linhasCobranca.map(({ cobranca, encargos, multaJuros, totalAtualizado, tasaVesExibir }) => (
-                      <TableRow key={cobranca.id}>
-                        <TableCell>{formatDate(cobranca.competencia)}</TableCell>
-                        <TableCell>{cobrancaTipoLabel[cobranca.tipo]}</TableCell>
-                        <TableCell>{cobranca.descricao}</TableCell>
-                        <TableCell>
-                          {formatUsd(cobranca.valor_usd)}
-                          {cobranca.valor_credito_abatido_usd > 0 && (
-                            <span className="block text-xs text-primary">
-                              {t("charges.creditApplied", {
-                                value: formatUsd(cobranca.valor_credito_abatido_usd),
-                              })}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {formatDate(cobranca.data_vencimento)}
-                          {encargos.diasAtraso > 0 && (
-                            <span className="block text-xs text-destructive">
-                              {tCobrancas("status.daysOverdue", { count: encargos.diasAtraso })}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>{multaJuros > 0 ? formatUsd(multaJuros) : "—"}</TableCell>
-                        <TableCell className="font-medium">
-                          {formatUsd(totalAtualizado)}
-                          {tasaVesExibir != null && (
-                            <span className="block text-xs font-normal text-muted-foreground">
-                              {formatVes(totalAtualizado, tasaVesExibir)}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={cobrancaStatusVariant[cobranca.status]}>
-                            {cobrancaStatusLabel[cobranca.status]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {cobranca.pagamentos.length > 0 ? (
-                            <VerPagamentoDialog
-                              cobranca={cobranca}
-                              pagamentos={cobranca.pagamentos}
-                              cotacoes={cotacoes}
-                            />
-                          ) : (
-                            "—"
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </>
-            )}
+            <ListaCobrancas
+              organizadas={organizarCobrancas(cobrancas, new Date())}
+              filtroInicial={filtroInicial}
+              podeLiquidar={false}
+              cotacaoAtual={cotacaoAtual}
+              cotacoes={cotacoes}
+            />
           </CardContent>
         </Card>
       </TabsContent>

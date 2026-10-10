@@ -1,5 +1,5 @@
 import { dataCaixaCaracas, percentualEmDia } from "@/lib/arrecadacao";
-import { calcularEncargos } from "@/lib/encargos";
+import { calcularEncargos, type Encargos } from "@/lib/encargos";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { MoedaTipo } from "@/lib/types/creditos";
 import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
@@ -70,6 +70,51 @@ const PRIORIDADE_MES: EstadoCobrancaConta[] = ["vencido", "porVencer", "conAtras
 
 const arredondar = (valor: number) => Math.round(valor * 100) / 100;
 
+export type CobrancaClassificada = {
+  estado: EstadoCobrancaConta | "cancelado";
+  // vencimento + carência: a partir do dia seguinte incidem multa e juros
+  prazo: string;
+  encargos: Encargos;
+  // pendente: saldo + encargos de hoje; paga: o que foi pago (principal + encargos + saldo a favor)
+  valor: number;
+  // dia (em Caracas) do último pagamento; null se não houve pagamento
+  pagoEm: string | null;
+  // só pra paga com atraso: dias entre o fim do prazo e o pagamento
+  diasDepoisDoPrazo: number | null;
+};
+
+// fonte única da situação de uma cobrança, usada pelo estado de conta e pela lista de cobranças
+export function classificarCobranca(c: CobrancaDaUnidade, hojeIso: string): CobrancaClassificada {
+  const prazo = somarDias(c.data_vencimento, c.dias_graca);
+  const encargos = calcularEncargos(c, hojeIso);
+  const pagoEm = c.data_ultimo_pagamento ? dataCaixaCaracas(c.data_ultimo_pagamento) : null;
+
+  if (c.status === "cancelado") {
+    return { estado: "cancelado", prazo, encargos, valor: c.valor_usd, pagoEm, diasDepoisDoPrazo: null };
+  }
+  if (c.status === "pendente" && encargos.saldoDevedor > 0) {
+    return {
+      estado: encargos.diasAtraso > 0 ? "vencido" : "porVencer",
+      prazo,
+      encargos,
+      valor: encargos.valorTotalComEncargos,
+      pagoEm,
+      diasDepoisDoPrazo: null,
+    };
+  }
+  // paga: em dia se o último pagamento caiu até o fim do prazo (quitada só com saldo a favor não tem
+  // pagamento e foi abatida na emissão, então também está em dia)
+  const comAtraso = pagoEm !== null && pagoEm > prazo;
+  return {
+    estado: comAtraso ? "conAtraso" : "enDia",
+    prazo,
+    encargos,
+    valor: c.valor_principal_pago_usd + c.valor_juros_pago_usd + c.valor_credito_abatido_usd,
+    pagoEm,
+    diasDepoisDoPrazo: comAtraso ? diasEntre(prazo, pagoEm) : null,
+  };
+}
+
 export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Date): EstadoDeConta {
   // encargos usam a data UTC, como as listas de cobranças; pontualidade usa o dia em Caracas, como o Dashboard
   const hojeIso = agora.toISOString().slice(0, 10);
@@ -94,8 +139,9 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
   let encargosPagos = 0;
 
   for (const c of cobrancas) {
-    if (c.status === "cancelado") continue;
-    const prazo = somarDias(c.data_vencimento, c.dias_graca);
+    const classificada = classificarCobranca(c, hojeIso);
+    if (classificada.estado === "cancelado") continue;
+    const { estado, prazo, valor: valorExibido } = classificada;
     const mes = c.competencia.slice(0, 7);
     const naJanela = mes >= inicioJanela && mes <= mesAtual;
 
@@ -104,14 +150,8 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
       pagamentosPorDia.set(dia, [...(pagamentosPorDia.get(dia) ?? []), p]);
     }
 
-    let estado: EstadoCobrancaConta;
-    let valorExibido: number;
-    if (c.status === "pendente") {
-      const e = calcularEncargos(c, hojeIso);
-      if (e.saldoDevedor <= 0) continue;
-      estado = e.diasAtraso > 0 ? "vencido" : "porVencer";
-      valorExibido = e.valorTotalComEncargos;
-
+    if (estado === "vencido" || estado === "porVencer") {
+      const e = classificada.encargos;
       divida.principal += e.saldoDevedor;
       divida.encargos += e.valorMulta + e.valorJuros;
       const faixa = antiguidade.get(faixaDoAtraso(e.diasAtraso))!;
@@ -128,14 +168,8 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
       if (estado === "porVencer" && (!proximoVencimento || c.data_vencimento < proximoVencimento.data)) {
         proximoVencimento = { origem: c.titulo_origem, data: c.data_vencimento, valor: e.saldoDevedor };
       }
-    } else {
-      // paga: em dia se o último pagamento caiu até o fim do prazo (quitada só com saldo a favor
-      // não tem pagamento e foi abatida na emissão, então também está em dia)
-      const pagoEm = c.data_ultimo_pagamento ? dataCaixaCaracas(c.data_ultimo_pagamento) : null;
-      const comAtraso = pagoEm !== null && pagoEm > prazo;
-      estado = comAtraso ? "conAtraso" : "enDia";
-      valorExibido = c.valor_principal_pago_usd + c.valor_juros_pago_usd + c.valor_credito_abatido_usd;
-      if (naJanela && comAtraso) atrasosPagos.push(diasEntre(prazo, pagoEm));
+    } else if (naJanela && classificada.diasDepoisDoPrazo !== null) {
+      atrasosPagos.push(classificada.diasDepoisDoPrazo);
     }
 
     if (naJanela) {

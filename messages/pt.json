@@ -667,5 +667,40 @@
       "charges": "{count, plural, one {# cobrança} other {# cobranças}}"
     },
     "lastPaymentCount": "{count} pagamentos registrados nesse dia, um para cada cobrança quitada"
+  },
+  "listaCobrancas": {
+    "empty": "Nenhuma cobrança para esta unidade.",
+    "chargesCount": "{count, plural, one {# cobrança} other {# cobranças}}",
+    "filter": {
+      "label": "Filtrar cobranças",
+      "todos": "Todas ({count})",
+      "pendientes": "Pendentes ({count})",
+      "pagados": "Pagas ({count})"
+    },
+    "pending": {
+      "title": "Pendentes",
+      "empty": "Nenhuma cobrança pendente. A unidade está em dia."
+    },
+    "history": {
+      "title": "Histórico",
+      "show": "Mostrar ({count})",
+      "hide": "Ocultar",
+      "empty": "Ainda não há cobranças pagas."
+    },
+    "status": {
+      "vencido": "Venceu em {date} · {count, plural, one {# dia} other {# dias}} em atraso",
+      "enCarencia": "Venceu em {date} · em carência até {grace}",
+      "venceHoy": "Vence hoje",
+      "porVencer": "Vence em {date} · daqui a {count, plural, one {# dia} other {# dias}}",
+      "enDia": "Paga em {date} · no prazo",
+      "conAtraso": "Paga em {date} · {count, plural, one {# dia} other {# dias}} depois do prazo",
+      "saldadoConCredito": "Quitada com saldo a favor",
+      "cancelado": "Cancelada"
+    },
+    "amount": {
+      "pendingSplit": "{principal} + {charges} de multa e juros",
+      "paidCharges": "inclui {charges} de multa e juros",
+      "creditApplied": "Crédito aplicado: -{value}"
+    }
   }
 }

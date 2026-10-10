@@ -11,6 +11,7 @@ import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
 import { Button } from "@/components/ui/button";
 import { PortalUnidadeView } from "@/components/portal/portal-unidade-view";
 import { resolverAbaUnidade } from "@/lib/abas-unidade";
+import { resolverFiltroCobrancas } from "@/lib/lista-cobrancas";
 
 // query/mapeamento intencionalmente duplicados de app/(admin)/unidades/[id]/page.tsx: o portal
 // público é uma superfície decoupled do admin (sem guard de auth), então não compartilha o mesmo
@@ -49,10 +50,12 @@ export default async function PortalUnidadePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ aba?: string | string[] }>;
+  searchParams: Promise<{ aba?: string | string[]; filtro?: string | string[] }>;
 }) {
   const { id } = await params;
-  const aba = resolverAbaUnidade((await searchParams).aba);
+  const { aba: abaParam, filtro: filtroParam } = await searchParams;
+  const aba = resolverAbaUnidade(abaParam);
+  const filtro = resolverFiltroCobrancas(filtroParam);
   const supabase = await createClient();
   const t = await getTranslations("portal");
 
@@ -171,6 +174,7 @@ export default async function PortalUnidadePage({
 
       <PortalUnidadeView
         abaInicial={aba}
+        filtroInicial={filtro}
         unidade={unidade}
         cobrancas={cobrancas}
         creditos={creditos}
