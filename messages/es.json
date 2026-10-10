@@ -664,6 +664,7 @@
     "composition": {
       "title": "Composición de la deuda",
       "charges": "{count, plural, one {# cobro} other {# cobros}}"
-    }
+    },
+    "lastPaymentCount": "{count} pagos registrados ese día, uno por cada cobro saldado"
   }
 }

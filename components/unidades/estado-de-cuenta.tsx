@@ -55,8 +55,6 @@ export function EstadoDeCuenta({ cobrancas, saldoFavorUsd, saldoFavorVes, tasaVe
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
   const formatDate = (iso: string) =>
     new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
-  const formatDataPagamento = (timestamp: string) =>
-    new Intl.DateTimeFormat(intlLocale, { timeZone: "America/Caracas" }).format(new Date(timestamp));
   const mesCurto = new Intl.DateTimeFormat(intlLocale, { month: "short", timeZone: "UTC" });
   const mesLongo = new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric", timeZone: "UTC" });
 
@@ -114,12 +112,20 @@ export function EstadoDeCuenta({ cobrancas, saldoFavorUsd, saldoFavorVes, tasaVe
             <dt className="text-xs text-muted-foreground">{t("lastPayment")}</dt>
             {estado.ultimoPagamento ? (
               <>
+                {/* moedas separadas, sem converter: o que entrou em bolívar fica em bolívar */}
                 <dd className="font-medium">
-                  {formatMoeda(estado.ultimoPagamento.valor, estado.ultimoPagamento.moeda)}
+                  {estado.ultimoPagamento.porMoeda.map((m) => formatMoeda(m.valor, m.moeda)).join(" + ")}
                 </dd>
                 <dd className="text-xs text-muted-foreground">
-                  {formatDataPagamento(estado.ultimoPagamento.data)} · {tForma(estado.ultimoPagamento.forma)}
+                  {formatDate(estado.ultimoPagamento.data)} ·{" "}
+                  {estado.ultimoPagamento.formas.map((forma) => tForma(forma)).join(", ")}
                 </dd>
+                {/* um pagamento por cobrança: sem isto, "2 pagos" num dia parece pagamento duplicado */}
+                {estado.ultimoPagamento.quantidade > 1 && (
+                  <dd className="text-xs text-muted-foreground">
+                    {t("lastPaymentCount", { count: estado.ultimoPagamento.quantidade })}
+                  </dd>
+                )}
               </>
             ) : (
               <dd className="font-medium">—</dd>

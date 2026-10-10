@@ -26,7 +26,14 @@ export type EstadoDeConta = {
   atrasoDesde: string | null;
   divida: { principal: number; encargos: number; total: number };
   proximoVencimento: { origem: string; data: string; valor: number } | null;
-  ultimoPagamento: { data: string; moeda: MoedaTipo; valor: number; forma: FormaPagamentoTipo } | null;
+  // todos os pagamentos do dia (em Caracas) do pagamento mais recente: o app registra um pagamento
+  // por cobrança, então quitar a cuota e o fundo juntos gera 2. Somados por moeda, sem converter
+  ultimoPagamento: {
+    data: string;
+    quantidade: number;
+    porMoeda: { moeda: MoedaTipo; valor: number }[];
+    formas: FormaPagamentoTipo[];
+  } | null;
   // total atualizado (com encargos) por faixa de dias de atraso; soma = divida.total
   antiguidade: { faixa: FaixaAntiguidade; valor: number; cobrancas: number }[];
   // um item por mês ("YYYY-MM") da janela, do mais antigo ao atual
@@ -81,7 +88,7 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
   const porMes = new Map(mesesJanela.map((m) => [m, [] as EstadoDeConta["meses"][number]["cobrancas"]]));
   let prazoVencidoMaisAntigo: string | null = null;
   let proximoVencimento: EstadoDeConta["proximoVencimento"] = null;
-  let ultimoPagamento: EstadoDeConta["ultimoPagamento"] = null;
+  const pagamentosPorDia = new Map<string, CobrancaDaUnidade["pagamentos"]>();
   const pontualidade = { base: 0, emDia: 0 };
   const atrasosPagos: number[] = [];
   let encargosPagos = 0;
@@ -93,9 +100,8 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
     const naJanela = mes >= inicioJanela && mes <= mesAtual;
 
     for (const p of c.pagamentos) {
-      if (!ultimoPagamento || p.data_pagamento > ultimoPagamento.data) {
-        ultimoPagamento = { data: p.data_pagamento, moeda: p.moeda, valor: p.valor_recebido, forma: p.forma_pagamento };
-      }
+      const dia = dataCaixaCaracas(p.data_pagamento);
+      pagamentosPorDia.set(dia, [...(pagamentosPorDia.get(dia) ?? []), p]);
     }
 
     let estado: EstadoCobrancaConta;
@@ -150,6 +156,24 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
   divida.total = arredondar(divida.principal + divida.encargos);
 
   const situacao: SituacaoConta = prazoVencidoMaisAntigo ? "enAtraso" : divida.total > 0 ? "porVencer" : "alDia";
+
+  const ultimoDia = [...pagamentosPorDia.keys()].sort().at(-1);
+  const pagamentosDoUltimoDia = ultimoDia ? pagamentosPorDia.get(ultimoDia)! : [];
+  const ultimoPagamento: EstadoDeConta["ultimoPagamento"] = ultimoDia
+    ? {
+        data: ultimoDia,
+        quantidade: pagamentosDoUltimoDia.length,
+        porMoeda: (["USD", "VES"] as const)
+          .map((moeda) => ({
+            moeda,
+            valor: arredondar(
+              pagamentosDoUltimoDia.filter((p) => p.moeda === moeda).reduce((acc, p) => acc + p.valor_recebido, 0),
+            ),
+          }))
+          .filter((m) => pagamentosDoUltimoDia.some((p) => p.moeda === m.moeda)),
+        formas: [...new Set(pagamentosDoUltimoDia.map((p) => p.forma_pagamento))],
+      }
+    : null;
 
   return {
     situacao,
