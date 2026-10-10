@@ -216,7 +216,7 @@ function LinhaCobranca({
       </div>
 
       <div className="flex items-center justify-between gap-4 sm:justify-end">
-        <div className="text-left sm:w-44 sm:text-right">
+        <div className="text-left sm:w-64 sm:text-right">
           <p className={cn("font-medium tabular-nums", estado === "cancelado" && "text-muted-foreground line-through")}>
             {formatUsd(item.valor)}
           </p>
@@ -240,7 +240,8 @@ function LinhaCobranca({
           )}
         </div>
 
-        <div className="flex shrink-0 gap-2 sm:w-52 sm:justify-end">
+        {/* largura fixa pra alinhar os valores entre linhas; cabe "Liquidar" + "Ver pago" (abono parcial) */}
+        <div className="flex shrink-0 gap-2 sm:w-44 sm:justify-end">
           {pendente && podeLiquidar && (
             <LiquidarCobrancaDialog
               cobrancaId={cobranca.id}
