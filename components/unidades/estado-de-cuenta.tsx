@@ -60,6 +60,9 @@ export function EstadoDeCuenta({ cobrancas, saldoFavorUsd, saldoFavorVes, tasaVe
 
   const estado = calcularEstadoDeConta(cobrancas, new Date());
   const { divida, comportamento } = estado;
+  const cobrancasVencidas = estado.antiguidade
+    .filter((f) => f.faixa !== "porVencer")
+    .reduce((acc, f) => acc + f.cobrancas, 0);
 
   return (
     <Card>
@@ -215,6 +218,14 @@ export function EstadoDeCuenta({ cobrancas, saldoFavorUsd, saldoFavorVes, tasaVe
               {comportamento.cobrancasPagasComAtraso > 0 && (
                 <dd className="text-xs text-muted-foreground">
                   {t("behavior.latePaidCount", { count: comportamento.cobrancasPagasComAtraso })}
+                </dd>
+              )}
+              {/* o atraso médio só conta o que já foi pago: quem parou de pagar teria "nenhum pago
+                  fora do prazo" ao lado de "en atraso". Mostra as vencidas em aberto pra não parecer
+                  que a unidade nunca atrasa */}
+              {cobrancasVencidas > 0 && (
+                <dd className="text-xs text-destructive">
+                  {t("behavior.overdueUnpaid", { count: cobrancasVencidas })}
                 </dd>
               )}
             </div>

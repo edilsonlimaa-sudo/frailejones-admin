@@ -655,11 +655,12 @@
     "behavior": {
       "title": "Comportamiento de pago (últimos {count} meses)",
       "onTime": "Pagado en día",
-      "averageDelay": "Atraso promedio al pagar",
+      "averageDelay": "Atraso promedio en pagos realizados",
       "days": "{count, plural, one {# día} other {# días}}",
-      "noLatePayments": "Sin pagos atrasados",
+      "noLatePayments": "Ningún pago fuera de plazo",
       "latePaidCount": "en {count, plural, one {# cobro pagado} other {# cobros pagados}} después del plazo",
-      "chargesPaid": "Multa e intereses pagados"
+      "chargesPaid": "Multa e intereses pagados",
+      "overdueUnpaid": "{count, plural, one {# cobro vencido sin pagar} other {# cobros vencidos sin pagar}}"
     },
     "composition": {
       "title": "Composición de la deuda",
