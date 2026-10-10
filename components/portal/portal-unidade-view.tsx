@@ -7,6 +7,7 @@ import { calcularEncargos } from "@/lib/encargos";
 import { formatUsd, formatBs, encontrarTasaNaData, formatVes, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-dialog";
+import { EstadoDeCuenta } from "@/components/unidades/estado-de-cuenta";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -257,7 +258,13 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
         <TabsTrigger value="creditos">{t("tabs.creditStatement")}</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="geral">
+      <TabsContent value="geral" className="flex flex-col gap-6">
+        <EstadoDeCuenta
+          cobrancas={cobrancas}
+          saldoFavorUsd={saldoUsd}
+          saldoFavorVes={saldoVes}
+          tasaVes={cotacaoAtual?.tasa_ves ?? null}
+        />
         <Card>
           <CardHeader>
             <CardTitle>{t("general.title")}</CardTitle>
@@ -283,14 +290,6 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
               <div>
                 <dt className="text-xs text-muted-foreground">{t("general.email")}</dt>
                 <dd className="font-medium">{unidade.proprietario?.email ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">{t("general.creditBalanceUsd")}</dt>
-                <dd className="font-medium">{formatUsd(saldoUsd)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">{t("general.creditBalanceVes")}</dt>
-                <dd className="font-medium">{formatBs(saldoVes)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t("general.createdAt")}</dt>

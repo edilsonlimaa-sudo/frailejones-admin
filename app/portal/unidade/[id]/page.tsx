@@ -16,8 +16,10 @@ import { PortalUnidadeView } from "@/components/portal/portal-unidade-view";
 // código de fetch — evita que uma mudança futura no admin vaze sem querer pro lado público
 type CobrancaRow = Omit<
   CobrancaDaUnidade,
-  "valor_principal_pago_usd" | "valor_juros_pago_usd" | "data_ultimo_pagamento" | "pagamentos"
+  "valor_principal_pago_usd" | "valor_juros_pago_usd" | "data_ultimo_pagamento" | "pagamentos" | "titulo_origem"
 > & {
+  taxa: { titulo: string } | null;
+  despesa: { titulo: string } | null;
   pagamento_cobrancas: {
     valor_principal_abatido_usd: number;
     valor_juros_pago_usd: number;
@@ -80,7 +82,7 @@ export default async function PortalUnidadePage({
     supabase
       .from("cobrancas")
       .select(
-        "id, tipo, descricao, competencia, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, tasa_bcv_aplicada, forma_pagamento, referencia_bancaria, observacao, creditos_movimentacoes(valor, moeda)))",
+        "id, tipo, descricao, taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(titulo), competencia, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, tasa_bcv_aplicada, forma_pagamento, referencia_bancaria, observacao, creditos_movimentacoes(valor, moeda)))",
       )
       .eq("unidade_id", id)
       .order("data_vencimento", { ascending: false })
@@ -120,8 +122,9 @@ export default async function PortalUnidadePage({
       : null,
   }));
 
-  const cobrancas: CobrancaDaUnidade[] = (cobrancasRaw ?? []).map(({ pagamento_cobrancas, ...cobranca }) => ({
+  const cobrancas: CobrancaDaUnidade[] = (cobrancasRaw ?? []).map(({ pagamento_cobrancas, taxa, despesa, ...cobranca }) => ({
     ...cobranca,
+    titulo_origem: taxa?.titulo ?? despesa?.titulo ?? cobranca.descricao,
     valor_principal_pago_usd: pagamento_cobrancas.reduce((acc, p) => acc + p.valor_principal_abatido_usd, 0),
     valor_juros_pago_usd: pagamento_cobrancas.reduce((acc, p) => acc + p.valor_juros_pago_usd, 0),
     data_ultimo_pagamento: pagamento_cobrancas.reduce<string | null>(

@@ -7,6 +7,8 @@ export type CobrancaDaUnidade = {
   id: string;
   tipo: CobrancaTipo;
   descricao: string;
+  // título da taxa ou do rateio de origem (a descrição das ordinárias é sempre "Taxa de condomínio")
+  titulo_origem: string;
   competencia: string;
   valor_usd: number;
   valor_credito_abatido_usd: number;

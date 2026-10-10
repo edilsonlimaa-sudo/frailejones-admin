@@ -199,8 +199,6 @@
       "document": "Documento",
       "phone": "Teléfono (WhatsApp)",
       "email": "Correo electrónico",
-      "creditBalanceUsd": "Saldo a favor en dólares",
-      "creditBalanceVes": "Saldo a favor en bolívares",
       "createdAt": "Creada el"
     },
     "charges": {
@@ -619,6 +617,53 @@
       "title": "¡Gracias por registrarse!",
       "description": "Revise su correo para confirmar",
       "body": "Se registró con éxito. Revise su correo para confirmar su cuenta antes de iniciar sesión."
+    }
+  },
+  "estadoCuenta": {
+    "title": "Estado de cuenta",
+    "description": "Situación de la unidad al día de hoy, con multa e intereses calculados hoy",
+    "situation": {
+      "alDia": "Al día",
+      "porVencer": "Por vencer",
+      "enAtraso": "En atraso desde el {date}"
+    },
+    "debt": {
+      "total": "Deuda total",
+      "split": "{principal} de cobros + {charges} de multa e intereses"
+    },
+    "creditBalance": "Saldo a favor",
+    "nextDue": "Próximo vencimiento",
+    "lastPayment": "Último pago",
+    "aging": {
+      "title": "Antigüedad de la deuda",
+      "porVencer": "Por vencer",
+      "d1a30": "1–30 días",
+      "d31a60": "31–60 días",
+      "d61a90": "61–90 días",
+      "mas90": "Más de 90 días"
+    },
+    "timeline": {
+      "title": "Últimos {count} meses",
+      "states": {
+        "enDia": "Pagado en día",
+        "conAtraso": "Pagado con atraso",
+        "vencido": "Vencido",
+        "porVencer": "Por vencer",
+        "sinCobros": "Sin cobros"
+      }
+    },
+    "behavior": {
+      "title": "Comportamiento de pago (últimos {count} meses)",
+      "onTime": "Pagado en día",
+      "averageDelay": "Atraso promedio al pagar",
+      "days": "{count, plural, one {# día} other {# días}}",
+      "noLatePayments": "Sin pagos atrasados",
+      "latePaidCount": "en {count, plural, one {# cobro pagado} other {# cobros pagados}} después del plazo",
+      "chargesPaid": "Multa e intereses pagados"
+    },
+    "composition": {
+      "title": "Composición de la deuda",
+      "charges": "{count, plural, one {# cobro} other {# cobros}}"
     }
   }
 }

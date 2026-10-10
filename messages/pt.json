@@ -199,8 +199,6 @@
       "document": "Documento",
       "phone": "Telefone (WhatsApp)",
       "email": "Email",
-      "creditBalanceUsd": "Saldo a favor em dólares",
-      "creditBalanceVes": "Saldo a favor em bolívares",
       "createdAt": "Criada em"
     },
     "charges": {
@@ -619,6 +617,53 @@
       "title": "Obrigado por se cadastrar!",
       "description": "Verifique seu email para confirmar",
       "body": "Você se cadastrou com sucesso. Verifique seu email para confirmar sua conta antes de entrar."
+    }
+  },
+  "estadoCuenta": {
+    "title": "Estado de conta",
+    "description": "Situação da unidade até hoje, com multa e juros calculados hoje",
+    "situation": {
+      "alDia": "Em dia",
+      "porVencer": "A vencer",
+      "enAtraso": "Em atraso desde {date}"
+    },
+    "debt": {
+      "total": "Dívida total",
+      "split": "{principal} de cobranças + {charges} de multa e juros"
+    },
+    "creditBalance": "Saldo a favor",
+    "nextDue": "Próximo vencimento",
+    "lastPayment": "Último pagamento",
+    "aging": {
+      "title": "Antiguidade da dívida",
+      "porVencer": "A vencer",
+      "d1a30": "1–30 dias",
+      "d31a60": "31–60 dias",
+      "d61a90": "61–90 dias",
+      "mas90": "Mais de 90 dias"
+    },
+    "timeline": {
+      "title": "Últimos {count} meses",
+      "states": {
+        "enDia": "Pago em dia",
+        "conAtraso": "Pago com atraso",
+        "vencido": "Vencido",
+        "porVencer": "A vencer",
+        "sinCobros": "Sem cobranças"
+      }
+    },
+    "behavior": {
+      "title": "Comportamento de pagamento (últimos {count} meses)",
+      "onTime": "Pago em dia",
+      "averageDelay": "Atraso médio ao pagar",
+      "days": "{count, plural, one {# dia} other {# dias}}",
+      "noLatePayments": "Sem pagamentos atrasados",
+      "latePaidCount": "em {count, plural, one {# cobrança paga} other {# cobranças pagas}} depois do prazo",
+      "chargesPaid": "Multa e juros pagos"
+    },
+    "composition": {
+      "title": "Composição da dívida",
+      "charges": "{count, plural, one {# cobrança} other {# cobranças}}"
     }
   }
 }
