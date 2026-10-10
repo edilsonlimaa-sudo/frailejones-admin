@@ -70,7 +70,7 @@
     "overdue": "En atraso",
     "collectionTitle": "Recaudación del mes",
     "activeUnitsDescription": "{count, plural, one {# unidad activa en la emisión de cobros} other {# unidades activas en la emisión de cobros}}",
-    "collectedPercent": "{percent}% recaudado",
+    "collectedPercent": "{percent}% recaudado al día de hoy",
     "pendingChargesTitle": "Cobros pendientes",
     "pendingChargesDescription": "Vencimientos del mes seleccionado",
     "noPendingCharges": "Ningún cobro pendiente este mes.",
@@ -98,11 +98,14 @@
         "emAberto": "Por cobrar"
       },
       "charges": "Multa e intereses cobrados",
-      "chargesNote": "Se suman a lo emitido, no forman parte de él"
+      "chargesNote": "Se suman a lo emitido, no forman parte de él",
+      "onTimePercent": "{percent}% pagado en día",
+      "onTimePending": "plazo de pago aún no vencido"
     },
     "evolutionTitle": "Evolución de la recaudación",
-    "evolutionDescription": "Emitido × saldado en dólares, últimos {count} meses",
+    "evolutionDescription": "Emitido × saldado en dólares y % pagado en día, últimos {count} meses",
     "chartIssued": "Emitido",
+    "chartOnTime": "Pagado en día",
     "entries": {
       "title": "Ingresos del mes",
       "description": "Dinero recibido en el mes, en la moneda en que entró, según la fecha de pago",
@@ -114,7 +117,7 @@
       "noEntriesVes": "Ningún pago en bolívares este mes."
     },
     "chartSettled": "Saldado",
-    "evolutionNote": "Los cobros son en dólares, así que el gráfico mide deuda, no caja. \"Saldado\" es cuánto abonaron los pagos del mes a los cobros: un pago en bolívares cuenta por el monto que abonó, a la tasa BCV del día en que se liquidó. Lo emitido cuenta por el mes del cobro y lo saldado por la fecha de pago, así que un mes puede saldar más de lo que emitió cuando se pagan atrasos. Multa, intereses y saldo a favor no se incluyen. El dinero que entró, en cada moneda, está en \"Ingresos del mes\".",
+    "evolutionNote": "Los cobros son en dólares, así que el gráfico mide deuda, no caja. \"Saldado\" es cuánto abonaron los pagos del mes a los cobros: un pago en bolívares cuenta por el monto que abonó, a la tasa BCV del día en que se liquidó. Lo emitido cuenta por el mes del cobro y lo saldado por la fecha de pago, así que un mes puede saldar más de lo que emitió cuando se pagan atrasos. Multa, intereses y saldo a favor no se incluyen. El dinero que entró, en cada moneda, está en \"Ingresos del mes\". \"Pagado en día\" es el % de lo emitido en el mes que se pagó hasta el vencimiento más los días de gracia; solo cuentan los cobros cuyo plazo ya terminó.",
     "settlement": {
       "title": "Deuda saldada en el mes",
       "description": "Cuánto abonaron a los cobros los pagos recibidos en el mes, en dólares (pagos en bolívares a la tasa BCV del día de la liquidación)",

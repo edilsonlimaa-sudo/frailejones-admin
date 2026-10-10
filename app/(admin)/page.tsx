@@ -5,11 +5,15 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
 import {
+  acumularPontualidade,
   inicioDoMesCaracas,
   mesCaixaCaracas,
+  percentualEmDia,
   principalQuitado,
   resumirEntradas,
+  type CobrancaParaPontualidade,
   type PagamentoDoPeriodo,
+  type Pontualidade,
 } from "@/lib/arrecadacao";
 import { calcularEncargos } from "@/lib/encargos";
 import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
@@ -69,6 +73,7 @@ export default async function Home({
   const { ano, mes } = parseMes(mesParam);
   const hoje = new Date();
   const hojeIso = hoje.toISOString().slice(0, 10);
+  const hojeCaracas = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(hoje);
 
   const t = await getTranslations("dashboard");
   const tStatus = await getTranslations("cobrancas.status");
@@ -133,11 +138,13 @@ export default async function Home({
         .returns<PagamentoDoPeriodo[]>(),
       supabase
         .from("cobrancas")
-        .select("competencia, valor_usd")
+        .select(
+          "competencia, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pagamento_cobrancas(valor_principal_abatido_usd, pagamento:pagamentos(data_pagamento))",
+        )
         .neq("status", "cancelado")
         .gte("competencia", competenciaInicioEvolucao)
         .lt("competencia", inicioMesSeguinte)
-        .returns<{ competencia: string; valor_usd: number }[]>(),
+        .returns<(CobrancaParaPontualidade & { competencia: string })[]>(),
     ]);
 
   const loadError =
@@ -161,12 +168,22 @@ export default async function Home({
       rotulo: mesRotuloCurtoFormatter.format(new Date(`${chave}-01T00:00:00Z`)).replace(".", ""),
       emitido: 0,
       quitado: 0,
+      emDia: null,
     };
   });
   const pontoPorMes = new Map(evolucao.map((p) => [p.mes, p]));
+  const pontualidadePorMes = new Map<string, Pontualidade>(
+    evolucao.map((p) => [p.mes, { base: 0, emDia: 0 }]),
+  );
   for (const c of cobrancasEvolucaoRaw ?? []) {
-    const ponto = pontoPorMes.get(c.competencia.slice(0, 7));
+    const chave = c.competencia.slice(0, 7);
+    const ponto = pontoPorMes.get(chave);
     if (ponto) ponto.emitido += c.valor_usd;
+    const pontualidade = pontualidadePorMes.get(chave);
+    if (pontualidade) acumularPontualidade(pontualidade, c, hojeCaracas);
+  }
+  for (const ponto of evolucao) {
+    ponto.emDia = percentualEmDia(pontualidadePorMes.get(ponto.mes)!);
   }
   // quitado = principal abatido pelos pagamentos do mês (em dólar, a moeda da dívida), e não o
   // valor recebido: somar bolívar convertido como se fosse caixa em dólar seria enganoso
@@ -226,12 +243,13 @@ export default async function Home({
     quitadoDepois: quitadoDepoisDoMes,
     emAberto: valorEmAberto,
     encargos: encargosCobrados,
+    // a janela do gráfico termina no mês selecionado: o último ponto é a pontualidade dele
+    percentualEmDia: evolucao.at(-1)?.emDia ?? null,
   };
 
   // a cotação é atualizada pelo cron; se a mais recente for anterior a hoje (no fuso de Caracas),
   // a atualização falhou e liquidações em VES usariam uma taxa vencida. Em fim de semana e feriado
   // não há aviso falso: a taxa publicada na sexta já vem com a data do próximo dia útil.
-  const hojeCaracas = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(hoje);
   const cotacaoDesatualizada = !cotacaoBcv || cotacaoBcv.data_cotacao < hojeCaracas;
 
   return (
@@ -327,7 +345,7 @@ export default async function Home({
           <CardContent>
             <EvolucaoArrecadacaoChart
               dados={evolucao}
-              labels={{ emitido: t("chartIssued"), quitado: t("chartSettled") }}
+              labels={{ emitido: t("chartIssued"), quitado: t("chartSettled"), emDia: t("chartOnTime") }}
             />
           </CardContent>
           <CardFooter className="items-start gap-2 text-xs text-muted-foreground">

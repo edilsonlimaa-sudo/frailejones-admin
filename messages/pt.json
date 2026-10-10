@@ -70,7 +70,7 @@
     "overdue": "Em atraso",
     "collectionTitle": "Arrecadação do mês",
     "activeUnitsDescription": "{count, plural, one {# unidade ativa na emissão de cobranças} other {# unidades ativas na emissão de cobranças}}",
-    "collectedPercent": "{percent}% arrecadado",
+    "collectedPercent": "{percent}% arrecadado até hoje",
     "pendingChargesTitle": "Cobranças pendentes",
     "pendingChargesDescription": "Vencimentos do mês selecionado",
     "noPendingCharges": "Nenhuma cobrança pendente neste mês.",
@@ -98,11 +98,14 @@
         "emAberto": "Em aberto"
       },
       "charges": "Multa e juros cobrados",
-      "chargesNote": "Somam-se ao emitido, não fazem parte dele"
+      "chargesNote": "Somam-se ao emitido, não fazem parte dele",
+      "onTimePercent": "{percent}% pago em dia",
+      "onTimePending": "prazo de pagamento ainda não venceu"
     },
     "evolutionTitle": "Evolução da arrecadação",
-    "evolutionDescription": "Emitido × quitado em dólares, últimos {count} meses",
+    "evolutionDescription": "Emitido × quitado em dólares e % pago em dia, últimos {count} meses",
     "chartIssued": "Emitido",
+    "chartOnTime": "Pago em dia",
     "entries": {
       "title": "Entradas do mês",
       "description": "Dinheiro recebido no mês, na moeda em que entrou, pela data do pagamento",
@@ -114,7 +117,7 @@
       "noEntriesVes": "Nenhum pagamento em bolívares neste mês."
     },
     "chartSettled": "Quitado",
-    "evolutionNote": "As cobranças são em dólares, então o gráfico mede dívida, não caixa. \"Quitado\" é quanto os pagamentos do mês abateram das cobranças: um pagamento em bolívares entra pelo valor que abateu, na taxa BCV do dia em que foi liquidado. O emitido conta pelo mês da cobrança e o quitado pela data do pagamento, então um mês pode quitar mais do que emitiu quando há atrasados sendo pagos. Multa, juros e saldo a favor não entram. O dinheiro que entrou, em cada moeda, está em \"Entradas do mês\".",
+    "evolutionNote": "As cobranças são em dólares, então o gráfico mede dívida, não caixa. \"Quitado\" é quanto os pagamentos do mês abateram das cobranças: um pagamento em bolívares entra pelo valor que abateu, na taxa BCV do dia em que foi liquidado. O emitido conta pelo mês da cobrança e o quitado pela data do pagamento, então um mês pode quitar mais do que emitiu quando há atrasados sendo pagos. Multa, juros e saldo a favor não entram. O dinheiro que entrou, em cada moeda, está em \"Entradas do mês\". \"Pago em dia\" é o % do emitido no mês que foi pago até o vencimento mais os dias de carência; só entram as cobranças cujo prazo já acabou.",
     "settlement": {
       "title": "Dívida quitada no mês",
       "description": "Quanto os pagamentos recebidos no mês abateram das cobranças, em dólares (pagamentos em bolívares pela taxa BCV do dia da liquidação)",

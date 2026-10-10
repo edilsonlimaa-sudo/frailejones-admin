@@ -12,10 +12,57 @@ export function inicioDoMesCaracas(ano: number, mes: number): string {
   return new Date(`${iso}T00:00:00${OFFSET_CARACAS}`).toISOString();
 }
 
+// "YYYY-MM-DD" do dia (no fuso de Caracas) em que o pagamento caiu
+export function dataCaixaCaracas(dataPagamento: string): string {
+  const local = new Date(new Date(dataPagamento).getTime() - 4 * 60 * 60 * 1000);
+  return local.toISOString().slice(0, 10);
+}
+
 // "YYYY-MM" do mês (no fuso de Caracas) em que o pagamento caiu
 export function mesCaixaCaracas(dataPagamento: string): string {
-  const local = new Date(new Date(dataPagamento).getTime() - 4 * 60 * 60 * 1000);
-  return local.toISOString().slice(0, 7);
+  return dataCaixaCaracas(dataPagamento).slice(0, 7);
+}
+
+export type CobrancaParaPontualidade = {
+  valor_usd: number;
+  valor_credito_abatido_usd: number;
+  data_vencimento: string;
+  dias_graca: number;
+  pagamento_cobrancas: {
+    valor_principal_abatido_usd: number;
+    pagamento: { data_pagamento: string } | null;
+  }[];
+};
+
+// base = emitido das cobranças cujo prazo já acabou; emDia = quanto dele foi quitado dentro do prazo
+export type Pontualidade = { base: number; emDia: number };
+
+// pago "em dia" = quitado até o vencimento + dias de carência (depois disso já incidem multa e
+// juros). Cobrança cujo prazo ainda não acabou fica fora da base: ninguém está atrasado nela ainda,
+// e contá-la derrubaria a pontualidade do mês corrente. Saldo a favor é aplicado na emissão, então
+// conta como em dia.
+export function acumularPontualidade(
+  acc: Pontualidade,
+  cobranca: CobrancaParaPontualidade,
+  hojeIso: string,
+): void {
+  const limite = new Date(`${cobranca.data_vencimento}T00:00:00Z`);
+  limite.setUTCDate(limite.getUTCDate() + cobranca.dias_graca);
+  const prazo = limite.toISOString().slice(0, 10);
+  if (hojeIso <= prazo) return;
+
+  acc.base += cobranca.valor_usd;
+  acc.emDia += cobranca.valor_credito_abatido_usd;
+  for (const p of cobranca.pagamento_cobrancas) {
+    if (p.pagamento && dataCaixaCaracas(p.pagamento.data_pagamento) <= prazo) {
+      acc.emDia += p.valor_principal_abatido_usd;
+    }
+  }
+}
+
+// null quando nenhuma cobrança do período teve o prazo encerrado ainda
+export function percentualEmDia(pontualidade: Pontualidade): number | null {
+  return pontualidade.base > 0 ? Math.min(100, (pontualidade.emDia / pontualidade.base) * 100) : null;
 }
 
 export type PagamentoDoPeriodo = {

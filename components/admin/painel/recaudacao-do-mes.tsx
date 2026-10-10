@@ -18,6 +18,8 @@ export type RecaudacaoDoMes = {
   quitadoDepois: number;
   emAberto: number;
   encargos: number;
+  // % do emitido quitado até vencimento + carência; null se o prazo de nenhuma cobrança acabou
+  percentualEmDia: number | null;
 };
 
 type RecaudacaoDoMesProps = {
@@ -62,6 +64,10 @@ export async function RecaudacaoDoMes({ recaudacao, unidadesAtivas }: Recaudacao
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
                 {t("collectedPercent", { percent: percentual(quitado).toFixed(0) })}
+                {" · "}
+                {recaudacao.percentualEmDia === null
+                  ? t("collection.onTimePending")
+                  : t("collection.onTimePercent", { percent: recaudacao.percentualEmDia.toFixed(0) })}
               </p>
             </div>
             <ul className="flex flex-col gap-2.5">
