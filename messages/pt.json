@@ -76,6 +76,18 @@
     "noPendingCharges": "Nenhuma cobrança pendente neste mês.",
     "unitRemoved": "Unidade removida",
     "dueOn": "Vence em {date}",
+    "graceUntil": "carência até {date}",
+    "debt": {
+      "title": "Dívida total até hoje",
+      "description": "Tudo que está pendente, de qualquer mês, independente do mês selecionado, com multa e juros calculados hoje",
+      "empty": "Nenhuma dívida pendente. Todas as unidades estão em dia.",
+      "total": "Total a receber",
+      "principal": "Taxas e rateios pendentes",
+      "charges": "Multa e juros até hoje",
+      "summary": "{overdue, plural, =0 {Nenhuma cobrança vencida} one {# cobrança vencida} other {# cobranças vencidas}} de {pending, plural, one {# pendente} other {# pendentes}}, em {units, plural, one {# unidade} other {# unidades}}",
+      "topTitle": "Unidades com maior dívida",
+      "topDescription": "Total atualizado com multa e juros"
+    },
     "shortcutUnidades": "Unidades",
     "shortcutUnidadesDescription": "Unidades e proprietários",
     "shortcutTaxas": "Taxas de Condomínio",

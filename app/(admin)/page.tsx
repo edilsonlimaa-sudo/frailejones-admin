@@ -21,6 +21,7 @@ import { NavegadorMes } from "@/components/admin/navegador-mes";
 import { EntradasDoMes } from "@/components/admin/painel/entradas-do-mes";
 import { QuitacaoDoMes } from "@/components/admin/painel/quitacao-do-mes";
 import { RecaudacaoDoMes } from "@/components/admin/painel/recaudacao-do-mes";
+import { DeudaTotal, type CobrancaPendenteTotal } from "@/components/admin/painel/deuda-total";
 import {
   EvolucaoArrecadacaoChart,
   type PontoEvolucao,
@@ -46,6 +47,7 @@ const statusVariant: Record<CobrancaStatus, "outline" | "default" | "destructive
 
 type CobrancaDoMes = {
   id: string;
+  descricao: string;
   valor_usd: number;
   valor_credito_abatido_usd: number;
   data_vencimento: string;
@@ -54,6 +56,10 @@ type CobrancaDoMes = {
   pct_juros_diario: number;
   status: CobrancaStatus;
   unidade: { id: string; identificacao: string } | null;
+  // título da origem: a descrição das ordinárias é sempre "Taxa de condomínio", então sem isto
+  // a lista de pendentes não distingue a cuota do fundo de reserva
+  taxa: { titulo: string } | null;
+  despesa: { titulo: string } | null;
   pagamento_cobrancas: {
     valor_principal_abatido_usd: number;
     valor_juros_pago_usd: number;
@@ -63,6 +69,19 @@ type CobrancaDoMes = {
 
 // quantos meses (incluindo o selecionado) o gráfico de evolução mostra
 const MESES_EVOLUCAO = 6;
+
+const somarDias = (dataIso: string, dias: number) => {
+  const data = new Date(`${dataIso}T00:00:00Z`);
+  data.setUTCDate(data.getUTCDate() + dias);
+  return data.toISOString().slice(0, 10);
+};
+
+// último dia útil (seg–sex) até a data: o BCV não publica taxa com fecha valor de sábado ou
+// domingo, então no fim de semana a vigente é a de sexta (feriados não são considerados)
+const ultimoDiaUtil = (dataIso: string) => {
+  const diaDaSemana = new Date(`${dataIso}T00:00:00Z`).getUTCDay();
+  return somarDias(dataIso, diaDaSemana === 6 ? -1 : diaDaSemana === 0 ? -2 : 0);
+};
 
 export default async function Home({
   searchParams,
@@ -109,11 +128,12 @@ export default async function Home({
     { data: cotacaoBcv, error: cotacaoBcvError },
     { data: pagamentosRaw, error: pagamentosError },
     { data: cobrancasEvolucaoRaw, error: cobrancasEvolucaoError },
+    { data: pendentesTotaisRaw, error: pendentesTotaisError },
   ] = await Promise.all([
       supabase
         .from("cobrancas")
         .select(
-          "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
+          "id, descricao, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(titulo), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
         )
         .gte("competencia", inicioMes)
         .lt("competencia", inicioMesSeguinte)
@@ -145,10 +165,23 @@ export default async function Home({
         .gte("competencia", competenciaInicioEvolucao)
         .lt("competencia", inicioMesSeguinte)
         .returns<(CobrancaParaPontualidade & { competencia: string })[]>(),
+      // tudo que está pendente hoje, de qualquer competência (card de dívida total)
+      supabase
+        .from("cobrancas")
+        .select(
+          "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd)",
+        )
+        .eq("status", "pendente")
+        .returns<CobrancaPendenteTotal[]>(),
     ]);
 
   const loadError =
-    cobrancasError ?? taxaVinculosError ?? cotacaoBcvError ?? pagamentosError ?? cobrancasEvolucaoError;
+    cobrancasError ??
+    taxaVinculosError ??
+    cotacaoBcvError ??
+    pagamentosError ??
+    cobrancasEvolucaoError ??
+    pendentesTotaisError;
   if (loadError) {
     return <p className="text-sm text-destructive">{t("loadError", { message: loadError.message })}</p>;
   }
@@ -247,10 +280,11 @@ export default async function Home({
     percentualEmDia: evolucao.at(-1)?.emDia ?? null,
   };
 
-  // a cotação é atualizada pelo cron; se a mais recente for anterior a hoje (no fuso de Caracas),
-  // a atualização falhou e liquidações em VES usariam uma taxa vencida. Em fim de semana e feriado
-  // não há aviso falso: a taxa publicada na sexta já vem com a data do próximo dia útil.
-  const cotacaoDesatualizada = !cotacaoBcv || cotacaoBcv.data_cotacao < hojeCaracas;
+  // a cotação é atualizada pelo cron; se a mais recente for anterior ao último dia útil (no fuso de
+  // Caracas), a atualização falhou e liquidações em VES usariam uma taxa vencida. Comparar com hoje
+  // dava aviso falso todo fim de semana: a DolarApi (fonte principal) só traz a taxa de segunda
+  // quando ela passa a valer, então no sábado e no domingo a mais recente é a de sexta.
+  const cotacaoDesatualizada = !cotacaoBcv || cotacaoBcv.data_cotacao < ultimoDiaUtil(hojeCaracas);
 
   return (
     <div className="flex flex-col gap-6">
@@ -280,6 +314,12 @@ export default async function Home({
           </Button>
         </div>
       )}
+
+      <DeudaTotal
+        cobrancas={pendentesTotaisRaw ?? []}
+        hojeIso={hojeIso}
+        tasaVes={cotacaoBcv?.tasa_ves ?? null}
+      />
 
       <EntradasDoMes usd={resumoEntradas.usd} ves={resumoEntradas.ves} mes={mesSelecionado}>
         <QuitacaoDoMes quitacao={resumoEntradas.quitacao} />
@@ -357,21 +397,33 @@ export default async function Home({
         <Card size="sm" className="lg:col-span-2">
           <CardHeader>
             <CardTitle>{t("pendingChargesTitle")}</CardTitle>
-            <CardDescription>{t("pendingChargesDescription")}</CardDescription>
+            <CardDescription>
+              {t("pendingChargesDescription")}
+              {pendentes.length > 0 && ` · ${t("chargesCount", { count: pendentes.length })}`}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {pendentes.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noPendingCharges")}</p>
             ) : (
-              <ul className="flex flex-col gap-3">
-                {linhasPendentes.slice(0, 6).map(({ cobranca: c, encargos }) => (
+              // lista completa com rolagem: cortar sem aviso fazia o card mostrar menos cobranças
+              // do que o contador "Pendientes"
+              <ul className="-mr-2 flex max-h-96 flex-col gap-3 overflow-y-auto pr-2">
+                {linhasPendentes.map(({ cobranca: c, encargos }) => (
                   <li key={c.id} className="flex items-center justify-between gap-2 text-sm">
                     <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {c.unidade?.identificacao ?? t("unitRemoved")}
+                      <p className="truncate">
+                        <span className="font-medium">{c.unidade?.identificacao ?? t("unitRemoved")}</span>
+                        <span className="text-muted-foreground">
+                          {" · "}
+                          {c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao}
+                        </span>
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {t("dueOn", { date: formatDate(c.data_vencimento) })}
+                        {/* os dias de atraso contam do fim da carência, não do vencimento */}
+                        {c.dias_graca > 0 &&
+                          ` · ${t("graceUntil", { date: formatDate(somarDias(c.data_vencimento, c.dias_graca)) })}`}
                         {encargos.diasAtraso > 0 && (
                           <span className="text-destructive">
                             {" "}
@@ -382,17 +434,12 @@ export default async function Home({
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <div className="text-right">
-                        <span className="font-medium">
-                          {formatUsd(
-                            encargos.diasAtraso > 0 ? encargos.valorTotalComEncargos : c.valor_usd,
-                          )}
-                        </span>
+                        {/* saldo devedor (+ encargos se vencida), não o valor original: um abono
+                            parcial já reduziu o que falta pagar */}
+                        <span className="font-medium">{formatUsd(encargos.valorTotalComEncargos)}</span>
                         {cotacaoBcv && (
                           <p className="text-xs text-muted-foreground">
-                            {formatVes(
-                              encargos.diasAtraso > 0 ? encargos.valorTotalComEncargos : c.valor_usd,
-                              cotacaoBcv.tasa_ves,
-                            )}
+                            {formatVes(encargos.valorTotalComEncargos, cotacaoBcv.tasa_ves)}
                           </p>
                         )}
                       </div>

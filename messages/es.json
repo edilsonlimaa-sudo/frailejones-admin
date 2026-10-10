@@ -76,6 +76,18 @@
     "noPendingCharges": "Ningún cobro pendiente este mes.",
     "unitRemoved": "Unidad eliminada",
     "dueOn": "Vence el {date}",
+    "graceUntil": "gracia hasta el {date}",
+    "debt": {
+      "title": "Deuda total al día de hoy",
+      "description": "Todo lo pendiente de cualquier mes, sin importar el mes seleccionado, con multa e intereses calculados hoy",
+      "empty": "Ninguna deuda pendiente. Todas las unidades están al día.",
+      "total": "Total por cobrar",
+      "principal": "Cuotas y prorrateos pendientes",
+      "charges": "Multa e intereses al día de hoy",
+      "summary": "{overdue, plural, =0 {Ningún cobro vencido} one {# cobro vencido} other {# cobros vencidos}} de {pending, plural, one {# pendiente} other {# pendientes}}, en {units, plural, one {# unidad} other {# unidades}}",
+      "topTitle": "Unidades con mayor deuda",
+      "topDescription": "Total actualizado con multa e intereses"
+    },
     "shortcutUnidades": "Unidades",
     "shortcutUnidadesDescription": "Unidades y propietarios",
     "shortcutTaxas": "Cuotas de Condominio",
