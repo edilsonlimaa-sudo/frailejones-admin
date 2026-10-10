@@ -146,12 +146,15 @@ export function resumirEntradas(
     total: 0,
   };
 
+  // compara só o mês: a competência de rateio extraordinário é a data de vencimento (ex.:
+  // 2026-02-25), não o dia 1, e compará-la com "YYYY-MM-01" a jogaria em "meses futuros"
+  const mesDoResumo = competenciaDoMes.slice(0, 7);
   for (const p of pagamentos) {
     const principal = principalQuitado(p);
-    const competencia = p.pagamento_cobrancas?.cobranca?.competencia;
-    if (competencia && competencia < competenciaDoMes) {
+    const mesDaCobranca = p.pagamento_cobrancas?.cobranca?.competencia.slice(0, 7);
+    if (mesDaCobranca && mesDaCobranca < mesDoResumo) {
       quitacao.principalAtrasado += principal;
-    } else if (competencia && competencia > competenciaDoMes) {
+    } else if (mesDaCobranca && mesDaCobranca > mesDoResumo) {
       quitacao.principalAdiantado += principal;
     } else {
       quitacao.principalDoMes += principal;
