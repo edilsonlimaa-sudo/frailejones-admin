@@ -80,7 +80,7 @@ const corDaSituacao: Record<SituacaoConta, string> = {
 };
 
 // colunas da grade (desktop): unidade | proprietário | situação | dívida | ações
-const COLUNAS = "sm:grid sm:grid-cols-[5.5rem_minmax(0,1fr)_minmax(0,14rem)_9rem_2.25rem] sm:items-center sm:gap-4";
+const COLUNAS = "sm:grid sm:grid-cols-[5.5rem_minmax(0,1fr)_minmax(0,11rem)_14rem_2.25rem] sm:items-center sm:gap-4";
 
 export function UnidadesManager({
   unidades,
@@ -270,7 +270,7 @@ export function UnidadesManager({
           />
 
           {proprietarioFiltrado && (
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-muted-foreground">{t("ownerFilter")}</span>
               <Badge variant="secondary">{proprietarioFiltrado}</Badge>
               <Button size="xs" variant="ghost" onClick={() => trocarProprietario(null)}>
@@ -304,19 +304,20 @@ export function UnidadesManager({
                       key={unidade.id}
                       onClick={() => router.push(`/unidades/${unidade.id}`)}
                       className={cn(
-                        "flex cursor-pointer flex-col gap-2 px-3 py-3 transition-colors hover:bg-muted/50",
+                        "relative flex cursor-pointer flex-col gap-2 px-3 py-3 transition-colors hover:bg-muted/50",
                         COLUNAS,
                       )}
                     >
-                      <div className="flex items-center justify-between gap-2 sm:contents">
+                      {/* no celular o menu ⋯ fica no canto (absolute), então reserva espaço à direita */}
+                      <div className="flex items-center gap-3 pr-10 sm:contents">
                         <Link
                           href={`/unidades/${unidade.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="font-medium hover:underline"
+                          className="shrink-0 font-medium whitespace-nowrap hover:underline"
                         >
                           {unidade.identificacao}
                         </Link>
-                        <div className="flex min-w-0 items-center gap-2 sm:order-none">
+                        <div className="flex min-w-0 items-center gap-2">
                           <span className="truncate text-sm">{unidade.proprietario?.nome ?? "—"}</span>
                           {outrasDoDono > 1 && (
                             <Button
@@ -364,7 +365,7 @@ export function UnidadesManager({
                         </div>
                       </div>
 
-                      <div className="self-end sm:self-auto" onClick={(e) => e.stopPropagation()}>
+                      <div className="absolute top-2 right-2 sm:static" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger
                             render={
