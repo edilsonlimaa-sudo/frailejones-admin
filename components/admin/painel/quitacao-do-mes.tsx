@@ -21,6 +21,8 @@ export async function QuitacaoDoMes({ quitacao }: { quitacao: Quitacao }) {
     { chave: "encargos", valor: quitacao.encargos, cor: "var(--destructive)" },
     // "adiantado" é raro (pagar cobrança de competência futura): só aparece quando existe
   ].filter((l) => l.chave !== "adiantado" || l.valor > 0);
+  // só pra largura da barra (composição do total); não é exibido como número porque, ao lado da
+  // arrecadação, "100%" era lido como "100% das cobranças do mês quitadas"
   const percentual = (valor: number) => (quitacao.total > 0 ? (valor / quitacao.total) * 100 : 0);
 
   return (
@@ -48,9 +50,6 @@ export async function QuitacaoDoMes({ quitacao }: { quitacao: Quitacao }) {
                 <li key={l.chave} className="flex items-center gap-2 text-sm">
                   <span className="size-2.5 shrink-0 rounded-[2px]" style={{ backgroundColor: l.cor }} />
                   <span className="flex-1 text-muted-foreground">{t(`rows.${l.chave}`)}</span>
-                  <span className="w-12 text-right text-xs text-muted-foreground tabular-nums">
-                    {percentual(l.valor).toFixed(0)}%
-                  </span>
                   <span className="w-24 text-right font-medium tabular-nums">{formatUsd(l.valor)}</span>
                 </li>
               ))}

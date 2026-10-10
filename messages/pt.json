@@ -88,7 +88,18 @@
     "openAmount": "{value} em aberto",
     "withCharges": "{value} com multa e juros",
     "billingTitle": "Cobrança do mês",
-    "billingDescription": "Cobranças com competência no mês selecionado",
+    "billingDescription": "Cobranças com competência no mês selecionado e a situação delas até hoje",
+    "collection": {
+      "empty": "Nenhuma cobrança emitida para este mês.",
+      "issued": "Emitido",
+      "rows": {
+        "noMes": "Quitado dentro do mês",
+        "depois": "Quitado nos meses seguintes",
+        "emAberto": "Em aberto"
+      },
+      "charges": "Multa e juros cobrados",
+      "chargesNote": "Somam-se ao emitido, não fazem parte dele"
+    },
     "evolutionTitle": "Evolução da arrecadação",
     "evolutionDescription": "Emitido × quitado em dólares, últimos {count} meses",
     "chartIssued": "Emitido",

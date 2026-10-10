@@ -88,7 +88,18 @@
     "openAmount": "{value} por cobrar",
     "withCharges": "{value} con multa e intereses",
     "billingTitle": "Cobranza del mes",
-    "billingDescription": "Cobros del período seleccionado",
+    "billingDescription": "Cobros del mes seleccionado y su situación al día de hoy",
+    "collection": {
+      "empty": "Ningún cobro emitido para este mes.",
+      "issued": "Emitido",
+      "rows": {
+        "noMes": "Saldado dentro del mes",
+        "depois": "Saldado en meses siguientes",
+        "emAberto": "Por cobrar"
+      },
+      "charges": "Multa e intereses cobrados",
+      "chargesNote": "Se suman a lo emitido, no forman parte de él"
+    },
     "evolutionTitle": "Evolución de la recaudación",
     "evolutionDescription": "Emitido × saldado en dólares, últimos {count} meses",
     "chartIssued": "Emitido",

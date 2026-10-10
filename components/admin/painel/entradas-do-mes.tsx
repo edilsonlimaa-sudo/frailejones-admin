@@ -19,12 +19,14 @@ type EntradasDoMesProps = {
   ves: EntradasNaMoeda;
   // "YYYY-MM", repassado pro filtro de Liquidações
   mes: string;
+  // demais cards da visão de caixa (ex.: dívida quitada no mês), abaixo dos cards de moeda
+  children?: React.ReactNode;
 };
 
 // caixa do mês: cada moeda no seu card, sem somar nem converter. O que entrou em bolívar não
 // vira dólar no caixa (perde valor com o câmbio); o equivalente em dólar só faz sentido como
-// dívida quitada, que fica no bloco de cobrança.
-export async function EntradasDoMes({ usd, ves, mes }: EntradasDoMesProps) {
+// dívida quitada, que entra como children nesta mesma seção.
+export async function EntradasDoMes({ usd, ves, mes, children }: EntradasDoMesProps) {
   const t = await getTranslations("dashboard.entries");
 
   return (
@@ -49,6 +51,8 @@ export async function EntradasDoMes({ usd, ves, mes }: EntradasDoMesProps) {
         <CardDaMoeda moeda="USD" entradas={usd} />
         <CardDaMoeda moeda="VES" entradas={ves} />
       </div>
+
+      {children}
     </section>
   );
 }

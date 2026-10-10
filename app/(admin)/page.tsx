@@ -16,6 +16,7 @@ import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
 import { NavegadorMes } from "@/components/admin/navegador-mes";
 import { EntradasDoMes } from "@/components/admin/painel/entradas-do-mes";
 import { QuitacaoDoMes } from "@/components/admin/painel/quitacao-do-mes";
+import { RecaudacaoDoMes } from "@/components/admin/painel/recaudacao-do-mes";
 import {
   EvolucaoArrecadacaoChart,
   type PontoEvolucao,
@@ -32,7 +33,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 const statusVariant: Record<CobrancaStatus, "outline" | "default" | "destructive"> = {
   pendente: "outline",
@@ -50,7 +50,11 @@ type CobrancaDoMes = {
   pct_juros_diario: number;
   status: CobrancaStatus;
   unidade: { id: string; identificacao: string } | null;
-  pagamento_cobrancas: { valor_principal_abatido_usd: number; valor_juros_pago_usd: number }[];
+  pagamento_cobrancas: {
+    valor_principal_abatido_usd: number;
+    valor_juros_pago_usd: number;
+    pagamento: { data_pagamento: string } | null;
+  }[];
 };
 
 // quantos meses (incluindo o selecionado) o gráfico de evolução mostra
@@ -104,7 +108,7 @@ export default async function Home({
       supabase
         .from("cobrancas")
         .select(
-          "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd)",
+          "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
         )
         .gte("competencia", inicioMes)
         .lt("competencia", inicioMesSeguinte)
@@ -179,15 +183,21 @@ export default async function Home({
   const valorEmitido = ativas.reduce((acc, c) => acc + c.valor_usd, 0);
   // quitado com crédito não é dinheiro novo entrando no mês: fica separado do quitado com pagamento
   const valorQuitadoComCredito = ativas.reduce((acc, c) => acc + c.valor_credito_abatido_usd, 0);
-  const valorQuitadoComPagamento = ativas.reduce(
-    (acc, c) =>
-      acc +
-      c.pagamento_cobrancas.reduce(
-        (sum, p) => sum + p.valor_principal_abatido_usd + p.valor_juros_pago_usd,
-        0,
-      ),
-    0,
-  );
+  // só principal: o emitido não inclui multa/juros, então somá-los aqui faria o quitado passar do
+  // emitido. Os encargos pagos aparecem à parte no card de arrecadação
+  let valorQuitadoComPagamento = 0;
+  let quitadoDepoisDoMes = 0;
+  let encargosCobrados = 0;
+  for (const c of ativas) {
+    for (const p of c.pagamento_cobrancas) {
+      valorQuitadoComPagamento += p.valor_principal_abatido_usd;
+      encargosCobrados += p.valor_juros_pago_usd;
+      // pago num mês de caixa posterior: recuperado depois, não arrecadado dentro do mês
+      if (p.pagamento && mesCaixaCaracas(p.pagamento.data_pagamento) > mesSelecionado) {
+        quitadoDepoisDoMes += p.valor_principal_abatido_usd;
+      }
+    }
+  }
   const valorArrecadado = valorQuitadoComCredito + valorQuitadoComPagamento;
   const pendentes = ativas.filter((c) => c.status === "pendente");
   const linhasPendentes = pendentes.map((c) => ({
@@ -209,7 +219,14 @@ export default async function Home({
     (acc, l) => acc + l.encargos.valorTotalComEncargos,
     0,
   );
-  const progresso = valorEmitido > 0 ? Math.min(100, (valorArrecadado / valorEmitido) * 100) : 0;
+  const recaudacao = {
+    emitido: valorEmitido,
+    // saldo a favor é aplicado na emissão, então conta como quitado dentro do mês
+    quitadoNoMes: valorArrecadado - quitadoDepoisDoMes,
+    quitadoDepois: quitadoDepoisDoMes,
+    emAberto: valorEmAberto,
+    encargos: encargosCobrados,
+  };
 
   // a cotação é atualizada pelo cron; se a mais recente for anterior a hoje (no fuso de Caracas),
   // a atualização falhou e liquidações em VES usariam uma taxa vencida. Em fim de semana e feriado
@@ -246,7 +263,9 @@ export default async function Home({
         </div>
       )}
 
-      <EntradasDoMes usd={resumoEntradas.usd} ves={resumoEntradas.ves} mes={mesSelecionado} />
+      <EntradasDoMes usd={resumoEntradas.usd} ves={resumoEntradas.ves} mes={mesSelecionado}>
+        <QuitacaoDoMes quitacao={resumoEntradas.quitacao} />
+      </EntradasDoMes>
 
       <section className="flex flex-col gap-3">
         <div>
@@ -296,20 +315,7 @@ export default async function Home({
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <Card size="sm">
-            <CardHeader>
-              <CardTitle>{t("collectionTitle")}</CardTitle>
-              <CardDescription>{t("activeUnitsDescription", { count: unidadesAtivas })}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Progress value={progresso} />
-              <p className="mt-2 text-xs text-muted-foreground">{t("collectedPercent", { percent: progresso.toFixed(0) })}</p>
-            </CardContent>
-          </Card>
-
-          <QuitacaoDoMes quitacao={resumoEntradas.quitacao} />
-        </div>
+        <RecaudacaoDoMes recaudacao={recaudacao} unidadesAtivas={unidadesAtivas} />
       </section>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
