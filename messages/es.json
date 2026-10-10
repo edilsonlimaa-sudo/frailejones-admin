@@ -184,7 +184,32 @@
       "emailLabel": "Correo electrónico",
       "saveSuccess": "Propietario registrado.",
       "saveError": "Error al guardar el propietario."
-    }
+    },
+    "summary": {
+      "label": "Filtrar por situación",
+      "todas": "Todas ({count})",
+      "alDia": "Al día ({count})",
+      "porVencer": "Por vencer ({count})",
+      "enAtraso": "En atraso ({count})",
+      "totalDebt": "Deuda total"
+    },
+    "columns": {
+      "situation": "Situación",
+      "debt": "Deuda"
+    },
+    "situation": {
+      "alDia": "Al día",
+      "porVencer": "Por vencer",
+      "enAtraso": "En atraso"
+    },
+    "situationSince": "desde el {date}",
+    "overdueSummary": "{count, plural, one {# vencido} other {# vencidos}} · {days, plural, one {# día} other {# días}} de atraso",
+    "ownerUnits": "{count} uds.",
+    "ownerUnitsAria": "Ver las {count} unidades de este propietario",
+    "ownerFilter": "Propietario:",
+    "clearOwnerFilter": "Quitar filtro",
+    "deleteLockedReason": "No se puede eliminar: la unidad tiene cobros registrados y se perdería su historial financiero.",
+    "sortBy": "Ordenar por {column}"
   },
   "unidadeDetail": {
     "tabs": {

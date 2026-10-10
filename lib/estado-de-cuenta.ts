@@ -1,5 +1,5 @@
 import { dataCaixaCaracas, percentualEmDia } from "@/lib/arrecadacao";
-import { calcularEncargos, type Encargos } from "@/lib/encargos";
+import { calcularEncargos, type CobrancaParaEncargos, type Encargos } from "@/lib/encargos";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { MoedaTipo } from "@/lib/types/creditos";
 import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
@@ -115,6 +115,51 @@ export function classificarCobranca(c: CobrancaDaUnidade, hojeIso: string): Cobr
   };
 }
 
+export type ResumoPendencias = {
+  situacao: SituacaoConta;
+  // primeiro dia de atraso da cobrança vencida mais antiga (dia seguinte ao fim da carência)
+  atrasoDesde: string | null;
+  divida: { principal: number; encargos: number; total: number };
+  vencidas: number;
+  // dias de atraso da cobrança vencida mais antiga (0 se nenhuma)
+  maiorAtraso: number;
+};
+
+// situação de uma unidade a partir das cobranças pendentes dela: fonte única usada pelo estado de
+// conta (tela da unidade) e pela listagem de unidades, pra que as duas nunca discordem
+export function resumirPendencias(cobrancas: CobrancaParaEncargos[], hojeIso: string): ResumoPendencias {
+  const divida = { principal: 0, encargos: 0, total: 0 };
+  let vencidas = 0;
+  let maiorAtraso = 0;
+  let prazoVencidoMaisAntigo: string | null = null;
+
+  for (const c of cobrancas) {
+    if (c.status !== "pendente") continue;
+    const e = calcularEncargos(c, hojeIso);
+    if (e.saldoDevedor <= 0) continue;
+    divida.principal += e.saldoDevedor;
+    divida.encargos += e.valorMulta + e.valorJuros;
+    if (e.diasAtraso > 0) {
+      vencidas += 1;
+      maiorAtraso = Math.max(maiorAtraso, e.diasAtraso);
+      const prazo = somarDias(c.data_vencimento, c.dias_graca);
+      if (!prazoVencidoMaisAntigo || prazo < prazoVencidoMaisAntigo) prazoVencidoMaisAntigo = prazo;
+    }
+  }
+
+  divida.principal = arredondar(divida.principal);
+  divida.encargos = arredondar(divida.encargos);
+  divida.total = arredondar(divida.principal + divida.encargos);
+
+  return {
+    situacao: prazoVencidoMaisAntigo ? "enAtraso" : divida.total > 0 ? "porVencer" : "alDia",
+    atrasoDesde: prazoVencidoMaisAntigo ? somarDias(prazoVencidoMaisAntigo, 1) : null,
+    divida,
+    vencidas,
+    maiorAtraso,
+  };
+}
+
 export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Date): EstadoDeConta {
   // encargos usam a data UTC, como as listas de cobranças; pontualidade usa o dia em Caracas, como o Dashboard
   const hojeIso = agora.toISOString().slice(0, 10);
@@ -127,11 +172,9 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
   });
   const inicioJanela = mesesJanela[0];
 
-  const divida = { principal: 0, encargos: 0, total: 0 };
   const antiguidade = new Map(FAIXAS_ANTIGUIDADE.map((f) => [f, { faixa: f, valor: 0, cobrancas: 0 }]));
   const composicao = new Map<string, { origem: string; cobrancas: number; total: number }>();
   const porMes = new Map(mesesJanela.map((m) => [m, [] as EstadoDeConta["meses"][number]["cobrancas"]]));
-  let prazoVencidoMaisAntigo: string | null = null;
   let proximoVencimento: EstadoDeConta["proximoVencimento"] = null;
   const pagamentosPorDia = new Map<string, CobrancaDaUnidade["pagamentos"]>();
   const pontualidade = { base: 0, emDia: 0 };
@@ -152,8 +195,6 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
 
     if (estado === "vencido" || estado === "porVencer") {
       const e = classificada.encargos;
-      divida.principal += e.saldoDevedor;
-      divida.encargos += e.valorMulta + e.valorJuros;
       const faixa = antiguidade.get(faixaDoAtraso(e.diasAtraso))!;
       faixa.valor += e.valorTotalComEncargos;
       faixa.cobrancas += 1;
@@ -162,9 +203,6 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
       item.total += e.valorTotalComEncargos;
       composicao.set(c.titulo_origem, item);
 
-      if (estado === "vencido" && (!prazoVencidoMaisAntigo || prazo < prazoVencidoMaisAntigo)) {
-        prazoVencidoMaisAntigo = prazo;
-      }
       if (estado === "porVencer" && (!proximoVencimento || c.data_vencimento < proximoVencimento.data)) {
         proximoVencimento = { origem: c.titulo_origem, data: c.data_vencimento, valor: e.saldoDevedor };
       }
@@ -185,11 +223,7 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
     }
   }
 
-  divida.principal = arredondar(divida.principal);
-  divida.encargos = arredondar(divida.encargos);
-  divida.total = arredondar(divida.principal + divida.encargos);
-
-  const situacao: SituacaoConta = prazoVencidoMaisAntigo ? "enAtraso" : divida.total > 0 ? "porVencer" : "alDia";
+  const { situacao, atrasoDesde, divida } = resumirPendencias(cobrancas, hojeIso);
 
   const ultimoDia = [...pagamentosPorDia.keys()].sort().at(-1);
   const pagamentosDoUltimoDia = ultimoDia ? pagamentosPorDia.get(ultimoDia)! : [];
@@ -211,7 +245,7 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
 
   return {
     situacao,
-    atrasoDesde: prazoVencidoMaisAntigo ? somarDias(prazoVencidoMaisAntigo, 1) : null,
+    atrasoDesde,
     divida,
     proximoVencimento,
     ultimoPagamento,

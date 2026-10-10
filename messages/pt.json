@@ -184,7 +184,32 @@
       "emailLabel": "Email",
       "saveSuccess": "Proprietário cadastrado.",
       "saveError": "Erro ao salvar proprietário."
-    }
+    },
+    "summary": {
+      "label": "Filtrar por situação",
+      "todas": "Todas ({count})",
+      "alDia": "Em dia ({count})",
+      "porVencer": "A vencer ({count})",
+      "enAtraso": "Em atraso ({count})",
+      "totalDebt": "Dívida total"
+    },
+    "columns": {
+      "situation": "Situação",
+      "debt": "Dívida"
+    },
+    "situation": {
+      "alDia": "Em dia",
+      "porVencer": "A vencer",
+      "enAtraso": "Em atraso"
+    },
+    "situationSince": "desde {date}",
+    "overdueSummary": "{count, plural, one {# vencida} other {# vencidas}} · {days, plural, one {# dia} other {# dias}} de atraso",
+    "ownerUnits": "{count} unid.",
+    "ownerUnitsAria": "Ver as {count} unidades deste proprietário",
+    "ownerFilter": "Proprietário:",
+    "clearOwnerFilter": "Limpar filtro",
+    "deleteLockedReason": "Não é possível excluir: a unidade tem cobranças registradas e o histórico financeiro dela se perderia.",
+    "sortBy": "Ordenar por {column}"
   },
   "unidadeDetail": {
     "tabs": {
