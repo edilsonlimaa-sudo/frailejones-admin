@@ -3,17 +3,13 @@ import { Building2, HardHat, InfoIcon, Receipt, TriangleAlert } from "lucide-rea
 import { getTranslations, getLocale } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { buscarTodas } from "@/lib/supabase/buscar-todas";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
 import {
-  acumularPontualidade,
-  inicioDoMesCaracas,
   mesCaixaCaracas,
+  montarResumoEntradas,
   percentualEmDia,
-  principalQuitado,
-  resumirEntradas,
-  type CobrancaParaPontualidade,
-  type PagamentoDoPeriodo,
-  type Pontualidade,
+  type ResumoDashboard,
 } from "@/lib/arrecadacao";
 import { calcularEncargos } from "@/lib/encargos";
 import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
@@ -117,114 +113,96 @@ export default async function Home({
     timeZone: "UTC",
   });
 
-  // janela do gráfico de evolução: os MESES_EVOLUCAO meses que terminam no mês selecionado
-  const inicioEvolucao = mesAdjacente(ano, mes, -(MESES_EVOLUCAO - 1));
-  const competenciaInicioEvolucao = `${formatMes(inicioEvolucao.ano, inicioEvolucao.mes)}-01`;
-
   const supabase = await createClient();
 
   const [
     { data: cobrancasRaw, error: cobrancasError },
     { data: taxaVinculosRaw, error: taxaVinculosError },
     { data: cotacaoBcv, error: cotacaoBcvError },
-    { data: pagamentosRaw, error: pagamentosError },
-    { data: cobrancasEvolucaoRaw, error: cobrancasEvolucaoError },
+    { data: resumoRaw, error: resumoError },
     { data: pendentesTotaisRaw, error: pendentesTotaisError },
   ] = await Promise.all([
-      supabase
-        .from("cobrancas")
-        .select(
-          "id, descricao, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(id, titulo, valor_total_usd, valor_por_unidade_usd), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
-        )
-        .gte("competencia", inicioMes)
-        .lt("competencia", inicioMesSeguinte)
-        .order("data_vencimento", { ascending: true })
-        .returns<CobrancaDoMes[]>(),
-      supabase.from("taxa_condominio_unidades").select("unidade_id").returns<{ unidade_id: string }[]>(),
+      // paginadas (buscarTodas): um mês de ~300 unidades com 2 taxas e 2 rateios passa das 1000
+      // linhas que a API devolve por consulta
+      buscarTodas((de, ate) =>
+        supabase
+          .from("cobrancas")
+          .select(
+            "id, descricao, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao), taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(id, titulo, valor_total_usd, valor_por_unidade_usd), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
+            { count: "exact" },
+          )
+          .gte("competencia", inicioMes)
+          .lt("competencia", inicioMesSeguinte)
+          .order("data_vencimento", { ascending: true })
+          .order("id")
+          .range(de, ate)
+          .returns<CobrancaDoMes[]>(),
+      ),
+      buscarTodas((de, ate) =>
+        supabase
+          .from("taxa_condominio_unidades")
+          .select("unidade_id", { count: "exact" })
+          .order("id")
+          .range(de, ate)
+          .returns<{ unidade_id: string }[]>(),
+      ),
       supabase
         .from("cotacao_bcv")
         .select("data_cotacao, tasa_ves")
         .order("data_cotacao", { ascending: false })
         .limit(1)
         .maybeSingle<{ data_cotacao: string; tasa_ves: number }>(),
-      // pagamentos por data de caixa (não por competência): cobre o mês selecionado e a
-      // janela do gráfico de evolução numa consulta só
-      supabase
-        .from("pagamentos")
-        .select(
-          "id, data_pagamento, moeda, valor_recebido, forma_pagamento, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, cobranca:cobrancas(competencia))",
-        )
-        .gte("data_pagamento", inicioDoMesCaracas(inicioEvolucao.ano, inicioEvolucao.mes))
-        .lt("data_pagamento", inicioDoMesCaracas(anoSeguinte, mesSeguinteNumero))
-        .returns<PagamentoDoPeriodo[]>(),
-      supabase
-        .from("cobrancas")
-        .select(
-          "competencia, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pagamento_cobrancas(valor_principal_abatido_usd, pagamento:pagamentos(data_pagamento))",
-        )
-        .neq("status", "cancelado")
-        .gte("competencia", competenciaInicioEvolucao)
-        .lt("competencia", inicioMesSeguinte)
-        .returns<(CobrancaParaPontualidade & { competencia: string })[]>(),
-      // tudo que está pendente hoje, de qualquer competência (card de dívida total)
-      supabase
-        .from("cobrancas")
-        .select(
-          "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd)",
-        )
-        .eq("status", "pendente")
-        .returns<CobrancaPendenteTotal[]>(),
+      // caixa do mês e gráfico de evolução somados no banco: a janela de 6 meses passa das 1000
+      // linhas que a API devolve por consulta, e as somas sairiam cortadas sem erro
+      supabase.rpc("resumo_dashboard", {
+        p_mes: inicioMes,
+        p_meses: MESES_EVOLUCAO,
+        p_hoje: hojeCaracas,
+      }),
+      // tudo que está pendente hoje, de qualquer competência (card de dívida total). Paginada: com
+      // inadimplência acumulada passa fácil de 1000 cobranças, e um corte silencioso mostraria uma
+      // dívida menor que a real. Fica em linhas (não somada no banco) porque multa e juros de hoje
+      // são calculados por lib/encargos, a mesma regra das demais telas
+      buscarTodas((de, ate) =>
+        supabase
+          .from("cobrancas")
+          .select(
+            "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd)",
+            { count: "exact" },
+          )
+          .eq("status", "pendente")
+          .order("id")
+          .range(de, ate)
+          .returns<CobrancaPendenteTotal[]>(),
+      ),
     ]);
 
   const loadError =
     cobrancasError ??
     taxaVinculosError ??
     cotacaoBcvError ??
-    pagamentosError ??
-    cobrancasEvolucaoError ??
+    resumoError ??
     pendentesTotaisError;
-  if (loadError) {
-    return <p className="text-sm text-destructive">{t("loadError", { message: loadError.message })}</p>;
+  // a função devolve um único jsonb; sem os tipos gerados do banco, o cliente o tipa como lista
+  const resumo = resumoRaw as ResumoDashboard | null;
+  if (loadError || !resumo) {
+    return (
+      <p className="text-sm text-destructive">{t("loadError", { message: loadError?.message ?? "" })}</p>
+    );
   }
 
   const mesSelecionado = formatMes(ano, mes);
-  const pagamentos = pagamentosRaw ?? [];
-  const resumoEntradas = resumirEntradas(
-    pagamentos.filter((p) => mesCaixaCaracas(p.data_pagamento) === mesSelecionado),
-    inicioMes,
-  );
+  const resumoEntradas = montarResumoEntradas(resumo);
 
-  const evolucao: PontoEvolucao[] = Array.from({ length: MESES_EVOLUCAO }, (_, i) => {
-    const ponto = mesAdjacente(inicioEvolucao.ano, inicioEvolucao.mes, i);
-    const chave = formatMes(ponto.ano, ponto.mes);
-    return {
-      mes: chave,
-      rotulo: mesRotuloCurtoFormatter.format(new Date(`${chave}-01T00:00:00Z`)).replace(".", ""),
-      emitido: 0,
-      quitado: 0,
-      emDia: null,
-    };
-  });
-  const pontoPorMes = new Map(evolucao.map((p) => [p.mes, p]));
-  const pontualidadePorMes = new Map<string, Pontualidade>(
-    evolucao.map((p) => [p.mes, { base: 0, emDia: 0 }]),
-  );
-  for (const c of cobrancasEvolucaoRaw ?? []) {
-    const chave = c.competencia.slice(0, 7);
-    const ponto = pontoPorMes.get(chave);
-    if (ponto) ponto.emitido += c.valor_usd;
-    const pontualidade = pontualidadePorMes.get(chave);
-    if (pontualidade) acumularPontualidade(pontualidade, c, hojeCaracas);
-  }
-  for (const ponto of evolucao) {
-    ponto.emDia = percentualEmDia(pontualidadePorMes.get(ponto.mes)!);
-  }
   // quitado = principal abatido pelos pagamentos do mês (em dólar, a moeda da dívida), e não o
   // valor recebido: somar bolívar convertido como se fosse caixa em dólar seria enganoso
-  for (const p of pagamentos) {
-    const ponto = pontoPorMes.get(mesCaixaCaracas(p.data_pagamento));
-    if (ponto) ponto.quitado += principalQuitado(p);
-  }
+  const evolucao: PontoEvolucao[] = resumo.evolucao.map((ponto) => ({
+    mes: ponto.mes,
+    rotulo: mesRotuloCurtoFormatter.format(new Date(`${ponto.mes}-01T00:00:00Z`)).replace(".", ""),
+    emitido: ponto.emitido,
+    quitado: ponto.quitado,
+    emDia: percentualEmDia(ponto.baseEmDia, ponto.emDia),
+  }));
 
   // conta unidades distintas vinculadas a alguma taxa (uma unidade pode estar em N taxas)
   const unidadesAtivas = new Set((taxaVinculosRaw ?? []).map((v) => v.unidade_id)).size;

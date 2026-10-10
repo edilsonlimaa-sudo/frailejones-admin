@@ -23,61 +23,12 @@ export function mesCaixaCaracas(dataPagamento: string): string {
   return dataCaixaCaracas(dataPagamento).slice(0, 7);
 }
 
-export type CobrancaParaPontualidade = {
-  valor_usd: number;
-  valor_credito_abatido_usd: number;
-  data_vencimento: string;
-  dias_graca: number;
-  pagamento_cobrancas: {
-    valor_principal_abatido_usd: number;
-    pagamento: { data_pagamento: string } | null;
-  }[];
-};
-
-// base = emitido das cobranças cujo prazo já acabou; emDia = quanto dele foi quitado dentro do prazo
-export type Pontualidade = { base: number; emDia: number };
-
-// pago "em dia" = quitado até o vencimento + dias de carência (depois disso já incidem multa e
-// juros). Cobrança cujo prazo ainda não acabou fica fora da base: ninguém está atrasado nela ainda,
-// e contá-la derrubaria a pontualidade do mês corrente. Saldo a favor é aplicado na emissão, então
-// conta como em dia.
-export function acumularPontualidade(
-  acc: Pontualidade,
-  cobranca: CobrancaParaPontualidade,
-  hojeIso: string,
-): void {
-  const limite = new Date(`${cobranca.data_vencimento}T00:00:00Z`);
-  limite.setUTCDate(limite.getUTCDate() + cobranca.dias_graca);
-  const prazo = limite.toISOString().slice(0, 10);
-  if (hojeIso <= prazo) return;
-
-  acc.base += cobranca.valor_usd;
-  acc.emDia += cobranca.valor_credito_abatido_usd;
-  for (const p of cobranca.pagamento_cobrancas) {
-    if (p.pagamento && dataCaixaCaracas(p.pagamento.data_pagamento) <= prazo) {
-      acc.emDia += p.valor_principal_abatido_usd;
-    }
-  }
-}
-
+// % pago em dia: base = emitido das cobranças cujo prazo (vencimento + carência) já acabou; emDia =
+// quanto dele foi quitado dentro do prazo. A regra é aplicada no banco (resumo_dashboard).
 // null quando nenhuma cobrança do período teve o prazo encerrado ainda
-export function percentualEmDia(pontualidade: Pontualidade): number | null {
-  return pontualidade.base > 0 ? Math.min(100, (pontualidade.emDia / pontualidade.base) * 100) : null;
+export function percentualEmDia(base: number, emDia: number): number | null {
+  return base > 0 ? Math.min(100, (emDia / base) * 100) : null;
 }
-
-export type PagamentoDoPeriodo = {
-  id: string;
-  data_pagamento: string;
-  moeda: MoedaTipo;
-  valor_recebido: number;
-  forma_pagamento: FormaPagamentoTipo;
-  // pagamento_cobrancas.pagamento_id é UNIQUE: o embed reverso vem como objeto único (ou null)
-  pagamento_cobrancas: {
-    valor_principal_abatido_usd: number;
-    valor_juros_pago_usd: number;
-    cobranca: { competencia: string } | null;
-  } | null;
-};
 
 export type CanalDeEntrada = {
   forma: FormaPagamentoTipo;
@@ -110,63 +61,35 @@ export type ResumoEntradas = {
   quitacao: QuitacaoDoMes;
 };
 
-function resumirMoeda(pagamentos: PagamentoDoPeriodo[]): EntradasNaMoeda {
-  const canais = new Map<FormaPagamentoTipo, CanalDeEntrada>();
-  let total = 0;
-  for (const p of pagamentos) {
-    total += p.valor_recebido;
-    const canal = canais.get(p.forma_pagamento) ?? { forma: p.forma_pagamento, quantidade: 0, valor: 0 };
-    canal.quantidade += 1;
-    canal.valor += p.valor_recebido;
-    canais.set(p.forma_pagamento, canal);
-  }
+// retorno da função resumo_dashboard (migration resumo_dashboard): os totais são somados no banco
+// porque a API corta consultas em 1000 linhas, e a janela de 6 meses do gráfico passa disso
+export type ResumoDashboard = {
+  // caixa do mês selecionado, uma linha por moeda + forma de pagamento, já ordenada por valor
+  entradas: { moeda: MoedaTipo; forma: FormaPagamentoTipo; quantidade: number; valor: number }[];
+  quitacao: Omit<QuitacaoDoMes, "total">;
+  // um ponto por mês da janela do gráfico ("YYYY-MM"), em ordem
+  evolucao: { mes: string; emitido: number; quitado: number; baseEmDia: number; emDia: number }[];
+};
+
+function entradasDaMoeda(entradas: ResumoDashboard["entradas"], moeda: MoedaTipo): EntradasNaMoeda {
+  const canais = entradas
+    .filter((e) => e.moeda === moeda)
+    .map((e) => ({ forma: e.forma, quantidade: e.quantidade, valor: e.valor }));
   return {
-    quantidade: pagamentos.length,
-    total,
-    canais: [...canais.values()].sort((a, b) => b.valor - a.valor),
+    quantidade: canais.reduce((acc, c) => acc + c.quantidade, 0),
+    total: canais.reduce((acc, c) => acc + c.valor, 0),
+    canais,
   };
 }
 
-// principal abatido por um pagamento (base do "quitado" no gráfico de evolução)
-export function principalQuitado(p: PagamentoDoPeriodo): number {
-  return p.pagamento_cobrancas?.valor_principal_abatido_usd ?? 0;
-}
-
-// resume os pagamentos recebidos num mês de caixa. `competenciaDoMes` é o primeiro dia do mês
-// ("YYYY-MM-01"), usado pra separar o que quitou cobrança do próprio mês do que recuperou atraso.
-export function resumirEntradas(
-  pagamentos: PagamentoDoPeriodo[],
-  competenciaDoMes: string,
-): ResumoEntradas {
-  const quitacao: QuitacaoDoMes = {
-    principalDoMes: 0,
-    principalAtrasado: 0,
-    principalAdiantado: 0,
-    encargos: 0,
-    total: 0,
-  };
-
-  // compara só o mês: a competência de rateio extraordinário é a data de vencimento (ex.:
-  // 2026-02-25), não o dia 1, e compará-la com "YYYY-MM-01" a jogaria em "meses futuros"
-  const mesDoResumo = competenciaDoMes.slice(0, 7);
-  for (const p of pagamentos) {
-    const principal = principalQuitado(p);
-    const mesDaCobranca = p.pagamento_cobrancas?.cobranca?.competencia.slice(0, 7);
-    if (mesDaCobranca && mesDaCobranca < mesDoResumo) {
-      quitacao.principalAtrasado += principal;
-    } else if (mesDaCobranca && mesDaCobranca > mesDoResumo) {
-      quitacao.principalAdiantado += principal;
-    } else {
-      quitacao.principalDoMes += principal;
-    }
-    quitacao.encargos += p.pagamento_cobrancas?.valor_juros_pago_usd ?? 0;
-  }
-  quitacao.total =
-    quitacao.principalDoMes + quitacao.principalAtrasado + quitacao.principalAdiantado + quitacao.encargos;
-
+export function montarResumoEntradas(resumo: ResumoDashboard): ResumoEntradas {
+  const q = resumo.quitacao;
   return {
-    usd: resumirMoeda(pagamentos.filter((p) => p.moeda === "USD")),
-    ves: resumirMoeda(pagamentos.filter((p) => p.moeda === "VES")),
-    quitacao,
+    usd: entradasDaMoeda(resumo.entradas, "USD"),
+    ves: entradasDaMoeda(resumo.entradas, "VES"),
+    quitacao: {
+      ...q,
+      total: q.principalDoMes + q.principalAtrasado + q.principalAdiantado + q.encargos,
+    },
   };
 }
