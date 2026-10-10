@@ -13,6 +13,7 @@ import {
 } from "@/lib/arrecadacao";
 import { calcularEncargos } from "@/lib/encargos";
 import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
+import { taxasSemEmissaoNoMes } from "@/lib/taxas";
 import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
 import { NavegadorMes } from "@/components/admin/navegador-mes";
 import { EntradasDoMes } from "@/components/admin/painel/entradas-do-mes";
@@ -121,6 +122,7 @@ export default async function Home({
     { data: cotacaoBcv, error: cotacaoBcvError },
     { data: resumoRaw, error: resumoError },
     { data: pendentesTotaisRaw, error: pendentesTotaisError },
+    { data: taxasRaw, error: taxasError },
   ] = await Promise.all([
       // paginadas (buscarTodas): um mês de ~300 unidades com 2 taxas e 2 rateios passa das 1000
       // linhas que a API devolve por consulta
@@ -175,6 +177,19 @@ export default async function Home({
           .range(de, ate)
           .returns<CobrancaPendenteTotal[]>(),
       ),
+      // cuotas e meses já emitidos, pro aviso de "cuota sem emissão neste mês"
+      supabase
+        .from("taxa_condominio")
+        .select("id, titulo, ativo, taxa_condominio_unidades(count), faturamentos_competencia(competencia)")
+        .returns<
+          {
+            id: string;
+            titulo: string;
+            ativo: boolean;
+            taxa_condominio_unidades: { count: number }[];
+            faturamentos_competencia: { competencia: string }[];
+          }[]
+        >(),
     ]);
 
   const loadError =
@@ -182,7 +197,8 @@ export default async function Home({
     taxaVinculosError ??
     cotacaoBcvError ??
     resumoError ??
-    pendentesTotaisError;
+    pendentesTotaisError ??
+    taxasError;
   // a função devolve um único jsonb; sem os tipos gerados do banco, o cliente o tipa como lista
   const resumo = resumoRaw as ResumoDashboard | null;
   if (loadError || !resumo) {
@@ -283,6 +299,20 @@ export default async function Home({
   // quando ela passa a valer, então no sábado e no domingo a mais recente é a de sexta.
   const cotacaoDesatualizada = !cotacaoBcv || cotacaoBcv.data_cotacao < ultimoDiaUtil(hojeCaracas);
 
+  // pelo mês de hoje, não pelo selecionado: o aviso é sobre a emissão que falta fazer agora
+  const mesDeHoje = hojeCaracas.slice(0, 7);
+  const taxasSemEmissao = taxasSemEmissaoNoMes(
+    (taxasRaw ?? []).map((taxa) => ({
+      id: taxa.id,
+      titulo: taxa.titulo,
+      ativo: taxa.ativo,
+      unidadesVinculadas: taxa.taxa_condominio_unidades[0]?.count ?? 0,
+      competenciasEmitidas: taxa.faturamentos_competencia.map((f) => f.competencia),
+    })),
+    mesDeHoje,
+  );
+  const mesDeHojeLabel = mesLabelFormatter.format(new Date(`${mesDeHoje}-01T00:00:00Z`));
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-2">
@@ -308,6 +338,36 @@ export default async function Home({
           </div>
           <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/cotacao-bcv" />}>
             {t("updateRate")}
+          </Button>
+        </div>
+      )}
+
+      {taxasSemEmissao.length > 0 && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm"
+        >
+          <div className="flex items-start gap-2">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p>
+              {t("feesNotIssued", {
+                count: taxasSemEmissao.length,
+                month: mesDeHojeLabel,
+                names: taxasSemEmissao.map((taxa) => taxa.titulo).join(", "),
+              })}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={
+              <Link
+                href={taxasSemEmissao.length === 1 ? `/taxas-condominio/${taxasSemEmissao[0].id}` : "/taxas-condominio"}
+              />
+            }
+          >
+            {t("goToFees")}
           </Button>
         </div>
       )}

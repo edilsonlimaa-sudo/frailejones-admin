@@ -3,11 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
 import { RateiosExtraordinariosManager } from "@/components/admin/rateios-extraordinarios/rateios-extraordinarios-manager";
-import { resumirCobrancaDoRateio, type CobrancaParaResumoRateio } from "@/lib/rateios";
+import { resumirProgresso, type CobrancaParaProgresso } from "@/lib/progresso-cobranca";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
 import type { Unidade } from "@/lib/types/unidades";
 
-type CobrancaDoRateioRow = Omit<CobrancaParaResumoRateio, "valor_principal_pago_usd" | "valor_juros_pago_usd"> & {
+type CobrancaDoRateioRow = Omit<CobrancaParaProgresso, "valor_principal_pago_usd" | "valor_juros_pago_usd"> & {
   pagamento_cobrancas: { valor_principal_abatido_usd: number; valor_juros_pago_usd: number }[];
 };
 
@@ -55,7 +55,7 @@ export default async function RateiosExtraordinariosPage() {
   const despesasComResumo = (despesas ?? []).map(({ despesa_extraordinaria_unidades, cobrancas, ...despesa }) => ({
     ...despesa,
     unidade_ids: despesa_extraordinaria_unidades.map((u) => u.unidade_id),
-    resumo: resumirCobrancaDoRateio(
+    resumo: resumirProgresso(
       cobrancas.map(({ pagamento_cobrancas, ...c }) => ({
         ...c,
         valor_principal_pago_usd: pagamento_cobrancas.reduce((acc, p) => acc + p.valor_principal_abatido_usd, 0),

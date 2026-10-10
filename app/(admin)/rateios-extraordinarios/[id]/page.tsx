@@ -13,12 +13,8 @@ import {
 } from "@/lib/cobrancas-detalhadas";
 import { organizarCobrancas, resolverFiltroCobrancas } from "@/lib/lista-cobrancas";
 import { formatUsd } from "@/lib/moeda";
-import {
-  diferencaArredondamento,
-  formatDiferenca,
-  resumirCobrancaDoRateio,
-  type SituacaoRateio,
-} from "@/lib/rateios";
+import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
+import { resumirProgresso, type SituacaoProgresso } from "@/lib/progresso-cobranca";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { cn } from "@/lib/utils";
 import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
@@ -31,7 +27,7 @@ type CobrancaDoRateioRow = CobrancaDetalhadaRow & {
   unidade: { id: string; identificacao: string; proprietario: { nome: string } | null } | null;
 };
 
-const situacaoVariant: Record<SituacaoRateio, "default" | "outline" | "destructive"> = {
+const situacaoVariant: Record<SituacaoProgresso, "default" | "outline" | "destructive"> = {
   concluido: "default",
   porVencer: "outline",
   enCobro: "destructive",
@@ -109,7 +105,7 @@ export default async function RateioExtraordinarioDetalhePage({
   const unidadePorCobranca = new Map(linhas.map((c) => [c.id, c.unidade]));
 
   const agora = new Date();
-  const resumo = resumirCobrancaDoRateio(cobrancas, agora.toISOString().slice(0, 10));
+  const resumo = resumirProgresso(cobrancas, agora.toISOString().slice(0, 10));
   const organizadas = organizarCobrancas(cobrancas, agora, {
     agruparPorMes: false,
     // no rateio cada linha é uma unidade (com o dono e link pra aba de cobranças dela)

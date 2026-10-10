@@ -3,11 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
+import { INTL_LOCALE } from "@/lib/intl-locale";
+import { formatUsd } from "@/lib/moeda";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type EmitirCobrancasDoMesButtonProps = {
   taxaId: string;
@@ -18,6 +30,8 @@ type EmitirCobrancasDoMesButtonProps = {
   pctJurosDiario: number;
   diasGraca: number;
   unidades: { id: string; identificacao: string }[];
+  // "Octubre de 2026", pro título da confirmação
+  mesLabel: string;
   className?: string;
 };
 
@@ -30,11 +44,18 @@ export function EmitirCobrancasDoMesButton({
   pctJurosDiario,
   diasGraca,
   unidades,
+  mesLabel,
   className,
 }: EmitirCobrancasDoMesButtonProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
   const t = useTranslations("emitirCobrancasDoMes");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  const formatDate = (iso: string) =>
+    new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 
   const handleEmitir = async () => {
     const supabase = createClient();
@@ -65,9 +86,38 @@ export function EmitirCobrancasDoMesButton({
     }
   };
 
+  // confirmação antes de emitir: num condomínio grande são centenas de cobranças de uma vez, com as
+  // regras congeladas, e a competência fica fechada (não dá pra desfazer pela tela)
   return (
-    <Button onClick={handleEmitir} disabled={isSubmitting} className={cn("self-start", className)}>
-      {isSubmitting ? t("submitting") : t("trigger")}
-    </Button>
+    <AlertDialog open={confirmando} onOpenChange={(aberto) => !isSubmitting && setConfirmando(aberto)}>
+      <Button onClick={() => setConfirmando(true)} disabled={isSubmitting} className={cn("self-start", className)}>
+        {isSubmitting ? t("submitting") : t("trigger")}
+      </Button>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("confirmTitle", { month: mesLabel })}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("confirmDescription", {
+              count: unidades.length,
+              value: formatUsd(valorUsd),
+              total: formatUsd(valorUsd * unidades.length),
+              date: formatDate(dataVencimento),
+            })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isSubmitting}>{tCommon("cancel")}</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={isSubmitting}
+            onClick={async () => {
+              await handleEmitir();
+              setConfirmando(false);
+            }}
+          >
+            {isSubmitting ? t("submitting") : t("confirmAction", { count: unidades.length })}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

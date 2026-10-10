@@ -20,6 +20,7 @@ import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-d
 import { COR_ESTADO_COBRANCA } from "@/components/unidades/cores-estado";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 // Lista de cobranças de uma unidade (admin e portal): pendentes em cima, histórico recolhido
 // embaixo, tudo agrupado por mês. O filtro fica na URL (?filtro=), como as abas da tela.
@@ -31,13 +32,41 @@ type ListaCobrancasProps = {
   podeLiquidar: boolean;
   cotacaoAtual: { id: string; tasa_ves: number } | null;
   cotacoes: CotacaoHistorico[];
+  // busca por título/subtítulo da linha (unidade ou dono): útil quando a lista tem uma linha por
+  // unidade (rateio, mês de uma cuota), que num condomínio grande são centenas
+  comBusca?: boolean;
 };
 
-export function ListaCobrancas({ organizadas, filtroInicial, podeLiquidar, cotacaoAtual, cotacoes }: ListaCobrancasProps) {
+const filtrarGrupos = (grupos: GrupoMes[], termo: string): GrupoMes[] =>
+  termo
+    ? grupos
+        .map((g) => ({
+          ...g,
+          itens: g.itens.filter(
+            (i) =>
+              i.rotulo.titulo.toLocaleLowerCase().includes(termo) ||
+              (i.rotulo.subtitulo?.toLocaleLowerCase().includes(termo) ?? false),
+          ),
+        }))
+        .filter((g) => g.itens.length > 0)
+    : grupos;
+
+export function ListaCobrancas({
+  organizadas,
+  filtroInicial,
+  podeLiquidar,
+  cotacaoAtual,
+  cotacoes,
+  comBusca = false,
+}: ListaCobrancasProps) {
   const t = useTranslations("listaCobrancas");
   const [filtro, setFiltro] = useState(filtroInicial);
+  const [busca, setBusca] = useState("");
   // com pendências o foco é cobrar: o histórico começa recolhido
   const [historialAberto, setHistorialAberto] = useState(organizadas.quantidade.pendientes === 0);
+  const termo = busca.trim().toLocaleLowerCase();
+  const pendentes = filtrarGrupos(organizadas.pendentes, termo);
+  const historial = filtrarGrupos(organizadas.historial, termo);
 
   const trocarFiltro = (novo: FiltroCobrancas) => {
     setFiltro(novo);
@@ -53,11 +82,21 @@ export function ListaCobrancas({ organizadas, filtroInicial, podeLiquidar, cotac
 
   const mostrarPendentes = filtro !== "pagados";
   const mostrarHistorial = filtro !== "pendientes";
-  const historialVisivel = filtro === "pagados" || historialAberto;
-  const quantidadeHistorial = organizadas.historial.reduce((acc, g) => acc + g.itens.length, 0);
+  // buscando, o resultado pode estar no histórico: abre pra não esconder o que foi encontrado
+  const historialVisivel = filtro === "pagados" || historialAberto || termo !== "";
+  const quantidadeHistorial = historial.reduce((acc, g) => acc + g.itens.length, 0);
 
   return (
     <div className="flex flex-col gap-6">
+      {comBusca && (
+        <Input
+          type="search"
+          placeholder={t("searchPlaceholder")}
+          aria-label={t("searchPlaceholder")}
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
+      )}
       <div role="group" aria-label={t("filter.label")} className="flex flex-wrap gap-2">
         {(["todos", "pendientes", "pagados"] as const).map((f) => (
           <Button
@@ -85,10 +124,10 @@ export function ListaCobrancas({ organizadas, filtroInicial, podeLiquidar, cotac
               </p>
             )}
           </div>
-          {organizadas.pendentes.length === 0 ? (
+          {pendentes.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("pending.empty")}</p>
           ) : (
-            organizadas.pendentes.map((grupo) => (
+            pendentes.map((grupo) => (
               <GrupoDoMes key={grupo.mes} grupo={grupo} podeLiquidar={podeLiquidar} cotacaoAtual={cotacaoAtual} cotacoes={cotacoes} />
             ))
           )}
@@ -115,7 +154,7 @@ export function ListaCobrancas({ organizadas, filtroInicial, podeLiquidar, cotac
             <p className="text-sm text-muted-foreground">{t("history.empty")}</p>
           ) : (
             historialVisivel &&
-            organizadas.historial.map((grupo) => (
+            historial.map((grupo) => (
               <GrupoDoMes key={grupo.mes} grupo={grupo} podeLiquidar={podeLiquidar} cotacaoAtual={cotacaoAtual} cotacoes={cotacoes} />
             ))
           )}

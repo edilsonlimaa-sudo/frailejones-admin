@@ -9,7 +9,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { dataCaixaCaracas } from "@/lib/arrecadacao";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { formatUsd } from "@/lib/moeda";
-import type { ResumoCobrancaRateio, SituacaoRateio } from "@/lib/rateios";
+import type { ResumoProgresso, SituacaoProgresso } from "@/lib/progresso-cobranca";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
 import type { Unidade } from "@/lib/types/unidades";
 import { cn } from "@/lib/utils";
@@ -33,21 +33,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { RateioExtraordinarioFormDialog } from "@/components/admin/rateios-extraordinarios/rateio-extraordinario-form-dialog";
 
-type DespesaComResumo = DespesaExtraordinaria & { resumo: ResumoCobrancaRateio };
+type DespesaComResumo = DespesaExtraordinaria & { resumo: ResumoProgresso };
 
 type RateiosExtraordinariosManagerProps = {
   despesas: DespesaComResumo[];
   unidades: Unidade[];
 };
 
-const corDaSituacao: Record<SituacaoRateio, string> = {
+const corDaSituacao: Record<SituacaoProgresso, string> = {
   concluido: "bg-primary",
   porVencer: "bg-muted-foreground/50",
   enCobro: "bg-destructive",
 };
 
 // rateio recém-cadastrado nesta tela, antes do refresh trazer o resumo do servidor: tudo a receber
-const resumoDeNovoRateio = (d: DespesaExtraordinaria): ResumoCobrancaRateio => {
+const resumoDeNovoRateio = (d: DespesaExtraordinaria): ResumoProgresso => {
   const esperado = Math.round(d.valor_por_unidade_usd * d.unidade_ids.length * 100) / 100;
   return {
     situacao: "porVencer",

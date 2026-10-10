@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MoreHorizontalIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
+import { INTL_LOCALE } from "@/lib/intl-locale";
+import { formatUsd } from "@/lib/moeda";
+import type { ResumoProgresso } from "@/lib/progresso-cobranca";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,17 +23,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -43,15 +42,45 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TaxaCondominioFormDialog } from "@/components/admin/taxas-condominio/taxa-condominio-form-dialog";
-import { formatUsd } from "@/lib/moeda";
+
+// situação operacional de cada cuota, calculada no servidor
+export type SituacaoTaxa = {
+  unidadesVinculadas: number;
+  // com cobranças a cuota não pode ser excluída (o banco impede): só desativada
+  temCobrancas: boolean;
+  mesAtualEmitido: boolean;
+  // mês de referência: o atual se já emitido, senão o último emitido (null = nunca emitida)
+  referencia: { mes: string; resumo: ResumoProgresso; emDia: number; comAtraso: number } | null;
+};
 
 type TaxasCondominioManagerProps = {
   taxas: TaxaCondominio[];
+  situacoes: Record<string, SituacaoTaxa>;
+  // "YYYY-MM" do mês corrente em Caracas
+  mesAtual: string;
+  // cuotas ativas, com unidades, sem emissão no mês atual (aviso no topo)
+  semEmissaoIds: string[];
 };
 
-export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
+// cuota recém-cadastrada nesta tela, antes do refresh trazer a situação do servidor
+const SEM_SITUACAO: SituacaoTaxa = { unidadesVinculadas: 0, temCobrancas: false, mesAtualEmitido: false, referencia: null };
+
+export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoIds }: TaxasCondominioManagerProps) {
   const t = useTranslations("taxasCondominio");
   const tCommon = useTranslations("common");
+  const router = useRouter();
+  const locale = useLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  const formatMesLongo = (mes: string) => {
+    const texto = new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+      new Date(`${mes}-01T00:00:00Z`),
+    );
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  };
+  // percentuais vêm do banco como número cru (0.1): formata no idioma da tela (0,1)
+  const formatPercentual = (valor: number) =>
+    new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 4 }).format(valor);
+
   const [taxasList, setTaxasList] = useState(taxas);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -82,6 +111,8 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
       const next = exists ? prev.map((t) => (t.id === taxa.id ? taxa : t)) : [...prev, taxa];
       return sortTaxas(next);
     });
+    // situação (unidades, emissão do mês) vem do servidor
+    router.refresh();
   };
 
   const handleDelete = async () => {
@@ -103,6 +134,8 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
     }
   };
 
+  const semEmissao = taxasList.filter((taxa) => semEmissaoIds.includes(taxa.id));
+
   return (
     <>
       <Card>
@@ -116,139 +149,146 @@ export function TaxasCondominioManager({ taxas }: TaxasCondominioManagerProps) {
             </Button>
           </CardAction>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
+          {/* a pergunta operacional do mês: falta emitir alguma cuota? */}
+          {semEmissao.length > 0 && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm"
+            >
+              <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <p>
+                {t("notIssuedAlert", { count: semEmissao.length, month: formatMesLongo(mesAtual) })}{" "}
+                {semEmissao.map((taxa, i) => (
+                  <span key={taxa.id}>
+                    {i > 0 && ", "}
+                    <Link href={`/taxas-condominio/${taxa.id}`} className="font-medium underline underline-offset-2">
+                      {taxa.titulo}
+                    </Link>
+                  </span>
+                ))}
+              </p>
+            </div>
+          )}
+
           {taxasList.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noFees")}</p>
           ) : (
-            <>
-              {/* mobile: lista de cards (tabela com 8 colunas não cabe bem em telas pequenas) */}
-              <div className="flex flex-col gap-3 sm:hidden">
-                {taxasList.map((taxa) => (
-                  <div key={taxa.id} className="rounded-lg border border-input p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <Link
-                        href={`/taxas-condominio/${taxa.id}`}
-                        className="font-medium underline-offset-2 hover:underline"
-                      >
-                        {taxa.titulo}
-                      </Link>
-                      <div className="flex items-center gap-1">
-                        <Badge variant={taxa.ativo ? "default" : "outline"}>
-                          {taxa.ativo ? tCommon("yes") : tCommon("no")}
-                        </Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />
-                            }
-                          >
-                            <MoreHorizontalIcon />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem render={<Link href={`/taxas-condominio/${taxa.id}`} />}>
-                              {t("viewDetails")}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditDialog(taxa)}>
-                              {tCommon("edit")}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onClick={() => setDeleteTarget(taxa)}
-                            >
-                              {tCommon("delete")}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                      <div>
-                        <dt className="text-xs text-muted-foreground">{t("value")}</dt>
-                        <dd>{formatUsd(taxa.valor_usd)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-muted-foreground">{t("dueDate")}</dt>
-                        <dd>{t("dueDay", { day: taxa.dia_vencimento })}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-muted-foreground">{t("penalty")}</dt>
-                        <dd>{taxa.pct_multa_atraso}%</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-muted-foreground">{t("dailyInterest")}</dt>
-                        <dd>{taxa.pct_juros_diario}%</dd>
-                      </div>
-                      <div className="col-span-2">
-                        <dt className="text-xs text-muted-foreground">{t("gracePeriod")}</dt>
-                        <dd>{t("graceDays", { count: taxa.dias_graca })}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                ))}
-              </div>
-
-              {/* sm+: tabela */}
-              <Table className="hidden sm:table">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("titleColumn")}</TableHead>
-                    <TableHead>{t("value")}</TableHead>
-                    <TableHead>{t("dueDate")}</TableHead>
-                    <TableHead>{t("penalty")}</TableHead>
-                    <TableHead>{t("dailyInterest")}</TableHead>
-                    <TableHead>{t("gracePeriod")}</TableHead>
-                    <TableHead>{tCommon("active")}</TableHead>
-                    <TableHead className="w-9" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {taxasList.map((taxa) => (
-                    <TableRow key={taxa.id}>
-                      <TableCell className="font-medium">
-                        <Link href={`/taxas-condominio/${taxa.id}`} className="hover:underline">
+            <ul className="divide-y rounded-lg border">
+              {taxasList.map((taxa) => {
+                const s = situacoes[taxa.id] ?? SEM_SITUACAO;
+                const href = `/taxas-condominio/${taxa.id}`;
+                const pendenteDeEmissao = semEmissaoIds.includes(taxa.id);
+                const ref = s.referencia;
+                const progresso = ref && ref.resumo.esperado > 0 ? Math.min(100, (ref.resumo.recaudado / ref.resumo.esperado) * 100) : 0;
+                return (
+                  // a linha toda abre o detalhe; botões internos param a propagação do clique
+                  <li
+                    key={taxa.id}
+                    onClick={() => router.push(href)}
+                    className="relative flex cursor-pointer flex-col gap-3 px-3 py-3 pr-12 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-6"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="flex flex-wrap items-center gap-2">
+                        <Link href={href} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
                           {taxa.titulo}
                         </Link>
-                      </TableCell>
-                      <TableCell>{formatUsd(taxa.valor_usd)}</TableCell>
-                      <TableCell>{t("dueDay", { day: taxa.dia_vencimento })}</TableCell>
-                      <TableCell>{taxa.pct_multa_atraso}%</TableCell>
-                      <TableCell>{taxa.pct_juros_diario}%</TableCell>
-                      <TableCell>{t("graceDays", { count: taxa.dias_graca })}</TableCell>
-                      <TableCell>
-                        <Badge variant={taxa.ativo ? "default" : "outline"}>
-                          {taxa.ativo ? tCommon("yes") : tCommon("no")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />
-                            }
+                        {!taxa.ativo && <Badge variant="outline">{t("inactive")}</Badge>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t("rulesLine", {
+                          day: taxa.dia_vencimento,
+                          units: s.unidadesVinculadas,
+                          penalty: formatPercentual(taxa.pct_multa_atraso),
+                          interest: formatPercentual(taxa.pct_juros_diario),
+                          grace: taxa.dias_graca,
+                        })}
+                      </p>
+                    </div>
+
+                    {/* status do mês: emitir é a ação recorrente desta tela */}
+                    <div className="flex flex-col gap-1.5 sm:w-64">
+                      {pendenteDeEmissao ? (
+                        <div className="flex items-center gap-2">
+                          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                            <TriangleAlertIcon className="size-3.5 shrink-0" />
+                            {t("monthNotIssued", { month: formatMesLongo(mesAtual) })}
+                          </p>
+                          <Button
+                            size="xs"
+                            nativeButton={false}
+                            render={<Link href={href} onClick={(e) => e.stopPropagation()} />}
                           >
-                            <MoreHorizontalIcon />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem render={<Link href={`/taxas-condominio/${taxa.id}`} />}>
-                              {t("viewDetails")}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditDialog(taxa)}>
-                              {tCommon("edit")}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onClick={() => setDeleteTarget(taxa)}
-                            >
+                            {t("issueAction")}
+                          </Button>
+                        </div>
+                      ) : null}
+                      {ref && (
+                        <>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-primary" style={{ width: `${progresso}%` }} />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {t("monthProgress", {
+                              month: formatMesLongo(ref.mes),
+                              paid: ref.resumo.pagas,
+                              total: ref.resumo.cobrancas,
+                              late: ref.comAtraso,
+                            })}
+                          </p>
+                        </>
+                      )}
+                      {!ref && !pendenteDeEmissao && (
+                        <p className="text-xs text-muted-foreground">{t("neverIssued")}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-baseline justify-between gap-3 sm:w-40 sm:flex-col sm:items-end sm:gap-0.5">
+                      <p className="font-medium tabular-nums">{t("perUnit", { value: formatUsd(taxa.valor_usd) })}</p>
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        {t("perMonth", { value: formatUsd(taxa.valor_usd * s.unidadesVinculadas) })}
+                      </p>
+                    </div>
+
+                    <div
+                      className="absolute top-2 right-2 sm:top-1/2 sm:-translate-y-1/2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={<Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />}
+                        >
+                          <MoreHorizontalIcon />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem render={<Link href={href} />}>{t("viewDetails")}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditDialog(taxa)}>{tCommon("edit")}</DropdownMenuItem>
+                          {s.temCobrancas ? (
+                            // visível mas desabilitado, com o motivo: o banco não deixa excluir cuota com
+                            // cobranças (elas perderiam a origem). Pra parar de cobrar, desativa-se
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuGroup>
+                                <DropdownMenuLabel className="max-w-60 whitespace-normal">
+                                  {t("deleteLockedReason")}
+                                </DropdownMenuLabel>
+                                <DropdownMenuItem disabled variant="destructive">
+                                  {tCommon("delete")}
+                                </DropdownMenuItem>
+                              </DropdownMenuGroup>
+                            </>
+                          ) : (
+                            <DropdownMenuItem variant="destructive" onClick={() => setDeleteTarget(taxa)}>
                               {tCommon("delete")}
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </CardContent>
       </Card>

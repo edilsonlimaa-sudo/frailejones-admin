@@ -142,7 +142,9 @@
         "adiantado": "Cobranças de meses futuros",
         "encargos": "Multa e juros"
       }
-    }
+    },
+    "feesNotIssued": "{count, plural, one {Falta emitir # taxa} other {Faltam emitir # taxas}} de {month}: {names}.",
+    "goToFees": "Emitir taxas"
   },
   "unidades": {
     "title": "Unidades",
@@ -346,17 +348,9 @@
   },
   "taxasCondominio": {
     "title": "Taxas de Condomínio",
-    "description": "Regras de valor, vencimento, multa e juros usadas na emissão das cobranças ordinárias.",
+    "description": "Cobranças recorrentes emitidas todo mês para as unidades vinculadas.",
     "newFee": "Nova taxa",
     "noFees": "Nenhuma taxa de condomínio cadastrada.",
-    "titleColumn": "Título",
-    "value": "Valor",
-    "dueDate": "Vencimento",
-    "penalty": "Multa",
-    "dailyInterest": "Juros/dia",
-    "gracePeriod": "Carência",
-    "dueDay": "Dia {day}",
-    "graceDays": "{count, plural, one {# dia} other {# dias}}",
     "viewDetails": "Ver detalhes",
     "deleteSuccess": "Taxa de condomínio excluída.",
     "deleteError": "Erro ao excluir taxa de condomínio.",
@@ -379,7 +373,17 @@
       "updateSuccess": "Taxa de condomínio atualizada.",
       "createSuccess": "Taxa de condomínio cadastrada.",
       "saveError": "Erro ao salvar taxa de condomínio."
-    }
+    },
+    "inactive": "Inativa",
+    "rulesLine": "Vence no dia {day} · {units, plural, one {# unidade} other {# unidades}} · Multa {penalty}% · Juros {interest}% ao dia · {grace, plural, =0 {sem carência} one {# dia de carência} other {# dias de carência}}",
+    "notIssuedAlert": "{count, plural, one {# taxa sem emissão} other {# taxas sem emissão}} em {month}:",
+    "monthNotIssued": "{month}: sem emissão",
+    "issueAction": "Emitir",
+    "monthProgress": "{month}: {paid} de {total} pagas · {late} com atraso",
+    "neverIssued": "Nenhum mês emitido ainda.",
+    "perUnit": "{value} por unidade",
+    "perMonth": "{value} por mês",
+    "deleteLockedReason": "Não é possível excluir: a taxa já tem cobranças emitidas. Para parar de cobrá-la, edite e desative."
   },
   "taxaCondominioDetail": {
     "headerSubtitle": "{value} · vencimento todo dia {day}",
@@ -390,38 +394,37 @@
       "linkedUnits": "Unidades vinculadas"
     },
     "processed": "Processada",
-    "unitsWithChargeIssued": "{count} de {total} unidades com cobrança emitida neste mês",
     "closedOn": " · fechada em {date}",
     "previousMonth": "Mês anterior",
     "nextMonth": "Próximo mês",
     "collected": "Arrecadado",
     "collectedCharges": "+ {value} de multa e juros",
     "issued": "Emitido",
-    "paid": "Pagas",
-    "pending": "Pendentes",
-    "notIssued": "Não emitidas",
     "issuedChargesTitle": "Cobranças emitidas — {month}",
-    "searchPlaceholder": "Buscar por unidade ou proprietário...",
-    "noSearchResults": "Nenhuma cobrança encontrada para essa busca.",
     "noLinkedUnits": "Nenhuma unidade vinculada a esta taxa no momento.",
-    "noChargesYet": "Nenhuma cobrança emitida ainda para {month}.",
-    "value": "Valor",
-    "paidValue": "Pago",
-    "balance": "Saldo",
-    "dueDate": "Vencimento",
-    "penaltyInterest": "Multa + juros",
-    "updatedTotal": "Total atualizado",
-    "unit": "Unidade",
-    "owner": "Proprietário",
-    "status": "Status",
-    "creditApplied": "Crédito: -{value}",
-    "linkedUnitsDescription": "Unidades marcadas recebem cobrança ordinária desta taxa a cada emissão mensal."
+    "linkedUnitsDescription": "Unidades marcadas recebem cobrança ordinária desta taxa a cada emissão mensal.",
+    "situation": {
+      "concluido": "Tudo pago",
+      "porVencer": "No prazo",
+      "enCobro": "{count, plural, one {# cobrança vencida} other {# cobranças vencidas}}"
+    },
+    "paidSummary": "{paid} de {total} cobranças pagas · {onTime} no prazo · {late} com atraso",
+    "notIssuedYet": "As cobranças deste mês ainda não foram emitidas.",
+    "toCollect": "A receber",
+    "toCollectDetail": "{count, plural, one {# cobrança pendente} other {# cobranças pendentes}}, com multa e juros de hoje",
+    "chargesCount": "{count, plural, one {# cobrança} other {# cobranças}}",
+    "rules": "{value} por unidade · vence no dia {day} · Multa {penalty}% · Juros {interest}% ao dia · {grace, plural, =0 {sem carência} one {# dia de carência} other {# dias de carência}}",
+    "noChargesYet": "Ainda não há cobranças emitidas para {month}. {count, plural, one {# unidade vinculada vai receber} other {# unidades vinculadas vão receber}} a cobrança.",
+    "remainingUnits": "{count, plural, one {# unidade vinculada ainda não tem} other {# unidades vinculadas ainda não têm}} cobrança neste mês."
   },
   "emitirCobrancasDoMes": {
     "trigger": "Emitir cobrança do mês",
     "submitting": "Emitindo...",
     "successMessage": "{count, plural, one {# cobrança emitida para este mês.} other {# cobranças emitidas para este mês.}}",
-    "errorMessage": "Erro ao emitir cobranças do mês."
+    "errorMessage": "Erro ao emitir cobranças do mês.",
+    "confirmTitle": "Emitir as cobranças de {month}",
+    "confirmDescription": "{count, plural, one {Será emitida # cobrança} other {Serão emitidas # cobranças}} de {value} (total {total}), com vencimento em {date}. O valor e as regras de multa, juros e carência ficam fixos em cada cobrança, e o mês fica fechado: esta ação não pode ser desfeita.",
+    "confirmAction": "Emitir {count, plural, one {# cobrança} other {# cobranças}}"
   },
   "vincularUnidadesTaxa": {
     "noUnits": "Nenhuma unidade cadastrada.",
@@ -723,6 +726,7 @@
       "pendingSplit": "{principal} + {charges} de multa e juros",
       "paidCharges": "inclui {charges} de multa e juros",
       "creditApplied": "Crédito aplicado: -{value}"
-    }
+    },
+    "searchPlaceholder": "Buscar por unidade ou proprietário..."
   }
 }
