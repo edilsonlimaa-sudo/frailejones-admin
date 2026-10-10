@@ -14,8 +14,19 @@ export function resolverFiltroCobrancas(valor: string | string[] | undefined): F
   return FILTROS_COBRANCAS.find((f) => f === valor) ?? FILTRO_COBRANCAS_PADRAO;
 }
 
+// como a linha se identifica: na tela da unidade é a origem (taxa ou rateio); no detalhe de um
+// rateio é a unidade (com o dono e link pra ela)
+export type RotuloCobranca = {
+  titulo: string;
+  subtitulo: string | null;
+  href: string | null;
+  // mostra a etiqueta "Extraordinaria" (só faz sentido quando a linha é a origem)
+  extraordinaria: boolean;
+};
+
 export type ItemCobranca = CobrancaClassificada & {
   cobranca: CobrancaDaUnidade;
+  rotulo: RotuloCobranca;
   // pendente ainda dentro do prazo, mas com o vencimento já passado (está na carência)
   emCarencia: boolean;
   // pendente a vencer: dias até o vencimento
@@ -38,24 +49,47 @@ const diasEntre = (deIso: string, ateIso: string) =>
 
 const arredondar = (valor: number) => Math.round(valor * 100) / 100;
 
-function agruparPorMes(itens: ItemCobranca[], ordem: "asc" | "desc"): GrupoMes[] {
-  const porMes = new Map<string, ItemCobranca[]>();
+// sem agrupar, a lista vira um grupo só, com mes "" (o componente não mostra cabeçalho de mês)
+function agrupar(itens: ItemCobranca[], ordem: "asc" | "desc", porMes: boolean): GrupoMes[] {
+  const grupos = new Map<string, ItemCobranca[]>();
   for (const item of itens) {
-    const mes = item.cobranca.competencia.slice(0, 7);
-    porMes.set(mes, [...(porMes.get(mes) ?? []), item]);
+    const mes = porMes ? item.cobranca.competencia.slice(0, 7) : "";
+    grupos.set(mes, [...(grupos.get(mes) ?? []), item]);
   }
   const sinal = ordem === "asc" ? 1 : -1;
-  return [...porMes.entries()]
+  return [...grupos.entries()]
     .sort(([a], [b]) => sinal * a.localeCompare(b))
     .map(([mes, lista]) => ({
       mes,
-      itens: lista.sort((a, b) => sinal * a.cobranca.data_vencimento.localeCompare(b.cobranca.data_vencimento)),
+      itens: lista.sort(
+        (a, b) =>
+          sinal * a.cobranca.data_vencimento.localeCompare(b.cobranca.data_vencimento) ||
+          a.rotulo.titulo.localeCompare(b.rotulo.titulo),
+      ),
       total: arredondar(lista.filter((i) => i.estado !== "cancelado").reduce((acc, i) => acc + i.valor, 0)),
     }));
 }
 
+const rotuloPelaOrigem = (c: CobrancaDaUnidade): RotuloCobranca => ({
+  titulo: c.titulo_origem,
+  subtitulo: null,
+  href: null,
+  extraordinaria: c.tipo === "extraordinaria",
+});
+
+type OpcoesOrganizacao = {
+  // padrão: agrupa por mês de competência (tela da unidade)
+  agruparPorMes?: boolean;
+  // padrão: a origem da cobrança
+  rotulo?: (c: CobrancaDaUnidade) => RotuloCobranca;
+};
+
 // agora: instante de referência, fixado uma vez no servidor (o resultado é repassado ao cliente)
-export function organizarCobrancas(cobrancas: CobrancaDaUnidade[], agora: Date): CobrancasOrganizadas {
+export function organizarCobrancas(
+  cobrancas: CobrancaDaUnidade[],
+  agora: Date,
+  { agruparPorMes = true, rotulo = rotuloPelaOrigem }: OpcoesOrganizacao = {},
+): CobrancasOrganizadas {
   const hojeIso = agora.toISOString().slice(0, 10);
   const itens: ItemCobranca[] = cobrancas.map((cobranca) => {
     const classificada = classificarCobranca(cobranca, hojeIso);
@@ -63,6 +97,7 @@ export function organizarCobrancas(cobrancas: CobrancaDaUnidade[], agora: Date):
     return {
       ...classificada,
       cobranca,
+      rotulo: rotulo(cobranca),
       emCarencia: aVencer && hojeIso > cobranca.data_vencimento,
       diasParaVencer: aVencer && hojeIso <= cobranca.data_vencimento ? diasEntre(hojeIso, cobranca.data_vencimento) : null,
     };
@@ -72,8 +107,8 @@ export function organizarCobrancas(cobrancas: CobrancaDaUnidade[], agora: Date):
   const historial = itens.filter((i) => i.estado !== "vencido" && i.estado !== "porVencer");
 
   return {
-    pendentes: agruparPorMes(pendentes, "asc"),
-    historial: agruparPorMes(historial, "desc"),
+    pendentes: agrupar(pendentes, "asc", agruparPorMes),
+    historial: agrupar(historial, "desc", agruparPorMes),
     totalPendente: arredondar(pendentes.reduce((acc, i) => acc + i.valor, 0)),
     quantidade: {
       todos: itens.length,

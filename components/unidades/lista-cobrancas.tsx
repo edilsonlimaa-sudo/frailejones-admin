@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDownIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -135,18 +136,23 @@ function GrupoDoMes({ grupo, podeLiquidar, cotacaoAtual, cotacoes }: GrupoDoMesP
   const t = useTranslations("listaCobrancas");
   const locale = useLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const rotulo = new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
-    new Date(`${grupo.mes}-01T00:00:00Z`),
-  );
+  const rotulo = grupo.mes
+    ? new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+        new Date(`${grupo.mes}-01T00:00:00Z`),
+      )
+    : "";
 
   return (
     <div className="rounded-lg border">
-      <div className="flex items-baseline justify-between gap-2 border-b bg-muted/40 px-3 py-2 text-sm">
-        <span className="font-medium">{rotulo.charAt(0).toUpperCase() + rotulo.slice(1)}</span>
-        <span className="text-xs text-muted-foreground">
-          {t("chargesCount", { count: grupo.itens.length })} · {formatUsd(grupo.total)}
-        </span>
-      </div>
+      {/* lista sem agrupar (detalhe de um rateio) vem num grupo só, sem mês */}
+      {grupo.mes && (
+        <div className="flex items-baseline justify-between gap-2 border-b bg-muted/40 px-3 py-2 text-sm">
+          <span className="font-medium">{rotulo.charAt(0).toUpperCase() + rotulo.slice(1)}</span>
+          <span className="text-xs text-muted-foreground">
+            {t("chargesCount", { count: grupo.itens.length })} · {formatUsd(grupo.total)}
+          </span>
+        </div>
+      )}
       <ul className="divide-y">
         {grupo.itens.map((item) => (
           <LinhaCobranca key={item.cobranca.id} item={item} podeLiquidar={podeLiquidar} cotacaoAtual={cotacaoAtual} cotacoes={cotacoes} />
@@ -201,8 +207,17 @@ function LinhaCobranca({
     <li className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-4">
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 font-medium">
-          <span className="truncate">{cobranca.titulo_origem}</span>
-          {cobranca.tipo === "extraordinaria" && <Badge variant="outline">{tTipo("extraordinaria")}</Badge>}
+          {item.rotulo.href ? (
+            <Link href={item.rotulo.href} className="truncate hover:underline">
+              {item.rotulo.titulo}
+            </Link>
+          ) : (
+            <span className="truncate">{item.rotulo.titulo}</span>
+          )}
+          {item.rotulo.subtitulo && (
+            <span className="truncate text-sm font-normal text-muted-foreground">{item.rotulo.subtitulo}</span>
+          )}
+          {item.rotulo.extraordinaria && <Badge variant="outline">{tTipo("extraordinaria")}</Badge>}
         </p>
         <p
           className={cn(

@@ -6,29 +6,16 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Unidade } from "@/lib/types/unidades";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
-import type { CreditoMovimentacao, CreditoOrigemCobranca, MoedaTipo } from "@/lib/types/creditos";
-import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
+import type { CreditoMovimentacao, CreditoOrigemCobranca } from "@/lib/types/creditos";
+import {
+  montarCobrancaDetalhada,
+  SELECT_COBRANCA_DETALHADA,
+  type CobrancaDetalhadaRow,
+} from "@/lib/cobrancas-detalhadas";
 import { Button } from "@/components/ui/button";
 import { UnidadeDetailTabs } from "@/components/admin/unidades/unidade-detail-tabs";
 import { resolverAbaUnidade } from "@/lib/abas-unidade";
 import { resolverFiltroCobrancas } from "@/lib/lista-cobrancas";
-
-type CobrancaRow = Omit<
-  CobrancaDaUnidade,
-  "valor_principal_pago_usd" | "valor_juros_pago_usd" | "data_ultimo_pagamento" | "pagamentos" | "titulo_origem"
-> & {
-  taxa: { titulo: string } | null;
-  despesa: { titulo: string } | null;
-  pagamento_cobrancas: {
-    valor_principal_abatido_usd: number;
-    valor_juros_pago_usd: number;
-    pagamento:
-      | (Omit<PagamentoDaCobranca, "valor_principal_abatido_usd" | "valor_juros_pago_usd" | "creditosGerados"> & {
-          creditos_movimentacoes: { valor: number; moeda: MoedaTipo }[];
-        })
-      | null;
-  }[];
-};
 
 // pagamento_cobrancas.pagamento_id é UNIQUE, então o embed reverso (a partir de pagamentos)
 // vem como objeto único (ou null), não array
@@ -90,12 +77,10 @@ export default async function UnidadeDetailPage({
   ] = await Promise.all([
     supabase
       .from("cobrancas")
-      .select(
-        "id, tipo, descricao, taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(titulo), competencia, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, tasa_bcv_aplicada, forma_pagamento, referencia_bancaria, observacao, creditos_movimentacoes(valor, moeda)))",
-      )
+      .select(SELECT_COBRANCA_DETALHADA)
       .eq("unidade_id", id)
       .order("data_vencimento", { ascending: false })
-      .returns<CobrancaRow[]>(),
+      .returns<CobrancaDetalhadaRow[]>(),
     supabase
       .from("creditos_movimentacoes")
       .select(
@@ -133,36 +118,7 @@ export default async function UnidadeDetailPage({
       : null,
   }));
 
-  const cobrancas: CobrancaDaUnidade[] = (cobrancasRaw ?? []).map(
-    ({ pagamento_cobrancas, taxa, despesa, ...cobranca }) => ({
-      ...cobranca,
-      titulo_origem: taxa?.titulo ?? despesa?.titulo ?? cobranca.descricao,
-      valor_principal_pago_usd: pagamento_cobrancas.reduce(
-        (acc, p) => acc + p.valor_principal_abatido_usd,
-        0,
-      ),
-      valor_juros_pago_usd: pagamento_cobrancas.reduce((acc, p) => acc + p.valor_juros_pago_usd, 0),
-      // data do pagamento mais recente que liquidou esta cobrança, pra congelar o Bs. exibido nessa data
-      data_ultimo_pagamento: pagamento_cobrancas.reduce<string | null>(
-        (latest, p) =>
-          p.pagamento && (!latest || p.pagamento.data_pagamento > latest)
-            ? p.pagamento.data_pagamento
-            : latest,
-        null,
-      ),
-      pagamentos: pagamento_cobrancas
-        .filter((p) => p.pagamento !== null)
-        .map((p) => {
-          const { creditos_movimentacoes, ...pagamento } = p.pagamento!;
-          return {
-            ...pagamento,
-            valor_principal_abatido_usd: p.valor_principal_abatido_usd,
-            valor_juros_pago_usd: p.valor_juros_pago_usd,
-            creditosGerados: creditos_movimentacoes,
-          };
-        }),
-    }),
-  );
+  const cobrancas: CobrancaDaUnidade[] = (cobrancasRaw ?? []).map(montarCobrancaDetalhada);
 
   return (
     <div className="flex flex-col gap-6">
