@@ -9,6 +9,8 @@ import { INTL_LOCALE } from "@/lib/intl-locale";
 import { LiquidarCobrancaDialog } from "@/components/admin/cobrancas/liquidar-cobranca-dialog";
 import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-dialog";
 import { EstadoDeCuenta } from "@/components/unidades/estado-de-cuenta";
+import { TabsNaUrl } from "@/components/tabs-na-url";
+import { ABA_UNIDADE_PADRAO, type AbaUnidade } from "@/lib/abas-unidade";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,13 +24,15 @@ import {
 } from "@/components/ui/table";
 
 type UnidadeDetailTabsProps = {
+  // aba aberta ao carregar, vinda de ?aba= (recarregar a página não volta pra visão geral)
+  abaInicial: AbaUnidade;
   unidade: Omit<Unidade, "proprietario"> & { proprietario: Proprietario | null };
   cobrancas: CobrancaDaUnidade[];
   creditos: CreditoMovimentacao[];
   cotacoes: (CotacaoHistorico & { id: string })[];
 };
 
-export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: UnidadeDetailTabsProps) {
+export function UnidadeDetailTabs({ abaInicial, unidade, cobrancas, creditos, cotacoes }: UnidadeDetailTabsProps) {
   const t = useTranslations("unidadeDetail");
   const tCobrancas = useTranslations("cobrancas");
   const locale = useLocale();
@@ -255,7 +259,7 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
   }
 
   return (
-    <Tabs defaultValue="geral">
+    <TabsNaUrl parametro="aba" abaInicial={abaInicial} abaPadrao={ABA_UNIDADE_PADRAO}>
       <TabsList>
         <TabsTrigger value="geral">{t("tabs.general")}</TabsTrigger>
         <TabsTrigger value="cobrancas">{t("tabs.charges")}</TabsTrigger>
@@ -534,6 +538,6 @@ export function UnidadeDetailTabs({ unidade, cobrancas, creditos, cotacoes }: Un
           </CardContent>
         </Card>
       </TabsContent>
-    </Tabs>
+    </TabsNaUrl>
   );
 }

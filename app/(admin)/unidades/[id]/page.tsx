@@ -10,6 +10,7 @@ import type { CreditoMovimentacao, CreditoOrigemCobranca, MoedaTipo } from "@/li
 import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
 import { Button } from "@/components/ui/button";
 import { UnidadeDetailTabs } from "@/components/admin/unidades/unidade-detail-tabs";
+import { resolverAbaUnidade } from "@/lib/abas-unidade";
 
 type CobrancaRow = Omit<
   CobrancaDaUnidade,
@@ -42,10 +43,13 @@ type CreditoRow = Omit<CreditoMovimentacao, "pagamento"> & {
 
 export default async function UnidadeDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ aba?: string | string[] }>;
 }) {
   const { id } = await params;
+  const aba = resolverAbaUnidade((await searchParams).aba);
   const supabase = await createClient();
   const t = await getTranslations("common");
   const tUnidades = await getTranslations("unidades");
@@ -178,6 +182,7 @@ export default async function UnidadeDetailPage({
       </div>
 
       <UnidadeDetailTabs
+        abaInicial={aba}
         unidade={unidade}
         cobrancas={cobrancas}
         creditos={creditos}

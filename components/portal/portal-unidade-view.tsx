@@ -8,6 +8,8 @@ import { formatUsd, formatBs, encontrarTasaNaData, formatVes, type CotacaoHistor
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-dialog";
 import { EstadoDeCuenta } from "@/components/unidades/estado-de-cuenta";
+import { TabsNaUrl } from "@/components/tabs-na-url";
+import { ABA_UNIDADE_PADRAO, type AbaUnidade } from "@/lib/abas-unidade";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +23,8 @@ import {
 } from "@/components/ui/table";
 
 type PortalUnidadeViewProps = {
+  // aba aberta ao carregar, vinda de ?aba= (recarregar a página não volta pra visão geral)
+  abaInicial: AbaUnidade;
   unidade: Omit<Unidade, "proprietario"> & { proprietario: Proprietario | null };
   cobrancas: CobrancaDaUnidade[];
   creditos: CreditoMovimentacao[];
@@ -29,7 +33,7 @@ type PortalUnidadeViewProps = {
 
 // versão só-leitura de UnidadeDetailTabs pro portal público do condômino: mesma UI/dados, mas
 // sem LiquidarCobrancaDialog (ação exclusiva do admin) — reusa os mesmos namespaces de i18n
-export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: PortalUnidadeViewProps) {
+export function PortalUnidadeView({ abaInicial, unidade, cobrancas, creditos, cotacoes }: PortalUnidadeViewProps) {
   const t = useTranslations("unidadeDetail");
   const tCobrancas = useTranslations("cobrancas");
   const locale = useLocale();
@@ -251,7 +255,7 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
   }
 
   return (
-    <Tabs defaultValue="geral">
+    <TabsNaUrl parametro="aba" abaInicial={abaInicial} abaPadrao={ABA_UNIDADE_PADRAO}>
       <TabsList>
         <TabsTrigger value="geral">{t("tabs.general")}</TabsTrigger>
         <TabsTrigger value="cobrancas">{t("tabs.charges")}</TabsTrigger>
@@ -503,6 +507,6 @@ export function PortalUnidadeView({ unidade, cobrancas, creditos, cotacoes }: Po
           </CardContent>
         </Card>
       </TabsContent>
-    </Tabs>
+    </TabsNaUrl>
   );
 }

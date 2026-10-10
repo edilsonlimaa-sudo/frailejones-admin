@@ -10,6 +10,7 @@ import type { CreditoMovimentacao, CreditoOrigemCobranca, MoedaTipo } from "@/li
 import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
 import { Button } from "@/components/ui/button";
 import { PortalUnidadeView } from "@/components/portal/portal-unidade-view";
+import { resolverAbaUnidade } from "@/lib/abas-unidade";
 
 // query/mapeamento intencionalmente duplicados de app/(admin)/unidades/[id]/page.tsx: o portal
 // público é uma superfície decoupled do admin (sem guard de auth), então não compartilha o mesmo
@@ -45,10 +46,13 @@ type CreditoRow = Omit<CreditoMovimentacao, "pagamento"> & {
 
 export default async function PortalUnidadePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ aba?: string | string[] }>;
 }) {
   const { id } = await params;
+  const aba = resolverAbaUnidade((await searchParams).aba);
   const supabase = await createClient();
   const t = await getTranslations("portal");
 
@@ -165,7 +169,13 @@ export default async function PortalUnidadePage({
         </div>
       </div>
 
-      <PortalUnidadeView unidade={unidade} cobrancas={cobrancas} creditos={creditos} cotacoes={cotacoes ?? []} />
+      <PortalUnidadeView
+        abaInicial={aba}
+        unidade={unidade}
+        cobrancas={cobrancas}
+        creditos={creditos}
+        cotacoes={cotacoes ?? []}
+      />
     </div>
   );
 }
