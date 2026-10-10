@@ -53,6 +53,8 @@ export default async function RateioExtraordinarioDetalhePage({
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
+  const formatPercentual = (valor: number) =>
+    new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 4 }).format(valor);
 
   const { data: despesa, error: despesaError } = await supabase
     .from("despesas_extraordinarias")
@@ -212,8 +214,9 @@ export default async function RateioExtraordinarioDetalhePage({
             <p>
               {tRateio("rules", {
                 value: formatUsd(despesa.valor_por_unidade_usd),
-                penalty: despesa.pct_multa_atraso,
-                interest: despesa.pct_juros_diario,
+                // percentuais vêm do banco como número cru (0.1): formata no idioma da tela (0,1)
+                penalty: formatPercentual(despesa.pct_multa_atraso),
+                interest: formatPercentual(despesa.pct_juros_diario),
                 grace: despesa.dias_graca,
               })}
             </p>
