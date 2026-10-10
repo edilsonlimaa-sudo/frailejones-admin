@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { TriangleAlertIcon } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { formatUsd } from "@/lib/moeda";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
 import type { Unidade } from "@/lib/types/unidades";
 import { Button } from "@/components/ui/button";
@@ -24,15 +26,15 @@ import { Textarea } from "@/components/ui/textarea";
 type RateioExtraordinarioFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  despesa: DespesaExtraordinaria | null;
   unidades: Unidade[];
   onSaved: (despesa: DespesaExtraordinaria) => void;
 };
 
+// só cadastro: o rateio emite as cobranças no momento em que é salvo, e depois disso não é
+// editável (valor, unidades, vencimento e regras já foram copiados para cada cobrança)
 export function RateioExtraordinarioFormDialog({
   open,
   onOpenChange,
-  despesa,
   unidades,
   onSaved,
 }: RateioExtraordinarioFormDialogProps) {
@@ -41,8 +43,7 @@ export function RateioExtraordinarioFormDialog({
       <DialogContent className="flex max-h-[85dvh] max-w-2xl flex-col">
         {/* remount com estado limpo sempre que o dialog abre (evita setState em effect) */}
         <RateioExtraordinarioFormFields
-          key={open ? (despesa?.id ?? "new") : "closed"}
-          despesa={despesa}
+          key={open ? "new" : "closed"}
           unidades={unidades}
           onSaved={onSaved}
           onClose={() => onOpenChange(false)}
@@ -53,36 +54,27 @@ export function RateioExtraordinarioFormDialog({
 }
 
 type RateioExtraordinarioFormFieldsProps = {
-  despesa: DespesaExtraordinaria | null;
   unidades: Unidade[];
   onSaved: (despesa: DespesaExtraordinaria) => void;
   onClose: () => void;
 };
 
 function RateioExtraordinarioFormFields({
-  despesa,
   unidades,
   onSaved,
   onClose,
 }: RateioExtraordinarioFormFieldsProps) {
-  const isEditing = Boolean(despesa);
   const t = useTranslations("rateiosExtraordinarios.form");
   const tCommon = useTranslations("common");
 
-  const [titulo, setTitulo] = useState(despesa?.titulo ?? "");
-  const [descricao, setDescricao] = useState(despesa?.descricao ?? "");
-  const [valorTotalUsd, setValorTotalUsd] = useState(
-    despesa ? String(despesa.valor_total_usd) : "",
-  );
-  const [dataVencimento, setDataVencimento] = useState(despesa?.data_vencimento ?? "");
-  const [pctMultaAtraso, setPctMultaAtraso] = useState(
-    despesa ? String(despesa.pct_multa_atraso) : "0",
-  );
-  const [pctJurosDiario, setPctJurosDiario] = useState(
-    despesa ? String(despesa.pct_juros_diario) : "0",
-  );
-  const [diasGraca, setDiasGraca] = useState(despesa ? String(despesa.dias_graca) : "0");
-  const [unidadeIds, setUnidadeIds] = useState<string[]>(despesa?.unidade_ids ?? []);
+  const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [valorTotalUsd, setValorTotalUsd] = useState("");
+  const [dataVencimento, setDataVencimento] = useState("");
+  const [pctMultaAtraso, setPctMultaAtraso] = useState("0");
+  const [pctJurosDiario, setPctJurosDiario] = useState("0");
+  const [diasGraca, setDiasGraca] = useState("0");
+  const [unidadeIds, setUnidadeIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // wizard: passo 1 define o rateio, passo 2 vincula as unidades (não escala mostrar as 2 coisas juntas com centenas de unidades)
@@ -127,12 +119,12 @@ function RateioExtraordinarioFormFields({
     setError(null);
 
     try {
-      // salva a despesa, sincroniza as unidades participantes e, na criação, emite uma cobrança
-      // por unidade já aplicando o saldo a favor — tudo numa única transação (ver
-      // salvar_rateio_extraordinario na migration)
+      // cria a despesa, vincula as unidades participantes e emite uma cobrança por unidade já
+      // aplicando o saldo a favor — tudo numa única transação (ver salvar_rateio_extraordinario
+      // na migration)
       const { data, error: saveError } = await supabase
         .rpc("salvar_rateio_extraordinario", {
-          p_id: despesa?.id ?? null,
+          p_id: null,
           p_titulo: titulo.trim(),
           p_descricao: descricao.trim() || null,
           p_valor_total_usd: Number(valorTotalUsd),
@@ -148,11 +140,7 @@ function RateioExtraordinarioFormFields({
       if (saveError) throw saveError;
 
       onSaved({ ...data, unidade_ids: unidadeIds });
-      toast.success(
-        isEditing
-          ? t("updateSuccess")
-          : t("createSuccess", { count: unidadeIds.length }),
-      );
+      toast.success(t("createSuccess", { count: unidadeIds.length }));
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t("saveError"));
@@ -165,19 +153,12 @@ function RateioExtraordinarioFormFields({
     <>
       <DialogHeader>
         <DialogTitle>
-          {isEditing ? t("editTitle") : t("createTitle")}
+          {t("createTitle")}
           {" — "}
           {step === 1 ? t("step1Title") : t("step2Title")}
         </DialogTitle>
         <DialogDescription>
-          {step === 1 ? (
-            t("step1Description")
-          ) : (
-            <>
-              {t("step2Description")}
-              {!isEditing && t("step2DescriptionExtra")}
-            </>
-          )}
+          {step === 1 ? t("step1Description") : t("step2Description")}
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
@@ -317,6 +298,27 @@ function RateioExtraordinarioFormFields({
             </div>
           )}
 
+          {/* último momento de revisão: depois de salvar as cobranças já existem e o rateio não
+              pode mais ser editado */}
+          {step === 2 && (
+            <div
+              role="note"
+              className="flex items-start gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm"
+            >
+              <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <p>
+                {t("lockedNotice", {
+                  count: unidadeIds.length,
+                  value: formatUsd(
+                    unidadeIds.length > 0 && valorTotalUsd
+                      ? Number((Number(valorTotalUsd) / unidadeIds.length).toFixed(2))
+                      : 0,
+                  ),
+                })}
+              </p>
+            </div>
+          )}
+
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
@@ -334,7 +336,7 @@ function RateioExtraordinarioFormFields({
             </Button>
           )}
           <Button type="submit" disabled={isSubmitting}>
-            {step === 1 ? t("next") : isSubmitting ? tCommon("saving") : tCommon("save")}
+            {step === 1 ? t("next") : isSubmitting ? tCommon("saving") : t("emitCharges")}
           </Button>
         </DialogFooter>
       </form>

@@ -3,10 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
-import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
 
-import { createClient } from "@/lib/supabase/client";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
 import type { Unidade } from "@/lib/types/unidades";
 import { Badge } from "@/components/ui/badge";
@@ -30,19 +28,12 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { RateioExtraordinarioFormDialog } from "@/components/admin/rateios-extraordinarios/rateio-extraordinario-form-dialog";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { formatUsd } from "@/lib/moeda";
@@ -64,53 +55,16 @@ export function RateiosExtraordinariosManager({
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const [despesasList, setDespesasList] = useState(despesas);
 
+  // só cadastro: rateio emite as cobranças ao ser salvo e não é editável nem excluível depois
   const [formOpen, setFormOpen] = useState(false);
-  const [editingDespesa, setEditingDespesa] = useState<DespesaExtraordinaria | null>(null);
-
-  const [deleteTarget, setDeleteTarget] = useState<DespesaExtraordinaria | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const sortDespesas = (list: DespesaExtraordinaria[]) =>
     [...list].sort((a, b) => b.data_vencimento.localeCompare(a.data_vencimento));
 
-  const openCreateDialog = () => {
-    setEditingDespesa(null);
-    setFormOpen(true);
-  };
-
-  const openEditDialog = (despesa: DespesaExtraordinaria) => {
-    setEditingDespesa(despesa);
-    setFormOpen(true);
-  };
+  const openCreateDialog = () => setFormOpen(true);
 
   const handleSaved = (despesa: DespesaExtraordinaria) => {
-    setDespesasList((prev) => {
-      const exists = prev.some((d) => d.id === despesa.id);
-      const next = exists ? prev.map((d) => (d.id === despesa.id ? despesa : d)) : [...prev, despesa];
-      return sortDespesas(next);
-    });
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    const supabase = createClient();
-    setIsDeleting(true);
-
-    try {
-      const { error } = await supabase
-        .from("despesas_extraordinarias")
-        .delete()
-        .eq("id", deleteTarget.id);
-      if (error) throw error;
-
-      setDespesasList((prev) => prev.filter((d) => d.id !== deleteTarget.id));
-      toast.success(t("deleteSuccess"));
-      setDeleteTarget(null);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : t("deleteError"));
-    } finally {
-      setIsDeleting(false);
-    }
+    setDespesasList((prev) => sortDespesas([...prev, despesa]));
   };
 
   return (
@@ -192,15 +146,19 @@ export function RateiosExtraordinariosManager({
                           <DropdownMenuItem render={<Link href={`/rateios-extraordinarios/${despesa.id}`} />}>
                             {t("viewProgress")}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditDialog(despesa)}>
-                            {tCommon("edit")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => setDeleteTarget(despesa)}
-                          >
-                            {tCommon("delete")}
-                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {/* visíveis mas desabilitados, com o motivo: o rateio emite as cobranças no
+                              cadastro, então editar ou excluir divergiria das cobranças (algumas já pagas).
+                              Item desabilitado não recebe hover, por isso o motivo é texto, não tooltip */}
+                          <DropdownMenuGroup>
+                            <DropdownMenuLabel className="max-w-60 whitespace-normal">
+                              {t("lockedActionsReason")}
+                            </DropdownMenuLabel>
+                            <DropdownMenuItem disabled>{tCommon("edit")}</DropdownMenuItem>
+                            <DropdownMenuItem disabled variant="destructive">
+                              {tCommon("delete")}
+                            </DropdownMenuItem>
+                          </DropdownMenuGroup>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -216,30 +174,9 @@ export function RateiosExtraordinariosManager({
       <RateioExtraordinarioFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
-        despesa={editingDespesa}
         unidades={unidades}
         onSaved={handleSaved}
       />
-
-      <AlertDialog
-        open={Boolean(deleteTarget)}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("deleteConfirm", { titulo: deleteTarget?.titulo ?? "" })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
-            <AlertDialogAction disabled={isDeleting} onClick={handleDelete}>
-              {isDeleting ? t("deleting") : tCommon("delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

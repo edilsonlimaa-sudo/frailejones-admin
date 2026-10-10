@@ -411,7 +411,7 @@
   },
   "rateiosExtraordinarios": {
     "title": "Rateios Extraordinários",
-    "description": "Despesas extraordinárias (ex: reparos) rateadas entre as unidades participantes e cobradas via cobranças extraordinárias.",
+    "description": "Despesas extraordinárias (ex: reparos) rateadas entre as unidades participantes. Ao cadastrar um rateio as cobranças são emitidas na hora e, a partir daí, ele não pode mais ser editado nem excluído.",
     "newRateio": "Novo rateio",
     "noRateios": "Nenhum rateio extraordinário cadastrado.",
     "titleColumn": "Título",
@@ -425,21 +425,14 @@
     "gracePeriod": "Carência",
     "graceDays": "{count, plural, one {# dia} other {# dias}}",
     "viewProgress": "Ver progresso",
-    "deleteSuccess": "Rateio extraordinário excluído.",
-    "deleteError": "Erro ao excluir rateio extraordinário.",
-    "deleteTitle": "Excluir rateio extraordinário",
-    "deleteConfirm": "Tem certeza que deseja excluir o rateio \"{titulo}\"? Essa ação não pode ser desfeita.",
-    "deleting": "Excluindo...",
     "form": {
       "requiredFieldsError": "Preencha os campos obrigatórios antes de continuar.",
       "selectAtLeastOneUnit": "Selecione ao menos uma unidade participante.",
-      "editTitle": "Editar rateio extraordinário",
       "createTitle": "Novo rateio extraordinário",
       "step1Title": "passo 1 de 2: dados do rateio",
       "step2Title": "passo 2 de 2: unidades participantes",
       "step1Description": "Despesa extraordinária (ex: reparo) rateada entre as unidades selecionadas. As regras abaixo são congeladas em cada cobrança gerada a partir deste rateio.",
       "step2Description": "Escolha as unidades que vão participar deste rateio.",
-      "step2DescriptionExtra": " Nada é salvo até você confirmar no passo final — ao salvar, uma cobrança já é emitida para cada unidade selecionada.",
       "titleLabel": "Título",
       "titlePlaceholder": "Ex: Reparo do telhado",
       "descriptionLabel": "Descrição",
@@ -455,10 +448,12 @@
       "selectAll": "Selecionar todas",
       "noOwner": "Sem proprietário",
       "next": "Próximo",
-      "updateSuccess": "Rateio extraordinário atualizado.",
       "createSuccess": "{count, plural, one {Rateio extraordinário cadastrado e # cobrança gerada.} other {Rateio extraordinário cadastrado e # cobranças geradas.}}",
-      "saveError": "Erro ao salvar rateio extraordinário."
-    }
+      "saveError": "Erro ao salvar rateio extraordinário.",
+      "lockedNotice": "Ao confirmar, {count, plural, one {# cobrança será emitida} other {# cobranças serão emitidas}} de {value} e o rateio não poderá mais ser editado: título, valor, vencimento, multa, juros, carência e unidades ficam fixos em cada cobrança. Revise tudo antes de continuar.",
+      "emitCharges": "Emitir cobranças"
+    },
+    "lockedActionsReason": "Não é possível editar nem excluir: as cobranças deste rateio já foram emitidas para as unidades."
   },
   "rateioExtraordinarioDetail": {
     "summaryTitle": "Resumo do rateio",
@@ -488,7 +483,8 @@
     "updatedTotal": "Total atualizado",
     "unit": "Unidade",
     "status": "Status",
-    "creditApplied": "Crédito: -{value}"
+    "creditApplied": "Crédito: -{value}",
+    "lockedNote": "Cobranças emitidas em {date} para {count, plural, one {# unidade} other {# unidades}}. Um rateio com cobranças emitidas não pode ser editado."
   },
   "liquidacoes": {
     "title": "Liquidações",

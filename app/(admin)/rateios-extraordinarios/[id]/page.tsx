@@ -8,6 +8,7 @@ import type { CobrancaDoRateio, CobrancaStatus } from "@/lib/types/cobrancas";
 import { calcularEncargos } from "@/lib/encargos";
 import { formatUsd, encontrarTasaNaData, formatVes } from "@/lib/moeda";
 import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
+import { dataCaixaCaracas } from "@/lib/arrecadacao";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -199,6 +200,14 @@ export default async function RateioExtraordinarioDetalhePage({
       <Card>
         <CardHeader>
           <CardTitle>{tRateio("summaryTitle")}</CardTitle>
+          {/* as cobranças nascem junto com o rateio e copiam valor, vencimento e regras: por isso
+              ele não é editável */}
+          <CardDescription>
+            {tRateio("lockedNote", {
+              date: formatDate(dataCaixaCaracas(despesa.created_at)),
+              count: cobrancas.length,
+            })}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">

@@ -411,7 +411,7 @@
   },
   "rateiosExtraordinarios": {
     "title": "Prorrateos Extraordinarios",
-    "description": "Gastos extraordinarios (ej: reparaciones) prorrateados entre las unidades participantes y cobrados vía cobros extraordinarios.",
+    "description": "Gastos extraordinarios (ej: reparaciones) prorrateados entre las unidades participantes. Al registrar un prorrateo se emiten los cobros de inmediato y, a partir de ahí, ya no se puede editar ni eliminar.",
     "newRateio": "Nuevo prorrateo",
     "noRateios": "Ningún prorrateo extraordinario registrado.",
     "titleColumn": "Título",
@@ -425,21 +425,14 @@
     "gracePeriod": "Carencia",
     "graceDays": "{count, plural, one {# día} other {# días}}",
     "viewProgress": "Ver progreso",
-    "deleteSuccess": "Prorrateo extraordinario eliminado.",
-    "deleteError": "Error al eliminar el prorrateo extraordinario.",
-    "deleteTitle": "Eliminar prorrateo extraordinario",
-    "deleteConfirm": "¿Está seguro de que desea eliminar el prorrateo \"{titulo}\"? Esta acción no se puede deshacer.",
-    "deleting": "Eliminando...",
     "form": {
       "requiredFieldsError": "Complete los campos obligatorios antes de continuar.",
       "selectAtLeastOneUnit": "Seleccione al menos una unidad participante.",
-      "editTitle": "Editar prorrateo extraordinario",
       "createTitle": "Nuevo prorrateo extraordinario",
       "step1Title": "paso 1 de 2: datos del prorrateo",
       "step2Title": "paso 2 de 2: unidades participantes",
       "step1Description": "Gasto extraordinario (ej: reparación) prorrateado entre las unidades seleccionadas. Las reglas de abajo quedan congeladas en cada cobro generado a partir de este prorrateo.",
       "step2Description": "Elija las unidades que participarán de este prorrateo.",
-      "step2DescriptionExtra": " Nada se guarda hasta confirmar en el paso final — al guardar, se emite un cobro para cada unidad seleccionada.",
       "titleLabel": "Título",
       "titlePlaceholder": "Ej: Reparación del techo",
       "descriptionLabel": "Descripción",
@@ -455,10 +448,12 @@
       "selectAll": "Seleccionar todas",
       "noOwner": "Sin propietario",
       "next": "Siguiente",
-      "updateSuccess": "Prorrateo extraordinario actualizado.",
       "createSuccess": "{count, plural, one {Prorrateo extraordinario registrado y # cobro generado.} other {Prorrateo extraordinario registrado y # cobros generados.}}",
-      "saveError": "Error al guardar el prorrateo extraordinario."
-    }
+      "saveError": "Error al guardar el prorrateo extraordinario.",
+      "lockedNotice": "Al confirmar se emiten {count, plural, one {# cobro} other {# cobros}} de {value} y el prorrateo ya no se podrá editar: título, valor, vencimiento, multa, intereses, carencia y unidades quedan fijos en cada cobro. Revise todo antes de continuar.",
+      "emitCharges": "Emitir cobros"
+    },
+    "lockedActionsReason": "No se puede editar ni eliminar: los cobros de este prorrateo ya fueron emitidos a las unidades."
   },
   "rateioExtraordinarioDetail": {
     "summaryTitle": "Resumen del prorrateo",
@@ -488,7 +483,8 @@
     "updatedTotal": "Total actualizado",
     "unit": "Unidad",
     "status": "Estado",
-    "creditApplied": "Crédito: -{value}"
+    "creditApplied": "Crédito: -{value}",
+    "lockedNote": "Cobros emitidos el {date} a {count, plural, one {# unidad} other {# unidades}}. Un prorrateo con cobros emitidos no se puede editar."
   },
   "liquidacoes": {
     "title": "Liquidaciones",
