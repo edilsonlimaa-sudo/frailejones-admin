@@ -415,7 +415,8 @@
     "chargesCount": "{count, plural, one {# cobro} other {# cobros}}",
     "rules": "{value} por unidad · vence el día {day} · Multa {penalty}% · Interés {interest}% por día · {grace, plural, =0 {sin período de gracia} one {# día de gracia} other {# días de gracia}}",
     "noChargesYet": "Aún no hay cobros emitidos para {month}. {count, plural, one {# unidad vinculada recibirá} other {# unidades vinculadas recibirán}} el cobro.",
-    "remainingUnits": "{count, plural, one {# unidad vinculada todavía no tiene} other {# unidades vinculadas todavía no tienen}} cobro este mes."
+    "remainingUnits": "{count, plural, one {# unidad vinculada todavía no tiene} other {# unidades vinculadas todavía no tienen}} cobro este mes.",
+    "linkedUnitsCount": "{linked} de {total} unidades reciben esta cuota"
   },
   "emitirCobrancasDoMes": {
     "trigger": "Emitir cobro del mes",
@@ -431,9 +432,25 @@
     "selectAll": "Seleccionar todas",
     "noOwner": "Sin propietario",
     "saving": "Guardando...",
-    "saveLinks": "Guardar vínculos",
+    "saveLinks": "Guardar cambios",
     "successMessage": "Unidades vinculadas actualizadas.",
-    "errorMessage": "Error al actualizar las unidades vinculadas."
+    "errorMessage": "Error al actualizar las unidades vinculadas.",
+    "searchPlaceholder": "Buscar por unidad o propietario",
+    "filter": {
+      "label": "Filtrar unidades",
+      "todas": "Todas ({count})",
+      "vinculadas": "Vinculadas ({count})",
+      "noVinculadas": "No vinculadas ({count})"
+    },
+    "noResults": "Ninguna unidad coincide con la búsqueda.",
+    "selectVisible": "Seleccionar {count, plural, one {la # visible} other {las # visibles}}",
+    "group": "Grupo {prefix}",
+    "willAdd": "Se vinculará",
+    "willRemove": "Se quitará",
+    "pendingAdded": "{count, plural, one {# unidad por vincular} other {# unidades por vincular}}",
+    "pendingRemoved": "{count, plural, one {# unidad por quitar} other {# unidades por quitar}}",
+    "pendingHint": "Aplica a las próximas emisiones; los cobros ya emitidos no cambian.",
+    "discard": "Descartar"
   },
   "rateiosExtraordinarios": {
     "title": "Prorrateos Extraordinarios",

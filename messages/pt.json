@@ -415,7 +415,8 @@
     "chargesCount": "{count, plural, one {# cobrança} other {# cobranças}}",
     "rules": "{value} por unidade · vence no dia {day} · Multa {penalty}% · Juros {interest}% ao dia · {grace, plural, =0 {sem carência} one {# dia de carência} other {# dias de carência}}",
     "noChargesYet": "Ainda não há cobranças emitidas para {month}. {count, plural, one {# unidade vinculada vai receber} other {# unidades vinculadas vão receber}} a cobrança.",
-    "remainingUnits": "{count, plural, one {# unidade vinculada ainda não tem} other {# unidades vinculadas ainda não têm}} cobrança neste mês."
+    "remainingUnits": "{count, plural, one {# unidade vinculada ainda não tem} other {# unidades vinculadas ainda não têm}} cobrança neste mês.",
+    "linkedUnitsCount": "{linked} de {total} unidades recebem esta taxa"
   },
   "emitirCobrancasDoMes": {
     "trigger": "Emitir cobrança do mês",
@@ -431,9 +432,25 @@
     "selectAll": "Selecionar todas",
     "noOwner": "Sem proprietário",
     "saving": "Salvando...",
-    "saveLinks": "Salvar vínculos",
+    "saveLinks": "Salvar alterações",
     "successMessage": "Unidades vinculadas atualizadas.",
-    "errorMessage": "Erro ao atualizar unidades vinculadas."
+    "errorMessage": "Erro ao atualizar unidades vinculadas.",
+    "searchPlaceholder": "Buscar por unidade ou proprietário",
+    "filter": {
+      "label": "Filtrar unidades",
+      "todas": "Todas ({count})",
+      "vinculadas": "Vinculadas ({count})",
+      "noVinculadas": "Não vinculadas ({count})"
+    },
+    "noResults": "Nenhuma unidade corresponde à busca.",
+    "selectVisible": "Selecionar {count, plural, one {a # visível} other {as # visíveis}}",
+    "group": "Grupo {prefix}",
+    "willAdd": "Será vinculada",
+    "willRemove": "Será removida",
+    "pendingAdded": "{count, plural, one {# unidade a vincular} other {# unidades a vincular}}",
+    "pendingRemoved": "{count, plural, one {# unidade a remover} other {# unidades a remover}}",
+    "pendingHint": "Vale para as próximas emissões; cobranças já emitidas não mudam.",
+    "discard": "Descartar"
   },
   "rateiosExtraordinarios": {
     "title": "Rateios Extraordinários",

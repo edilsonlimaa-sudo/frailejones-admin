@@ -225,10 +225,14 @@ export async function TaxaCondominioDetailTabs({
         </Card>
       </TabsContent>
 
-      <TabsContent value="unidades">
-        <Card>
+      {/* montada mesmo escondida: trocar de aba não descarta a seleção ainda não salva */}
+      <TabsContent value="unidades" keepMounted>
+        {/* overflow visível pra barra de salvar grudar no rodapé da tela */}
+        <Card className="overflow-visible">
           <CardHeader>
-            <CardTitle>{t("tabs.linkedUnits")}</CardTitle>
+            <CardTitle>
+              {t("linkedUnitsCount", { linked: unidadesVinculadasIds.length, total: todasUnidades.length })}
+            </CardTitle>
             <CardDescription>{t("linkedUnitsDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
