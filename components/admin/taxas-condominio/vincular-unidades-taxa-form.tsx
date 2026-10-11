@@ -31,7 +31,7 @@ function emLotes<T>(itens: T[]): T[][] {
   return lotes;
 }
 
-// "21-01" → grupo "21" (andar/torre). Só agrupa se todas as unidades seguirem o padrão e houver
+// "21-01" → grupo "21-xx" (mesmo formato do código da unidade, sem nomear andar/torre). Só agrupa se todas as unidades seguirem o padrão e houver
 // mais de um grupo; senão a lista fica plana
 function agruparUnidades(unidades: Unidade[]): { chave: string | null; unidades: Unidade[] }[] {
   const prefixo = (u: Unidade) => (u.identificacao.includes("-") ? u.identificacao.split("-")[0] : null);
@@ -208,7 +208,7 @@ export function VincularUnidadesTaxaForm({
                         indeterminate={estado.algumas}
                         onCheckedChange={(checked) => alternar(grupo.unidades.map((u) => u.id), checked === true)}
                       />
-                      <span className="font-medium">{t("group", { prefix: grupo.chave })}</span>
+                      <span className="font-medium tabular-nums">{t("group", { prefix: grupo.chave })}</span>
                       <span className="text-xs text-muted-foreground tabular-nums">
                         {estado.marcadas}/{grupo.unidades.length}
                       </span>

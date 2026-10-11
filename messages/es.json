@@ -444,7 +444,7 @@
     },
     "noResults": "Ninguna unidad coincide con la búsqueda.",
     "selectVisible": "Seleccionar {count, plural, one {la # visible} other {las # visibles}}",
-    "group": "Grupo {prefix}",
+    "group": "{prefix}-xx",
     "willAdd": "Se vinculará",
     "willRemove": "Se quitará",
     "pendingAdded": "{count, plural, one {# unidad por vincular} other {# unidades por vincular}}",
