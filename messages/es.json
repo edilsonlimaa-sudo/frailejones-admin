@@ -427,26 +427,28 @@
     "confirmDescription": "Se {count, plural, one {emitirá # cobro} other {emitirán # cobros}} de {value} (total {total}), con vencimiento el {date}. El valor y las reglas de multa, intereses y gracia quedan fijos en cada cobro, y el mes queda cerrado: esta acción no se puede deshacer.",
     "confirmAction": "Emitir {count, plural, one {# cobro} other {# cobros}}"
   },
-  "vincularUnidadesTaxa": {
-    "noUnits": "Ninguna unidad registrada.",
-    "selectAll": "Seleccionar todas",
-    "noOwner": "Sin propietario",
-    "saving": "Guardando...",
-    "saveLinks": "Guardar cambios",
-    "successMessage": "Unidades vinculadas actualizadas.",
-    "errorMessage": "Error al actualizar las unidades vinculadas.",
+  "seletorUnidades": {
     "searchPlaceholder": "Buscar por unidad o propietario",
     "filter": {
       "label": "Filtrar unidades",
       "todas": "Todas ({count})",
-      "vinculadas": "Vinculadas ({count})",
-      "noVinculadas": "No vinculadas ({count})"
+      "selecionadas": "Seleccionadas ({count})",
+      "naoSelecionadas": "No seleccionadas ({count})"
     },
     "noResults": "Ninguna unidad coincide con la búsqueda.",
+    "noUnits": "Ninguna unidad registrada.",
+    "selectAll": "Seleccionar todas",
+    "noOwner": "Sin propietario",
     "selectVisible": "Seleccionar {count, plural, one {la # visible} other {las # visibles}}",
     "group": "{prefix}-xx",
     "willAdd": "Se vinculará",
-    "willRemove": "Se quitará",
+    "willRemove": "Se quitará"
+  },
+  "vincularUnidadesTaxa": {
+    "saving": "Guardando...",
+    "saveLinks": "Guardar cambios",
+    "successMessage": "Unidades vinculadas actualizadas.",
+    "errorMessage": "Error al actualizar las unidades vinculadas.",
     "pendingAdded": "{count, plural, one {# unidad por vincular} other {# unidades por vincular}}",
     "pendingRemoved": "{count, plural, one {# unidad por quitar} other {# unidades por quitar}}",
     "pendingHint": "Aplica a las próximas emisiones; los cobros ya emitidos no cambian.",
@@ -475,16 +477,13 @@
       "penaltyLabel": "Multa (%)",
       "dailyInterestLabel": "Interés/día (%)",
       "gracePeriodLabel": "Carencia (días)",
-      "participatingUnitsLabel": "Unidades participantes",
-      "selectedCount": "{count} de {total} seleccionada(s)",
-      "noUnits": "Ninguna unidad registrada.",
-      "selectAll": "Seleccionar todas",
-      "noOwner": "Sin propietario",
       "next": "Siguiente",
       "createSuccess": "{count, plural, one {Prorrateo extraordinario registrado y # cobro generado.} other {Prorrateo extraordinario registrado y # cobros generados.}}",
       "saveError": "Error al guardar el prorrateo extraordinario.",
-      "lockedNotice": "Al confirmar se emiten {count, plural, one {# cobro} other {# cobros}} de {value} y el prorrateo ya no se podrá editar: título, valor, vencimiento, multa, intereses, carencia y unidades quedan fijos en cada cobro. Revise todo antes de continuar.",
-      "emitCharges": "Emitir cobros"
+      "lockedNotice": "Después de emitir, el prorrateo ya no se puede editar: título, valor, vencimiento, multa, intereses, carencia y unidades quedan fijos en cada cobro.",
+      "emitCharges": "Emitir cobros",
+      "chargesSummary": "{count, plural, one {# cobro} other {# cobros}}",
+      "perUnit": "{value} por unidad"
     },
     "lockedActionsReason": "No se puede editar ni eliminar: los cobros de este prorrateo ya fueron emitidos a las unidades.",
     "summary": {

@@ -427,26 +427,28 @@
     "confirmDescription": "{count, plural, one {Será emitida # cobrança} other {Serão emitidas # cobranças}} de {value} (total {total}), com vencimento em {date}. O valor e as regras de multa, juros e carência ficam fixos em cada cobrança, e o mês fica fechado: esta ação não pode ser desfeita.",
     "confirmAction": "Emitir {count, plural, one {# cobrança} other {# cobranças}}"
   },
-  "vincularUnidadesTaxa": {
-    "noUnits": "Nenhuma unidade cadastrada.",
-    "selectAll": "Selecionar todas",
-    "noOwner": "Sem proprietário",
-    "saving": "Salvando...",
-    "saveLinks": "Salvar alterações",
-    "successMessage": "Unidades vinculadas atualizadas.",
-    "errorMessage": "Erro ao atualizar unidades vinculadas.",
+  "seletorUnidades": {
     "searchPlaceholder": "Buscar por unidade ou proprietário",
     "filter": {
       "label": "Filtrar unidades",
       "todas": "Todas ({count})",
-      "vinculadas": "Vinculadas ({count})",
-      "noVinculadas": "Não vinculadas ({count})"
+      "selecionadas": "Selecionadas ({count})",
+      "naoSelecionadas": "Não selecionadas ({count})"
     },
     "noResults": "Nenhuma unidade corresponde à busca.",
+    "noUnits": "Nenhuma unidade cadastrada.",
+    "selectAll": "Selecionar todas",
+    "noOwner": "Sem proprietário",
     "selectVisible": "Selecionar {count, plural, one {a # visível} other {as # visíveis}}",
     "group": "{prefix}-xx",
     "willAdd": "Será vinculada",
-    "willRemove": "Será removida",
+    "willRemove": "Será removida"
+  },
+  "vincularUnidadesTaxa": {
+    "saving": "Salvando...",
+    "saveLinks": "Salvar alterações",
+    "successMessage": "Unidades vinculadas atualizadas.",
+    "errorMessage": "Erro ao atualizar unidades vinculadas.",
     "pendingAdded": "{count, plural, one {# unidade a vincular} other {# unidades a vincular}}",
     "pendingRemoved": "{count, plural, one {# unidade a remover} other {# unidades a remover}}",
     "pendingHint": "Vale para as próximas emissões; cobranças já emitidas não mudam.",
@@ -475,16 +477,13 @@
       "penaltyLabel": "Multa (%)",
       "dailyInterestLabel": "Juros/dia (%)",
       "gracePeriodLabel": "Carência (dias)",
-      "participatingUnitsLabel": "Unidades participantes",
-      "selectedCount": "{count} de {total} selecionada(s)",
-      "noUnits": "Nenhuma unidade cadastrada.",
-      "selectAll": "Selecionar todas",
-      "noOwner": "Sem proprietário",
       "next": "Próximo",
       "createSuccess": "{count, plural, one {Rateio extraordinário cadastrado e # cobrança gerada.} other {Rateio extraordinário cadastrado e # cobranças geradas.}}",
       "saveError": "Erro ao salvar rateio extraordinário.",
-      "lockedNotice": "Ao confirmar, {count, plural, one {# cobrança será emitida} other {# cobranças serão emitidas}} de {value} e o rateio não poderá mais ser editado: título, valor, vencimento, multa, juros, carência e unidades ficam fixos em cada cobrança. Revise tudo antes de continuar.",
-      "emitCharges": "Emitir cobranças"
+      "lockedNotice": "Depois de emitir, o rateio não pode mais ser editado: título, valor, vencimento, multa, juros, carência e unidades ficam fixos em cada cobrança.",
+      "emitCharges": "Emitir cobranças",
+      "chargesSummary": "{count, plural, one {# cobrança} other {# cobranças}}",
+      "perUnit": "{value} por unidade"
     },
     "lockedActionsReason": "Não é possível editar nem excluir: as cobranças deste rateio já foram emitidas para as unidades.",
     "summary": {
