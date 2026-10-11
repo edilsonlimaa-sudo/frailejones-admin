@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppSidebar } from "@/components/admin/app-sidebar";
+import { BcvChip } from "@/components/admin/bcv-chip";
 import { HeaderTitle } from "@/components/admin/header-title";
 import { createClient } from "@/lib/supabase/server";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -28,11 +29,13 @@ export default async function AdminLayout({
     <SidebarProvider>
       <AppSidebar userEmail={data.claims.email ?? ""} />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
           <SidebarTrigger />
-          <Separator orientation="vertical" className="h-4" />
+          <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
           <HeaderTitle />
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <BcvChip />
+            <Separator orientation="vertical" className="mx-1 h-4 data-vertical:self-center max-sm:hidden" />
             <LocaleSwitcher />
             <ModeToggle />
           </div>

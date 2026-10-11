@@ -41,7 +41,18 @@
       "cadastros": "Cadastros",
       "financeiro": "Financeiro"
     },
-    "account": "Conta"
+    "account": "Conta",
+    "detail": "Detalhe",
+    "brandSubtitle": "Administração",
+    "role": "Administrador",
+    "breadcrumb": "Navegação estrutural",
+    "bcvChip": {
+      "today": "Cotação BCV de hoje: {tasa}",
+      "current": "Cotação BCV vigente: {tasa}, de {date}",
+      "stale": "Sem cotação BCV lançada para hoje. Última: {tasa} em {date}",
+      "missing": "Nenhuma cotação BCV cadastrada",
+      "missingShort": "Sem cotação"
+    }
   },
   "cobrancas": {
     "tipo": {

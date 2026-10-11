@@ -41,7 +41,18 @@
       "cadastros": "Registros",
       "financeiro": "Financiero"
     },
-    "account": "Cuenta"
+    "account": "Cuenta",
+    "detail": "Detalle",
+    "brandSubtitle": "Administración",
+    "role": "Administrador",
+    "breadcrumb": "Ruta de navegación",
+    "bcvChip": {
+      "today": "Tasa BCV de hoy: {tasa}",
+      "current": "Tasa BCV vigente: {tasa}, del {date}",
+      "stale": "Sin tasa BCV registrada para hoy. Última: {tasa} el {date}",
+      "missing": "Ninguna tasa BCV registrada",
+      "missingShort": "Sin tasa"
+    }
   },
   "cobrancas": {
     "tipo": {

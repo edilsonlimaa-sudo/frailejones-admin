@@ -128,3 +128,11 @@
     @apply font-sans;
   }
 }
+/* brilho verde bem sutil no topo da sidebar (desktop e Sheet mobile), dissolvendo no fundo */
+[data-sidebar="sidebar"] {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in oklch, var(--sidebar-primary) 8%, var(--sidebar)),
+    var(--sidebar) 45%
+  );
+}

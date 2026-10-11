@@ -42,3 +42,7 @@ export function findActiveNavItem(pathname: string): NavItem | undefined {
     .filter((item) => isNavItemActive(pathname, item.url))
     .sort((a, b) => b.url.length - a.url.length)[0];
 }
+
+export function findNavGroup(item: NavItem): NavGroup | undefined {
+  return navGroups.find((group) => group.items.includes(item));
+}
