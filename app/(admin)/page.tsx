@@ -11,7 +11,7 @@ import {
   percentualEmDia,
   type ResumoDashboard,
 } from "@/lib/arrecadacao";
-import { calcularEncargos } from "@/lib/encargos";
+import { calcularEncargos, pagamentosParaEncargos } from "@/lib/encargos";
 import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
 import { taxasSemEmissaoNoMes } from "@/lib/taxas";
 import { hojeCaracas } from "@/lib/fuso";
@@ -169,7 +169,7 @@ export default async function Home({
         supabase
           .from("cobrancas")
           .select(
-            "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd)",
+            "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
             { count: "exact" },
           )
           .eq("status", "pendente")
@@ -265,16 +265,7 @@ export default async function Home({
   const pendentes = ativas.filter((c) => c.status === "pendente");
   const linhasPendentes = pendentes.map((c) => ({
     cobranca: c,
-    encargos: calcularEncargos(
-      {
-        ...c,
-        valor_principal_pago_usd: c.pagamento_cobrancas.reduce(
-          (acc, p) => acc + p.valor_principal_abatido_usd,
-          0,
-        ),
-      },
-      hojeIso,
-    ),
+    encargos: calcularEncargos({ ...c, pagamentos: pagamentosParaEncargos(c.pagamento_cobrancas) }, hojeIso),
   }));
   const emAtraso = linhasPendentes.filter((l) => l.encargos.diasAtraso > 0);
   const valorEmAberto = linhasPendentes.reduce((acc, l) => acc + l.encargos.saldoDevedor, 0);

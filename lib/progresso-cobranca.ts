@@ -22,7 +22,7 @@ export type ResumoProgresso = {
   vencidas: number;
 };
 
-export type CobrancaParaProgresso = CobrancaParaEncargos & { valor_juros_pago_usd: number };
+export type CobrancaParaProgresso = CobrancaParaEncargos;
 
 const arredondar = (valor: number) => Math.round(valor * 100) / 100;
 
@@ -36,8 +36,15 @@ export function resumirProgresso(
   return {
     situacao: pendentes === 0 ? "concluido" : pendencias.vencidas > 0 ? "enCobro" : "porVencer",
     esperado: arredondar(ativas.reduce((acc, c) => acc + c.valor_usd, 0)),
-    recaudado: arredondar(ativas.reduce((acc, c) => acc + c.valor_credito_abatido_usd + c.valor_principal_pago_usd, 0)),
-    encargosPagos: arredondar(ativas.reduce((acc, c) => acc + c.valor_juros_pago_usd, 0)),
+    recaudado: arredondar(
+      ativas.reduce(
+        (acc, c) => acc + c.valor_credito_abatido_usd + c.pagamentos.reduce((s, p) => s + p.valor_principal_abatido_usd, 0),
+        0,
+      ),
+    ),
+    encargosPagos: arredondar(
+      ativas.reduce((acc, c) => acc + c.pagamentos.reduce((s, p) => s + p.valor_juros_pago_usd, 0), 0),
+    ),
     porCobrar: pendencias.divida.total,
     cobrancas: ativas.length,
     pagas: ativas.length - pendentes,

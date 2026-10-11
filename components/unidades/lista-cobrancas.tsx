@@ -297,13 +297,7 @@ function LinhaCobranca({
         {/* largura fixa pra alinhar os valores entre linhas; cabe "Liquidar" + "Ver pago" (abono parcial) */}
         <div className="flex shrink-0 gap-2 sm:w-44 sm:justify-end">
           {pendente && podeLiquidar && (
-            <LiquidarCobrancaDialog
-              cobrancaId={cobranca.id}
-              descricao={cobranca.titulo_origem}
-              saldoDevedorUsd={encargos.saldoDevedor}
-              encargosUsd={multaJuros}
-              cotacaoBcv={cotacaoAtual}
-            />
+            <LiquidarCobrancaDialog cobranca={cobranca} descricao={cobranca.titulo_origem} cotacoes={cotacoes} />
           )}
           {cobranca.pagamentos.length > 0 && (
             <VerPagamentoDialog cobranca={cobranca} pagamentos={cobranca.pagamentos} cotacoes={cotacoes} />

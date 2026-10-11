@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
+import { pagamentosParaEncargos } from "@/lib/encargos";
 import { UnidadesManager } from "@/components/admin/unidades/unidades-manager";
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
 import {
@@ -54,14 +55,14 @@ export default async function UnidadesPage({
       supabase
         .from("cobrancas")
         .select(
-          "unidade_id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, pagamento_cobrancas(valor_principal_abatido_usd)",
+          "unidade_id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
           { count: "exact" },
         )
         .eq("status", "pendente")
         .order("id")
         .range(de, ate)
-        .returns<(Omit<CobrancaPendenteDaUnidade, "valor_principal_pago_usd"> & {
-          pagamento_cobrancas: { valor_principal_abatido_usd: number }[];
+        .returns<(Omit<CobrancaPendenteDaUnidade, "pagamentos"> & {
+          pagamento_cobrancas: Parameters<typeof pagamentosParaEncargos>[0];
         })[]>(),
     ),
   ]);
@@ -85,7 +86,7 @@ export default async function UnidadesPage({
     listaUnidades.map((u) => u.id),
     (pendentes ?? []).map(({ pagamento_cobrancas, ...c }) => ({
       ...c,
-      valor_principal_pago_usd: pagamento_cobrancas.reduce((acc, p) => acc + p.valor_principal_abatido_usd, 0),
+      pagamentos: pagamentosParaEncargos(pagamento_cobrancas),
     })),
     new Date(),
   );

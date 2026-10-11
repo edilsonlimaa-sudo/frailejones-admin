@@ -261,6 +261,7 @@
     "trigger": "Liquidar",
     "title": "Registrar pago",
     "totalDueToday": "Total a pagar hoy",
+    "totalDueOn": "Total a pagar al {date}",
     "approxInBs": "≈ {value} a la tasa BCV",
     "baseAmount": "Cuota",
     "penalty": "Multa e intereses por atraso",

@@ -4,12 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
 import { hojeCaracas } from "@/lib/fuso";
 import { RateiosExtraordinariosManager } from "@/components/admin/rateios-extraordinarios/rateios-extraordinarios-manager";
+import { pagamentosParaEncargos } from "@/lib/encargos";
 import { resumirProgresso, type CobrancaParaProgresso } from "@/lib/progresso-cobranca";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
 import type { Unidade } from "@/lib/types/unidades";
 
-type CobrancaDoRateioRow = Omit<CobrancaParaProgresso, "valor_principal_pago_usd" | "valor_juros_pago_usd"> & {
-  pagamento_cobrancas: { valor_principal_abatido_usd: number; valor_juros_pago_usd: number }[];
+type CobrancaDoRateioRow = Omit<CobrancaParaProgresso, "pagamentos"> & {
+  pagamento_cobrancas: Parameters<typeof pagamentosParaEncargos>[0];
 };
 
 type DespesaExtraordinariaRow = Omit<DespesaExtraordinaria, "unidade_ids"> & {
@@ -27,7 +28,7 @@ export default async function RateiosExtraordinariosPage() {
       supabase
         .from("despesas_extraordinarias")
         .select(
-          "id, titulo, descricao, valor_total_usd, valor_por_unidade_usd, data_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, created_at, despesa_extraordinaria_unidades(unidade_id), cobrancas(status, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd))",
+          "id, titulo, descricao, valor_total_usd, valor_por_unidade_usd, data_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, created_at, despesa_extraordinaria_unidades(unidade_id), cobrancas(status, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento)))",
         )
         .order("created_at", { ascending: false })
         .returns<DespesaExtraordinariaRow[]>(),
@@ -57,11 +58,7 @@ export default async function RateiosExtraordinariosPage() {
     ...despesa,
     unidade_ids: despesa_extraordinaria_unidades.map((u) => u.unidade_id),
     resumo: resumirProgresso(
-      cobrancas.map(({ pagamento_cobrancas, ...c }) => ({
-        ...c,
-        valor_principal_pago_usd: pagamento_cobrancas.reduce((acc, p) => acc + p.valor_principal_abatido_usd, 0),
-        valor_juros_pago_usd: pagamento_cobrancas.reduce((acc, p) => acc + p.valor_juros_pago_usd, 0),
-      })),
+      cobrancas.map(({ pagamento_cobrancas, ...c }) => ({ ...c, pagamentos: pagamentosParaEncargos(pagamento_cobrancas) })),
       hojeIso,
     ),
   }));

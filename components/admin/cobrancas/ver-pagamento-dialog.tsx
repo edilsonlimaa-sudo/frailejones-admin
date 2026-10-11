@@ -36,17 +36,15 @@ type CobrancaDoPagamento = Pick<
 function analisarPagamento(
   cobranca: CobrancaDoPagamento,
   pagamento: PagamentoDaCobranca,
-  principalPagoAntes: number,
+  anteriores: PagamentoDaCobranca[],
   cotacoes: CotacaoHistorico[],
 ) {
   const dataIso = dataCaixaCaracas(pagamento.data_pagamento);
+  const principalPagoAntes = anteriores.reduce((acc, p) => acc + p.valor_principal_abatido_usd, 0);
   const cotaPendente = round2(
     Math.max(cobranca.valor_usd - cobranca.valor_credito_abatido_usd - principalPagoAntes, 0),
   );
-  const encargosCalculados = calcularEncargos(
-    { ...cobranca, status: "pendente", valor_principal_pago_usd: principalPagoAntes },
-    dataIso,
-  );
+  const encargosCalculados = calcularEncargos({ ...cobranca, status: "pendente", pagamentos: anteriores }, dataIso);
   const encargosNaData =
     pagamento.valor_principal_abatido_usd > 0
       ? pagamento.valor_juros_pago_usd
@@ -122,13 +120,11 @@ export function VerPagamentoDialog({ cobranca, pagamentos, cotacoes, triggerClas
   // em ordem cronológica, acumulando o principal já abatido pelos pagamentos anteriores
   const ordenados = [...pagamentos].sort((a, b) => a.data_pagamento.localeCompare(b.data_pagamento));
   const analisados = ordenados.map((pagamento, indice) => {
-    const principalPagoAntes = ordenados
-      .slice(0, indice)
-      .reduce((acc, p) => acc + p.valor_principal_abatido_usd, 0);
+    const anteriores = ordenados.slice(0, indice);
     return {
       pagamento,
-      analise: analisarPagamento(cobranca, pagamento, principalPagoAntes, cotacoes),
-      principalPagoAntes,
+      analise: analisarPagamento(cobranca, pagamento, anteriores, cotacoes),
+      principalPagoAntes: anteriores.reduce((acc, p) => acc + p.valor_principal_abatido_usd, 0),
     };
   });
 

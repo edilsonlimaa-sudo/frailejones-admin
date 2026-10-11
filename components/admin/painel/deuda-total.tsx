@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { calcularEncargos } from "@/lib/encargos";
+import { calcularEncargos, pagamentosParaEncargos } from "@/lib/encargos";
 import { formatUsd, formatVes } from "@/lib/moeda";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
 import {
@@ -22,7 +22,7 @@ export type CobrancaPendenteTotal = {
   pct_juros_diario: number;
   status: CobrancaStatus;
   unidade: { id: string; identificacao: string; proprietario: { nome: string } | null } | null;
-  pagamento_cobrancas: { valor_principal_abatido_usd: number }[];
+  pagamento_cobrancas: Parameters<typeof pagamentosParaEncargos>[0];
 };
 
 type DeudaTotalProps = {
@@ -53,13 +53,7 @@ export async function DeudaTotal({ cobrancas, hojeIso, tasaVes }: DeudaTotalProp
   let vencidas = 0;
   const porUnidade = new Map<string, DividaDaUnidade>();
   for (const c of cobrancas) {
-    const e = calcularEncargos(
-      {
-        ...c,
-        valor_principal_pago_usd: c.pagamento_cobrancas.reduce((acc, p) => acc + p.valor_principal_abatido_usd, 0),
-      },
-      hojeIso,
-    );
+    const e = calcularEncargos({ ...c, pagamentos: pagamentosParaEncargos(c.pagamento_cobrancas) }, hojeIso);
     if (e.saldoDevedor <= 0) continue;
     principal += e.saldoDevedor;
     encargos += e.valorMulta + e.valorJuros;

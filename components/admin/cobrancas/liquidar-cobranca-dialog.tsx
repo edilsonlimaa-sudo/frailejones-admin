@@ -3,18 +3,24 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
+import { dataCaixaCaracas } from "@/lib/arrecadacao";
+import { calcularEncargos, type CobrancaParaEncargos } from "@/lib/encargos";
+import { hojeCaracas, instanteNoDiaCaracas } from "@/lib/fuso";
+import { INTL_LOCALE } from "@/lib/intl-locale";
 import type { MoedaTipo } from "@/lib/types/creditos";
 import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
 import {
   SIMBOLO_MOEDA,
   SOBRA_MINIMA_USD,
+  encontrarTasaNaData,
   formatBs,
   formatMoeda,
   formatTasa,
   formatUsd,
+  type CotacaoHistorico,
 } from "@/lib/moeda";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,38 +43,25 @@ const formasPorMoeda: Record<MoedaTipo, FormaPagamentoTipo[]> = {
   USD: ["zelle", "efectivo_usd", "transferencia"],
 };
 
-// a data é escolhida pelo usuário (permite backdating), mas a hora usa o momento exato do
-// registro — sem isso, todo pagamento gravava meia-noite UTC e a UI sempre mostrava o mesmo
-// horário, mesmo pagamentos registrados em momentos bem diferentes do dia
-function combinarDataComHoraAtual(dataIso: string): Date {
-  const agora = new Date();
-  const dataCompleta = new Date(`${dataIso}T00:00:00`);
-  dataCompleta.setHours(agora.getHours(), agora.getMinutes(), agora.getSeconds(), agora.getMilliseconds());
-  return dataCompleta;
-}
-
-function hojeLocalIso() {
-  const hoje = new Date();
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
-}
-
 const round2 = (valor: number) => Math.round(valor * 100) / 100;
 
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+// a cobrança com os pagamentos já registrados: multa e juros dependem deles e da data escolhida
+type CobrancaParaLiquidar = CobrancaParaEncargos & { id: string };
+
 type LiquidarCobrancaDialogProps = {
-  cobrancaId: string;
+  cobranca: CobrancaParaLiquidar;
   descricao: string;
-  saldoDevedorUsd: number;
-  encargosUsd: number;
-  cotacaoBcv: { id: string; tasa_ves: number } | null;
+  // histórico desc por data_cotacao: a prévia em VES usa a cotação vigente na data do pagamento
+  cotacoes: CotacaoHistorico[];
   triggerClassName?: string;
 };
 
 export function LiquidarCobrancaDialog({
-  cobrancaId,
+  cobranca,
   descricao,
-  saldoDevedorUsd,
-  encargosUsd,
-  cotacaoBcv,
+  cotacoes,
   triggerClassName,
 }: LiquidarCobrancaDialogProps) {
   const router = useRouter();
@@ -91,11 +84,9 @@ export function LiquidarCobrancaDialog({
           {/* remount com estado limpo sempre que o dialog abre (evita setState em effect) */}
           <LiquidarCobrancaForm
             key={open ? "open" : "closed"}
-            cobrancaId={cobrancaId}
+            cobranca={cobranca}
             descricao={descricao}
-            saldoDevedorUsd={saldoDevedorUsd}
-            encargosUsd={encargosUsd}
-            cotacaoBcv={cotacaoBcv}
+            cotacoes={cotacoes}
             onClose={() => setOpen(false)}
             onSaved={() => router.refresh()}
           />
@@ -106,51 +97,87 @@ export function LiquidarCobrancaDialog({
 }
 
 type LiquidarCobrancaFormProps = {
-  cobrancaId: string;
+  cobranca: CobrancaParaLiquidar;
   descricao: string;
-  saldoDevedorUsd: number;
-  encargosUsd: number;
-  cotacaoBcv: { id: string; tasa_ves: number } | null;
+  cotacoes: CotacaoHistorico[];
   onClose: () => void;
   onSaved: () => void;
 };
 
 function LiquidarCobrancaForm({
-  cobrancaId,
+  cobranca,
   descricao,
-  saldoDevedorUsd,
-  encargosUsd,
-  cotacaoBcv,
+  cotacoes,
   onClose,
   onSaved,
 }: LiquidarCobrancaFormProps) {
-  const totalDevidoUsd = round2(saldoDevedorUsd + encargosUsd);
   const t = useTranslations("liquidarCobranca");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
 
+  // limites da data: não pode ser futura (em Caracas) nem anterior ao último pagamento já
+  // registrado (o banco recusa os dois casos)
+  const hoje = hojeCaracas();
+  const ultimoPagamento = cobranca.pagamentos.reduce<string | null>((maior, p) => {
+    const dia = dataCaixaCaracas(p.data_pagamento);
+    return !maior || dia > maior ? dia : maior;
+  }, null);
+
+  // o que é devido no dia do pagamento, pela mesma regra que liquidar_cobranca aplica no banco
+  // (encargos até essa data e a cotação vigente nela). É só prévia: o banco recalcula tudo
+  const devidoNaData = (data: string) => {
+    const dia = DATA_ISO.test(data) ? data : hoje;
+    const encargos = calcularEncargos({ ...cobranca, status: "pendente" }, dia);
+    const encargosUsd = round2(encargos.valorMulta + encargos.valorJuros);
+    return {
+      saldoDevedorUsd: encargos.saldoDevedor,
+      encargosUsd,
+      totalDevidoUsd: round2(encargos.saldoDevedor + encargosUsd),
+      tasaVes: encontrarTasaNaData(cotacoes, dia),
+    };
+  };
   // total devido convertido pra moeda do pagamento: é a sugestão do campo de valor
-  const totalNaMoeda = (moeda: MoedaTipo) =>
-    moeda === "VES" && cotacaoBcv ? round2(totalDevidoUsd * cotacaoBcv.tasa_ves) : totalDevidoUsd;
+  const totalNaMoeda = (moedaAlvo: MoedaTipo, data: string) => {
+    const { totalDevidoUsd: total, tasaVes: tasa } = devidoNaData(data);
+    return moedaAlvo === "VES" && tasa ? round2(total * tasa) : total;
+  };
 
   // a maioria dos pagamentos é em bolívares; sem cotação, só dá pra receber em dólares
-  const moedaInicial: MoedaTipo = cotacaoBcv ? "VES" : "USD";
+  const moedaInicial: MoedaTipo = devidoNaData(hoje).tasaVes ? "VES" : "USD";
   const [moeda, setMoeda] = useState<MoedaTipo>(moedaInicial);
-  const [valorRecebido, setValorRecebido] = useState(totalNaMoeda(moedaInicial).toFixed(2));
+  const [valorRecebido, setValorRecebido] = useState(totalNaMoeda(moedaInicial, hoje).toFixed(2));
+  // enquanto o valor for a sugestão, ele acompanha a data; depois de digitado, não muda sozinho
+  const [valorEditado, setValorEditado] = useState(false);
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoTipo>(formasPorMoeda[moedaInicial][0]);
-  const [dataPagamento, setDataPagamento] = useState(hojeLocalIso);
+  const [dataPagamento, setDataPagamento] = useState(hoje);
   const [referenciaBancaria, setReferenciaBancaria] = useState("");
   const [showObservacao, setShowObservacao] = useState(false);
   const [observacao, setObservacao] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { saldoDevedorUsd, encargosUsd, totalDevidoUsd, tasaVes } = devidoNaData(dataPagamento);
+  const dataEhHoje = dataPagamento === hoje;
+  const formatDate = (iso: string) =>
+    new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
+
   const handleMoedaChange = (novaMoeda: MoedaTipo) => {
     if (novaMoeda === moeda) return;
     setMoeda(novaMoeda);
     // ao trocar de moeda, sugere de novo o total devido já convertido (usuário pode ajustar depois)
-    setValorRecebido(totalNaMoeda(novaMoeda).toFixed(2));
+    setValorRecebido(totalNaMoeda(novaMoeda, dataPagamento).toFixed(2));
+    setValorEditado(false);
     if (!formasPorMoeda[novaMoeda].includes(formaPagamento)) {
       setFormaPagamento(formasPorMoeda[novaMoeda][0]);
+    }
+  };
+
+  // outra data muda os encargos e a cotação: a sugestão acompanha, se o usuário não digitou um valor
+  const handleDataChange = (novaData: string) => {
+    setDataPagamento(novaData);
+    if (!valorEditado && DATA_ISO.test(novaData)) {
+      setValorRecebido(totalNaMoeda(moeda, novaData).toFixed(2));
     }
   };
 
@@ -160,8 +187,8 @@ function LiquidarCobrancaForm({
   const valorEquivalenteUsd =
     moeda === "USD"
       ? valorRecebidoNumero
-      : cotacaoBcv
-        ? round2(valorRecebidoNumero / cotacaoBcv.tasa_ves)
+      : tasaVes
+        ? round2(valorRecebidoNumero / tasaVes)
         : 0;
   const valorJurosPago = Math.min(valorEquivalenteUsd, encargosUsd);
   const valorPrincipalAbatido = Math.min(Math.max(valorEquivalenteUsd - valorJurosPago, 0), saldoDevedorUsd);
@@ -173,8 +200,8 @@ function LiquidarCobrancaForm({
   const sobraNaMoeda =
     faltandoUsd > 0
       ? 0
-      : moeda === "VES" && cotacaoBcv
-        ? round2(valorRecebidoNumero - round2(valorAlocadoUsd * cotacaoBcv.tasa_ves))
+      : moeda === "VES" && tasaVes
+        ? round2(valorRecebidoNumero - round2(valorAlocadoUsd * tasaVes))
         : sobraUsd;
   // como no banco: só vira saldo a favor a partir de SOBRA_MINIMA_USD (equivalente em dólar);
   // abaixo disso fica absorvida no pagamento e o modal avisa antes de confirmar
@@ -188,7 +215,7 @@ function LiquidarCobrancaForm({
       setError(t("errorAmountRequired"));
       return;
     }
-    if (moeda === "VES" && !cotacaoBcv) {
+    if (moeda === "VES" && !tasaVes) {
       setError(t("errorNoRate"));
       return;
     }
@@ -199,15 +226,13 @@ function LiquidarCobrancaForm({
 
     try {
       // pagamento, alocação, sobra na carteira e status numa única transação (ver
-      // liquidar_cobranca na migration). Os valores calculados aqui são só prévia da tela: a
-      // função recalcula a alocação a partir do saldo devedor atual da cobrança
+      // liquidar_cobranca na migration encargos_calculados_no_banco). Multa, juros e cotação são
+      // calculados lá pela data do pagamento; os valores daqui são só a prévia da tela
       const { error: liquidarError } = await supabase.rpc("liquidar_cobranca", {
-        p_cobranca_id: cobrancaId,
+        p_cobranca_id: cobranca.id,
         p_moeda: moeda,
         p_valor_recebido: valorRecebidoNumero,
-        p_cotacao_bcv_id: moeda === "VES" ? cotacaoBcv!.id : null,
-        p_encargos_usd: encargosUsd,
-        p_data_pagamento: combinarDataComHoraAtual(dataPagamento).toISOString(),
+        p_data_pagamento: instanteNoDiaCaracas(dataPagamento),
         p_forma_pagamento: formaPagamento,
         p_referencia_bancaria: (precisaReferencia && referenciaBancaria.trim()) || null,
         p_observacao: observacao.trim() || null,
@@ -235,11 +260,14 @@ function LiquidarCobrancaForm({
         <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-1 pb-1">
           {/* resumo do que é devido */}
           <section className="rounded-2xl bg-muted/50 p-4">
-            <p className="text-xs text-muted-foreground">{t("totalDueToday")}</p>
+            {/* pagamento com data anterior: multa e juros até aquele dia, não até hoje */}
+            <p className="text-xs text-muted-foreground">
+              {dataEhHoje ? t("totalDueToday") : t("totalDueOn", { date: formatDate(dataPagamento) })}
+            </p>
             <p className="text-2xl font-semibold tabular-nums">{formatUsd(totalDevidoUsd)}</p>
-            {cotacaoBcv && (
+            {tasaVes && (
               <p className="text-sm text-muted-foreground tabular-nums">
-                {t("approxInBs", { value: formatBs(totalDevidoUsd * cotacaoBcv.tasa_ves) })}
+                {t("approxInBs", { value: formatBs(totalDevidoUsd * tasaVes) })}
               </p>
             )}
             {encargosUsd > 0 && (
@@ -262,7 +290,7 @@ function LiquidarCobrancaForm({
             <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted/50 p-1" role="radiogroup">
               {(["VES", "USD"] as const).map((opcao) => {
                 const ativa = moeda === opcao;
-                const desabilitada = opcao === "VES" && !cotacaoBcv;
+                const desabilitada = opcao === "VES" && !tasaVes;
                 return (
                   <button
                     key={opcao}
@@ -287,20 +315,23 @@ function LiquidarCobrancaForm({
                 );
               })}
             </div>
-            {!cotacaoBcv && <p className="text-xs text-muted-foreground">{t("noRateHint")}</p>}
+            {!tasaVes && <p className="text-xs text-muted-foreground">{t("noRateHint")}</p>}
           </fieldset>
 
           {/* valor recebido + prévia do resultado */}
           <div className="grid gap-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="valor_recebido">{t("amountReceived")}</Label>
-              {Number(valorRecebido) !== totalNaMoeda(moeda) && (
+              {Number(valorRecebido) !== totalNaMoeda(moeda, dataPagamento) && (
                 <Button
                   type="button"
                   variant="link"
                   size="sm"
                   className="h-auto px-0"
-                  onClick={() => setValorRecebido(totalNaMoeda(moeda).toFixed(2))}
+                  onClick={() => {
+                    setValorRecebido(totalNaMoeda(moeda, dataPagamento).toFixed(2));
+                    setValorEditado(false);
+                  }}
                 >
                   {t("useTotal")}
                 </Button>
@@ -318,16 +349,19 @@ function LiquidarCobrancaForm({
                 min="0"
                 required
                 value={valorRecebido}
-                onChange={(e) => setValorRecebido(e.target.value)}
+                onChange={(e) => {
+                  setValorRecebido(e.target.value);
+                  setValorEditado(true);
+                }}
                 onFocus={(e) => e.target.select()}
                 className={cn("h-12 text-lg tabular-nums", moeda === "VES" ? "pl-12" : "pl-9")}
               />
             </div>
-            {moeda === "VES" && cotacaoBcv && valorRecebidoNumero > 0 && (
+            {moeda === "VES" && tasaVes && valorRecebidoNumero > 0 && (
               <p className="text-xs text-muted-foreground tabular-nums">
                 {t("equivalentInUsd", {
                   value: formatUsd(valorEquivalenteUsd),
-                  rate: formatTasa(cotacaoBcv.tasa_ves),
+                  rate: formatTasa(tasaVes),
                 })}
               </p>
             )}
@@ -385,9 +419,10 @@ function LiquidarCobrancaForm({
                 id="data_pagamento"
                 type="date"
                 required
-                max={hojeLocalIso()}
+                min={ultimoPagamento ?? undefined}
+                max={hoje}
                 value={dataPagamento}
-                onChange={(e) => setDataPagamento(e.target.value)}
+                onChange={(e) => handleDataChange(e.target.value)}
                 className="h-10"
               />
             </div>
