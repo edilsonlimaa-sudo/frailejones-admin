@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { InfoIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
@@ -15,7 +16,6 @@ import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
 import {
   SIMBOLO_MOEDA,
   SOBRA_MINIMA_USD,
-  encontrarTasaNaData,
   formatBs,
   formatMoeda,
   formatTasa,
@@ -134,17 +134,17 @@ function LiquidarCobrancaForm({
       saldoDevedorUsd: encargos.saldoDevedor,
       encargosUsd,
       totalDevidoUsd: round2(encargos.saldoDevedor + encargosUsd),
-      tasaVes: encontrarTasaNaData(cotacoes, dia),
+      cotacao: cotacoes.find((c) => c.data_cotacao <= dia) ?? null,
     };
   };
   // total devido convertido pra moeda do pagamento: é a sugestão do campo de valor
   const totalNaMoeda = (moedaAlvo: MoedaTipo, data: string) => {
-    const { totalDevidoUsd: total, tasaVes: tasa } = devidoNaData(data);
-    return moedaAlvo === "VES" && tasa ? round2(total * tasa) : total;
+    const { totalDevidoUsd: total, cotacao } = devidoNaData(data);
+    return moedaAlvo === "VES" && cotacao ? round2(total * cotacao.tasa_ves) : total;
   };
 
   // a maioria dos pagamentos é em bolívares; sem cotação, só dá pra receber em dólares
-  const moedaInicial: MoedaTipo = devidoNaData(hoje).tasaVes ? "VES" : "USD";
+  const moedaInicial: MoedaTipo = devidoNaData(hoje).cotacao ? "VES" : "USD";
   const [moeda, setMoeda] = useState<MoedaTipo>(moedaInicial);
   const [valorRecebido, setValorRecebido] = useState(totalNaMoeda(moedaInicial, hoje).toFixed(2));
   // enquanto o valor for a sugestão, ele acompanha a data; depois de digitado, não muda sozinho
@@ -157,8 +157,12 @@ function LiquidarCobrancaForm({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { saldoDevedorUsd, encargosUsd, totalDevidoUsd, tasaVes } = devidoNaData(dataPagamento);
+  const { saldoDevedorUsd, encargosUsd, totalDevidoUsd, cotacao } = devidoNaData(dataPagamento);
+  const tasaVes = cotacao?.tasa_ves ?? null;
   const dataEhHoje = dataPagamento === hoje;
+  // pagamento com data anterior: comparação com hoje, pro aviso explicar o que muda
+  const devidoHoje = devidoNaData(hoje);
+  const valorSugerido = totalNaMoeda(moeda, dataPagamento);
   const formatDate = (iso: string) =>
     new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 
@@ -315,7 +319,11 @@ function LiquidarCobrancaForm({
                 );
               })}
             </div>
-            {!tasaVes && <p className="text-xs text-muted-foreground">{t("noRateHint")}</p>}
+            {!tasaVes && (
+              <p className="text-xs text-muted-foreground">
+                {dataEhHoje ? t("noRateHint") : t("noRateOnDate", { date: formatDate(dataPagamento) })}
+              </p>
+            )}
           </fieldset>
 
           {/* valor recebido + prévia do resultado */}
@@ -443,6 +451,39 @@ function LiquidarCobrancaForm({
               </div>
             )}
           </div>
+
+          {!dataEhHoje && DATA_ISO.test(dataPagamento) && (
+            <div className="flex gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-xs" role="status">
+              <InfoIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              <div className="grid gap-1">
+                <p className="font-medium">{t("backdated.title", { date: formatDate(dataPagamento) })}</p>
+                <p className="text-muted-foreground">
+                  {encargosUsd === 0
+                    ? devidoHoje.encargosUsd > 0
+                      ? t("backdated.noCharges", { today: formatUsd(devidoHoje.encargosUsd) })
+                      : t("backdated.noChargesEither")
+                    : t("backdated.charges", {
+                        value: formatUsd(encargosUsd),
+                        today: formatUsd(devidoHoje.encargosUsd),
+                      })}
+                </p>
+                {moeda === "VES" && cotacao && cotacao.data_cotacao !== devidoHoje.cotacao?.data_cotacao && (
+                  <p className="text-muted-foreground">
+                    {t("backdated.rate", {
+                      rate: formatTasa(cotacao.tasa_ves),
+                      date: formatDate(cotacao.data_cotacao),
+                      today: devidoHoje.cotacao ? formatTasa(devidoHoje.cotacao.tasa_ves) : "—",
+                    })}
+                  </p>
+                )}
+                {valorEditado && Number(valorRecebido) !== valorSugerido && (
+                  <p className="text-muted-foreground">
+                    {t("backdated.amountKept", { value: formatMoeda(valorSugerido, moeda) })}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {showObservacao ? (
             <div className="grid gap-2">

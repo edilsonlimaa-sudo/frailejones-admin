@@ -271,6 +271,7 @@
       "USD": "Dólares"
     },
     "noRateHint": "Registre una cotización BCV para aceptar pagos en bolívares.",
+    "noRateOnDate": "No hay cotización BCV registrada hasta el {date}. Para esa fecha, registre en dólares o cargue la cotización.",
     "amountReceived": "Monto recibido",
     "useTotal": "Usar el total",
     "equivalentInUsd": "Equivale a {value} · tasa {rate}",
@@ -287,6 +288,14 @@
       "zelle": "Zelle"
     },
     "paymentDateLabel": "Fecha del pago",
+    "backdated": {
+      "title": "Pago registrado el {date}, antes de hoy",
+      "charges": "Multa e intereses calculados hasta esa fecha: {value} (hoy serían {today}).",
+      "noCharges": "En esa fecha el cobro aún estaba en plazo: no hay multa ni intereses (hoy serían {today}).",
+      "noChargesEither": "En esa fecha el cobro estaba en plazo: no hay multa ni intereses.",
+      "rate": "En bolívares vale la tasa BCV vigente en esa fecha: {rate} (del {date}). Hoy: {today}.",
+      "amountKept": "El monto recibido que escribió no se recalculó. Lo adeudado en esa fecha es {value}."
+    },
     "bankReferenceLabel": "Referencia",
     "optional": "opcional",
     "observationLabel": "Observación",
