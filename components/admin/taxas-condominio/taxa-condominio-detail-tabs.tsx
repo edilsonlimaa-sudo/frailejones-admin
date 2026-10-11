@@ -8,6 +8,7 @@ import type { ResumoProgresso, SituacaoProgresso } from "@/lib/progresso-cobranc
 import { ABA_TAXA_PADRAO, type AbaTaxa } from "@/lib/taxas";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
 import { INTL_LOCALE } from "@/lib/intl-locale";
+import { FUSO_CARACAS } from "@/lib/fuso";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,7 @@ export async function TaxaCondominioDetailTabs({
   const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, {
     dateStyle: "short",
     timeStyle: "short",
-    timeZone: "America/Caracas",
+    timeZone: FUSO_CARACAS,
   });
   // percentuais vêm do banco como número cru (0.1): formata no idioma da tela (0,1)
   const formatPercentual = (valor: number) =>

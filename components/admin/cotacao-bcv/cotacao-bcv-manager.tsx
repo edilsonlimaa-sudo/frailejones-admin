@@ -9,6 +9,7 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { CotacaoBcv } from "@/lib/types/cotacao-bcv";
 import { INTL_LOCALE } from "@/lib/intl-locale";
+import { FUSO_CARACAS } from "@/lib/fuso";
 import { formatBs, formatTasa } from "@/lib/moeda";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +48,7 @@ export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
   const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: FUSO_CARACAS,
   });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
 

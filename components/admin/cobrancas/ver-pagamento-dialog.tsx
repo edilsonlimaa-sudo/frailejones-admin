@@ -4,9 +4,11 @@ import { useState, type ReactNode } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { CircleCheck, CircleAlert } from "lucide-react";
 
+import { dataCaixaCaracas } from "@/lib/arrecadacao";
 import { calcularDiasAtrasoNaData, calcularEncargos } from "@/lib/encargos";
 import { formatBs, formatMoeda, formatTasa, formatUsd, encontrarTasaNaData, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
+import { FUSO_CARACAS } from "@/lib/fuso";
 import { cn } from "@/lib/utils";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
@@ -37,7 +39,7 @@ function analisarPagamento(
   principalPagoAntes: number,
   cotacoes: CotacaoHistorico[],
 ) {
-  const dataIso = pagamento.data_pagamento.slice(0, 10);
+  const dataIso = dataCaixaCaracas(pagamento.data_pagamento);
   const cotaPendente = round2(
     Math.max(cobranca.valor_usd - cobranca.valor_credito_abatido_usd - principalPagoAntes, 0),
   );
@@ -114,8 +116,8 @@ export function VerPagamentoDialog({ cobranca, pagamentos, cotacoes, triggerClas
   const t = useTranslations("verPagamento");
   const locale = useLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short" });
-  const dateFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short" });
+  const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short", timeZone: FUSO_CARACAS });
+  const dateFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeZone: FUSO_CARACAS });
 
   // em ordem cronológica, acumulando o principal já abatido pelos pagamentos anteriores
   const ordenados = [...pagamentos].sort((a, b) => a.data_pagamento.localeCompare(b.data_pagamento));

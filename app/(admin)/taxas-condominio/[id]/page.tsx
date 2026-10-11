@@ -5,6 +5,7 @@ import { getTranslations, getLocale } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
+import { hojeCaracas } from "@/lib/fuso";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
 import {
   montarCobrancaDetalhada,
@@ -196,7 +197,7 @@ export default async function TaxaCondominioDetalhePage({
           seguinteHref: `/taxas-condominio/${id}?mes=${formatMes(mesSeguinte.ano, mesSeguinte.mes)}`,
         }}
         organizadas={organizadas}
-        resumo={resumirProgresso(cobrancas, agora.toISOString().slice(0, 10))}
+        resumo={resumirProgresso(cobrancas, hojeCaracas(agora))}
         pagasEmDia={pagas.filter((i) => i.estado === "enDia").length}
         pagasComAtraso={pagas.filter((i) => i.estado === "conAtraso").length}
         naoEmitidas={naoEmitidas}

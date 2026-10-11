@@ -13,9 +13,11 @@ import type {
   PagamentoIrmao,
 } from "@/lib/types/pagamentos";
 import type { MoedaTipo } from "@/lib/types/creditos";
+import { dataCaixaCaracas } from "@/lib/arrecadacao";
 import { calcularDiasAtrasoNaData } from "@/lib/encargos";
 import { formatMoeda, formatTasa, formatUsd, encontrarTasaNaData, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
+import { FUSO_CARACAS } from "@/lib/fuso";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,7 +70,7 @@ export default async function LiquidacaoDetalhePage({
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
-  const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short" });
+  const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short", timeZone: FUSO_CARACAS });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
 
   const cobrancaTipoLabel: Record<CobrancaTipo, string> = {
@@ -166,7 +168,7 @@ export default async function LiquidacaoDetalhePage({
     0,
   );
 
-  const dataPagamentoIso = pagamentoRow.data_pagamento.slice(0, 10);
+  const dataPagamentoIso = dataCaixaCaracas(pagamentoRow.data_pagamento);
   // VES: taxa exata usada neste pagamento; USD: cotação de referência do dia (informativa)
   const cotacaoDoPagamento =
     pagamentoRow.moeda === "VES"

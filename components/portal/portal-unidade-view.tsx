@@ -5,6 +5,7 @@ import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao, MovimentacaoTipo } from "@/lib/types/creditos";
 import { formatUsd, formatBs, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
+import { FUSO_CARACAS } from "@/lib/fuso";
 import { EstadoDeCuenta } from "@/components/unidades/estado-de-cuenta";
 import { TabsNaUrl } from "@/components/tabs-na-url";
 import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
@@ -44,6 +45,7 @@ export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobranca
   const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: FUSO_CARACAS,
   });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
 

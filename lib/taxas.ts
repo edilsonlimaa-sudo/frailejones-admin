@@ -1,6 +1,8 @@
 // Regras das cuotas de condomínio (taxas recorrentes) compartilhadas pela listagem, pelo detalhe
 // e pelo Dashboard.
 
+import { hojeCaracas } from "@/lib/fuso";
+
 // abas do detalhe de uma cuota, guardadas na URL como ?aba=
 export const ABAS_TAXA = ["emision", "unidades"] as const;
 export type AbaTaxa = (typeof ABAS_TAXA)[number];
@@ -12,7 +14,7 @@ export function resolverAbaTaxa(valor: string | string[] | undefined): AbaTaxa {
 
 // "YYYY-MM" do mês corrente em Caracas (a emissão é mensal no calendário do condomínio)
 export function mesAtualCaracas(agora: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(agora).slice(0, 7);
+  return hojeCaracas(agora).slice(0, 7);
 }
 
 // vencimento da cuota numa competência: o dia_vencimento, limitado ao último dia do mês

@@ -1,4 +1,6 @@
 // navegação por mês via ?mes=YYYY-MM (Painel e Liquidações). Sem parâmetro válido, vale o mês atual.
+import { hojeCaracas } from "@/lib/fuso";
+
 export type AnoMes = { ano: number; mes: number };
 
 export function parseMes(mes: string | undefined): AnoMes {
@@ -9,9 +11,10 @@ export function parseMes(mes: string | undefined): AnoMes {
   return mesAtual();
 }
 
+// mês corrente no calendário de Caracas (em UTC, a noite do último dia já seria o mês seguinte)
 export function mesAtual(): AnoMes {
-  const hoje = new Date();
-  return { ano: hoje.getUTCFullYear(), mes: hoje.getUTCMonth() + 1 };
+  const [ano, mes] = hojeCaracas().split("-").map(Number);
+  return { ano, mes };
 }
 
 export function formatMes(ano: number, mes: number): string {

@@ -6,6 +6,7 @@ import type { Liquidacao } from "@/lib/types/pagamentos";
 import type { CobrancaTipo } from "@/lib/types/cobrancas";
 import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
 import { INTL_LOCALE } from "@/lib/intl-locale";
+import { FUSO_CARACAS } from "@/lib/fuso";
 import type { AnoMes } from "@/lib/mes";
 import { NavegadorMes } from "@/components/admin/navegador-mes";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +45,7 @@ export async function LiquidacoesManager({ liquidacoes, ano, mes }: LiquidacoesM
   const tCobrancas = await getTranslations("cobrancas.tipo");
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short" });
+  const dateTimeFormatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short", timeZone: FUSO_CARACAS });
   const cobrancaTipoLabel: Record<CobrancaTipo, string> = {
     ordinaria: tCobrancas("ordinaria"),
     extraordinaria: tCobrancas("extraordinaria"),

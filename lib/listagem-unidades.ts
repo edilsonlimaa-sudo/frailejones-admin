@@ -1,5 +1,6 @@
 import { resumirPendencias, type ResumoPendencias, type SituacaoConta } from "@/lib/estado-de-cuenta";
 import type { CobrancaParaEncargos } from "@/lib/encargos";
+import { hojeCaracas } from "@/lib/fuso";
 
 // Listagem de unidades com a situação de conta de cada uma (mesma regra do estado de conta),
 // filtro por situação e ordenação. Filtro, ordem e proprietário ficam na URL.
@@ -29,7 +30,7 @@ export function resumirSituacaoUnidades(
   pendentes: CobrancaPendenteDaUnidade[],
   agora: Date,
 ): Record<string, ResumoPendencias> {
-  const hojeIso = agora.toISOString().slice(0, 10);
+  const hojeIso = hojeCaracas(agora);
   const porUnidade = new Map<string, CobrancaPendenteDaUnidade[]>();
   for (const c of pendentes) porUnidade.set(c.unidade_id, [...(porUnidade.get(c.unidade_id) ?? []), c]);
   return Object.fromEntries(unidadeIds.map((id) => [id, resumirPendencias(porUnidade.get(id) ?? [], hojeIso)]));

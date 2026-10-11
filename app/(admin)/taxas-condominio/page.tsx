@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
+import { hojeCaracas } from "@/lib/fuso";
 import { TaxasCondominioManager, type SituacaoTaxa } from "@/components/admin/taxas-condominio/taxas-condominio-manager";
 import {
   montarCobrancaDetalhada,
@@ -68,7 +69,7 @@ export default async function TaxasCondominioPage() {
     return <p className="text-sm text-destructive">{t("errorLoadingData", { message: cobrancasError.message })}</p>;
   }
 
-  const hojeIso = agora.toISOString().slice(0, 10);
+  const hojeIso = hojeCaracas(agora);
   const situacoes: Record<string, SituacaoTaxa> = Object.fromEntries(
     linhas.map((taxa) => {
       const mesReferencia = referencia.get(taxa.id) ?? null;

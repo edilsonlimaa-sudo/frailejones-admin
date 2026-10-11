@@ -1,4 +1,5 @@
 import { classificarCobranca, type CobrancaClassificada } from "@/lib/estado-de-cuenta";
+import { hojeCaracas } from "@/lib/fuso";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 
 // Lista de cobranças de uma unidade organizada pra leitura: o que exige ação (pendentes) separado
@@ -90,7 +91,7 @@ export function organizarCobrancas(
   agora: Date,
   { agruparPorMes = true, rotulo = rotuloPelaOrigem }: OpcoesOrganizacao = {},
 ): CobrancasOrganizadas {
-  const hojeIso = agora.toISOString().slice(0, 10);
+  const hojeIso = hojeCaracas(agora);
   const itens: ItemCobranca[] = cobrancas.map((cobranca) => {
     const classificada = classificarCobranca(cobranca, hojeIso);
     const aVencer = classificada.estado === "porVencer";

@@ -14,6 +14,7 @@ import {
 import { calcularEncargos } from "@/lib/encargos";
 import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
 import { taxasSemEmissaoNoMes } from "@/lib/taxas";
+import { hojeCaracas } from "@/lib/fuso";
 import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
 import { NavegadorMes } from "@/components/admin/navegador-mes";
 import { EntradasDoMes } from "@/components/admin/painel/entradas-do-mes";
@@ -88,9 +89,8 @@ export default async function Home({
 }) {
   const { mes: mesParam } = await searchParams;
   const { ano, mes } = parseMes(mesParam);
-  const hoje = new Date();
-  const hojeIso = hoje.toISOString().slice(0, 10);
-  const hojeCaracas = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(hoje);
+  // um só "hoje" (Caracas) pra encargos, Dashboard no banco, aviso de cotação e de emissão
+  const hojeIso = hojeCaracas();
 
   const t = await getTranslations("dashboard");
   const tStatus = await getTranslations("cobrancas.status");
@@ -159,7 +159,7 @@ export default async function Home({
       supabase.rpc("resumo_dashboard", {
         p_mes: inicioMes,
         p_meses: MESES_EVOLUCAO,
-        p_hoje: hojeCaracas,
+        p_hoje: hojeIso,
       }),
       // tudo que está pendente hoje, de qualquer competência (card de dívida total). Paginada: com
       // inadimplência acumulada passa fácil de 1000 cobranças, e um corte silencioso mostraria uma
@@ -297,10 +297,10 @@ export default async function Home({
   // Caracas), a atualização falhou e liquidações em VES usariam uma taxa vencida. Comparar com hoje
   // dava aviso falso todo fim de semana: a DolarApi (fonte principal) só traz a taxa de segunda
   // quando ela passa a valer, então no sábado e no domingo a mais recente é a de sexta.
-  const cotacaoDesatualizada = !cotacaoBcv || cotacaoBcv.data_cotacao < ultimoDiaUtil(hojeCaracas);
+  const cotacaoDesatualizada = !cotacaoBcv || cotacaoBcv.data_cotacao < ultimoDiaUtil(hojeIso);
 
   // pelo mês de hoje, não pelo selecionado: o aviso é sobre a emissão que falta fazer agora
-  const mesDeHoje = hojeCaracas.slice(0, 7);
+  const mesDeHoje = hojeIso.slice(0, 7);
   const taxasSemEmissao = taxasSemEmissaoNoMes(
     (taxasRaw ?? []).map((taxa) => ({
       id: taxa.id,

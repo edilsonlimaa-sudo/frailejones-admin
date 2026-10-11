@@ -5,6 +5,7 @@ import { getTranslations, getLocale } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
+import { hojeCaracas } from "@/lib/fuso";
 import { dataCaixaCaracas } from "@/lib/arrecadacao";
 import {
   montarCobrancaDetalhada,
@@ -105,7 +106,7 @@ export default async function RateioExtraordinarioDetalhePage({
   const unidadePorCobranca = new Map(linhas.map((c) => [c.id, c.unidade]));
 
   const agora = new Date();
-  const resumo = resumirProgresso(cobrancas, agora.toISOString().slice(0, 10));
+  const resumo = resumirProgresso(cobrancas, hojeCaracas(agora));
   const organizadas = organizarCobrancas(cobrancas, agora, {
     agruparPorMes: false,
     // no rateio cada linha é uma unidade (com o dono e link pra aba de cobranças dela)

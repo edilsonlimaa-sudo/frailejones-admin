@@ -1,5 +1,6 @@
 import { dataCaixaCaracas, percentualEmDia } from "@/lib/arrecadacao";
 import { calcularEncargos, type CobrancaParaEncargos, type Encargos } from "@/lib/encargos";
+import { hojeCaracas } from "@/lib/fuso";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { MoedaTipo } from "@/lib/types/creditos";
 import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
@@ -161,10 +162,9 @@ export function resumirPendencias(cobrancas: CobrancaParaEncargos[], hojeIso: st
 }
 
 export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Date): EstadoDeConta {
-  // encargos usam a data UTC, como as listas de cobranças; pontualidade usa o dia em Caracas, como o Dashboard
-  const hojeIso = agora.toISOString().slice(0, 10);
-  const hojeCaracas = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(agora);
-  const mesAtual = hojeCaracas.slice(0, 7);
+  // encargos e pontualidade usam o mesmo dia de Caracas (como o Dashboard e as listas de cobranças)
+  const hojeIso = hojeCaracas(agora);
+  const mesAtual = hojeIso.slice(0, 7);
   const [anoAtual, numeroMesAtual] = mesAtual.split("-").map(Number);
   const mesesJanela = Array.from({ length: MESES_ESTADO_CONTA }, (_, i) => {
     const data = new Date(Date.UTC(anoAtual, numeroMesAtual - 1 - (MESES_ESTADO_CONTA - 1 - i), 1));
@@ -213,7 +213,7 @@ export function calcularEstadoDeConta(cobrancas: CobrancaDaUnidade[], agora: Dat
     if (naJanela) {
       porMes.get(mes)!.push({ origem: c.titulo_origem, estado, valor: valorExibido });
       encargosPagos += c.valor_juros_pago_usd;
-      if (hojeCaracas > prazo) {
+      if (hojeIso > prazo) {
         pontualidade.base += c.valor_usd;
         pontualidade.emDia += c.valor_credito_abatido_usd;
         for (const p of c.pagamentos) {

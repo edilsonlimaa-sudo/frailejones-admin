@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
+import { hojeCaracas } from "@/lib/fuso";
 import { RateiosExtraordinariosManager } from "@/components/admin/rateios-extraordinarios/rateios-extraordinarios-manager";
 import { resumirProgresso, type CobrancaParaProgresso } from "@/lib/progresso-cobranca";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
@@ -51,7 +52,7 @@ export default async function RateiosExtraordinariosPage() {
     );
   }
 
-  const hojeIso = new Date().toISOString().slice(0, 10);
+  const hojeIso = hojeCaracas();
   const despesasComResumo = (despesas ?? []).map(({ despesa_extraordinaria_unidades, cobrancas, ...despesa }) => ({
     ...despesa,
     unidade_ids: despesa_extraordinaria_unidades.map((u) => u.unidade_id),
