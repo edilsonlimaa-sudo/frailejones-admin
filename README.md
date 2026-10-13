@@ -51,7 +51,33 @@ unidades (`supabase/seeds/unidades.sql`) e um usuário admin (`supabase/seed.sql
 credenciais estão no topo do arquivo). Taxas, cotações BCV e créditos são cadastrados pelo app.
 
 Migrations novas vão em `supabase/migrations/`. Teste localmente com `npm run db:reset` e depois
-aplique no projeto remoto com `npx supabase db push`.
+aplique no projeto remoto com `npm run db:remoto:migrar`.
+
+### Banco remoto (funciona na VPN)
+
+`supabase db push`/`db reset --linked`/`db query --linked` conectam direto no Postgres (pooler,
+portas 5432/6543), o que a VPN derruba. Os comandos abaixo usam a Management API do Supabase, só
+HTTPS (`scripts/db-remoto.mjs`). Uma vez só: gere um token pessoal em
+https://supabase.com/dashboard/account/tokens e grave em `.env.supabase.local` (fora do git):
+
+```
+SUPABASE_ACCESS_TOKEN=sbp_...
+```
+
+| Comando | O que faz |
+|---|---|
+| `npm run db:remoto:status` | lista migrations aplicadas e pendentes |
+| `npm run db:remoto:migrar` | aplica todas as pendentes, em ordem |
+| `npm run db:remoto:migrar -- 20261012130000` | aplica só essa (versão ou nome do arquivo) |
+| `npm run db:remoto:marcar -- 20261012130000` | registra como aplicada sem rodar (aplicada à mão no painel) |
+| `npm run db:remoto:zerar` | apaga o schema `public`, reaplica todas as migrations e cria o admin (pede confirmação; usuários do auth ficam) |
+| `npm run db:remoto:demo` | carrega `supabase/seeds/demo` (exige banco sem dados) |
+| `npm run db:remoto:zerar-com-demo` | os dois acima em sequência |
+| `npm run db:remoto:sql -- "select ..."` | roda um SQL avulso |
+| `npm run fn:deploy` | publica a Edge Function `atualizar-cotacao-bcv` (pela API, sem Docker) |
+
+O projeto é o linkado em `supabase/.temp/project-ref` (ou `SUPABASE_PROJECT_REF`). O histórico fica
+na mesma tabela do CLI, então `supabase db push` volta a funcionar fora da VPN.
 
 ### Cotação BCV automática
 
@@ -70,8 +96,8 @@ do dia e a fonte falhou ou ainda não foi consultada.
 
 No projeto remoto, depois de mudar a função ou as migrations:
 
-1. Publique a função: `npx supabase functions deploy atualizar-cotacao-bcv`
-2. Aplique as migrations: `npx supabase db push`
+1. Publique a função: `npm run fn:deploy`
+2. Aplique as migrations: `npm run db:remoto:migrar`
 
 ## Learn More
 

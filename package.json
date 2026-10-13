@@ -10,7 +10,15 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:status": "supabase status",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "db:remoto:status": "node --env-file-if-exists=.env.supabase.local scripts/db-remoto.mjs status",
+    "db:remoto:migrar": "node --env-file-if-exists=.env.supabase.local scripts/db-remoto.mjs migrar",
+    "db:remoto:marcar": "node --env-file-if-exists=.env.supabase.local scripts/db-remoto.mjs marcar",
+    "db:remoto:zerar": "node --env-file-if-exists=.env.supabase.local scripts/db-remoto.mjs zerar",
+    "db:remoto:demo": "node --env-file-if-exists=.env.supabase.local scripts/db-remoto.mjs seed:demo",
+    "db:remoto:zerar-com-demo": "npm run db:remoto:zerar && npm run db:remoto:demo",
+    "db:remoto:sql": "node --env-file-if-exists=.env.supabase.local scripts/db-remoto.mjs sql",
+    "fn:deploy": "supabase functions deploy atualizar-cotacao-bcv --use-api"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
