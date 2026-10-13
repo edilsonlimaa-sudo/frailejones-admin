@@ -32,18 +32,23 @@ const refArquivo = join(RAIZ, "supabase", ".temp", "project-ref");
 const ref =
   process.env.SUPABASE_PROJECT_REF ?? (existsSync(refArquivo) ? readFileSync(refArquivo, "utf8").trim() : null);
 
+class Falha extends Error {}
+
+// lança em vez de process.exit: sair com o fetch ainda fechando a conexão derruba o Node no Windows
+// (assertion em uv async.c). O erro sobe até o fim do arquivo, que só define o código de saída.
 function sair(mensagem) {
-  console.error(`\n✖ ${mensagem}`);
-  process.exit(1);
+  throw new Falha(mensagem);
 }
 
-if (!token) {
-  sair(
-    "Falta SUPABASE_ACCESS_TOKEN. Gere um token em https://supabase.com/dashboard/account/tokens e grave\n" +
-      "  em .env.supabase.local:  SUPABASE_ACCESS_TOKEN=sbp_...",
-  );
+function validarAmbiente() {
+  if (!token) {
+    sair(
+      "Falta SUPABASE_ACCESS_TOKEN. Gere um token em https://supabase.com/dashboard/account/tokens e grave\n" +
+        "  em .env.supabase.local:  SUPABASE_ACCESS_TOKEN=sbp_...",
+    );
+  }
+  if (!ref) sair("Projeto não identificado: rode `npx supabase link` ou defina SUPABASE_PROJECT_REF.");
 }
-if (!ref) sair("Projeto não identificado: rode `npx supabase link` ou defina SUPABASE_PROJECT_REF.");
 
 async function sql(query) {
   const resposta = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
@@ -238,10 +243,14 @@ const comandos = {
   },
 };
 
-if (!comandos[comando]) sair(`Comando desconhecido: ${comando ?? "(nenhum)"}. Use: ${Object.keys(comandos).join(", ")}`);
 
 try {
+  validarAmbiente();
+  if (!comandos[comando]) {
+    sair(`Comando desconhecido: ${comando ?? "(nenhum)"}. Use: ${Object.keys(comandos).join(", ")}`);
+  }
   await comandos[comando]();
 } catch (erro) {
-  sair(erro instanceof Error ? erro.message : String(erro));
+  console.error(`\n✖ ${erro instanceof Error ? erro.message : String(erro)}`);
+  process.exitCode = 1;
 }
