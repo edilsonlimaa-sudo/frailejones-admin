@@ -1,6 +1,8 @@
 // Busca a taxa oficial USD/VES do BCV e grava em cotacao_bcv (upsert por data_cotacao).
-// Chamada pelo pg_cron (ver migration agendar_atualizacao_cotacao_bcv) e pelo botão
-// "Atualizar cotação agora". Fonte principal: DolarApi; reserva: HTML do site do BCV.
+// Chamada pelo servidor Next quando a cotação vigente está atrasada (lib/cotacao-bcv.ts) e pelo
+// botão "Atualizar cotação agora". Fonte principal: DolarApi; reserva: HTML do site do BCV.
+// Toda chamada fica registrada em cotacao_bcv_consulta, que o app usa pra não consultar a fonte
+// de novo antes do intervalo mínimo.
 //
 // A data gravada é a "fecha valor" publicada pelo BCV (a taxa divulgada à tarde vale para o
 // próximo dia útil), não a data da consulta.
@@ -58,6 +60,16 @@ async function buscarSiteBcv(): Promise<Cotacao> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  // gravado antes de ir à fonte: requisições simultâneas do app já veem a consulta em andamento
+  await supabase.from("cotacao_bcv_consulta").upsert({ id: true, consultado_em: new Date().toISOString(), erro: null });
+
+  const falhar = async (body: { error: string } & Record<string, unknown>, status: number) => {
+    await supabase.from("cotacao_bcv_consulta").update({ erro: body.error }).eq("id", true);
+    return json(body, status);
+  };
+
   const falhas: string[] = [];
   let cotacao: Cotacao | null = null;
   for (const buscar of [buscarDolarApi, buscarSiteBcv]) {
@@ -71,14 +83,12 @@ Deno.serve(async (req) => {
 
   if (!cotacao) {
     console.error("Nenhuma fonte de cotação respondeu", falhas);
-    return json({ error: "Nenhuma fonte de cotação respondeu", falhas }, 502);
+    return falhar({ error: "Nenhuma fonte de cotação respondeu", falhas }, 502);
   }
 
   if (cotacao.tasaVes <= 0) {
-    return json({ error: `Taxa inválida: ${cotacao.tasaVes}`, cotacao }, 422);
+    return falhar({ error: `Taxa inválida: ${cotacao.tasaVes}`, cotacao }, 422);
   }
-
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   const { data: anterior, error: anteriorError } = await supabase
     .from("cotacao_bcv")
@@ -87,13 +97,13 @@ Deno.serve(async (req) => {
     .order("data_cotacao", { ascending: false })
     .limit(1)
     .maybeSingle<{ data_cotacao: string; tasa_ves: number }>();
-  if (anteriorError) return json({ error: anteriorError.message }, 500);
+  if (anteriorError) return falhar({ error: anteriorError.message }, 500);
 
   if (anterior) {
     const variacao = Math.abs(cotacao.tasaVes - anterior.tasa_ves) / anterior.tasa_ves;
     if (variacao > VARIACAO_MAXIMA) {
       console.error("Variação suspeita, cotação não gravada", { cotacao, anterior });
-      return json(
+      return falhar(
         {
           error: `Variação de ${(variacao * 100).toFixed(1)}% em relação a ${anterior.data_cotacao}; cadastre manualmente se estiver correta`,
           cotacao,
@@ -109,10 +119,10 @@ Deno.serve(async (req) => {
     .select("tasa_ves")
     .eq("data_cotacao", cotacao.dataCotacao)
     .maybeSingle<{ tasa_ves: number }>();
-  if (existenteError) return json({ error: existenteError.message }, 500);
+  if (existenteError) return falhar({ error: existenteError.message }, 500);
 
-  // o cron roda de hora em hora: só grava quando a taxa muda, pra "Atualizada em" (created_at)
-  // registrar quando o BCV publicou o valor, e não a última execução
+  // só grava quando a taxa muda, pra "Atualizada em" (created_at) registrar quando o valor entrou,
+  // e não a última consulta
   if (existente && Number(existente.tasa_ves) === cotacao.tasaVes) {
     return json({ cotacao, inalterada: true, falhas });
   }
@@ -128,7 +138,7 @@ Deno.serve(async (req) => {
     },
     { onConflict: "data_cotacao" },
   );
-  if (error) return json({ error: error.message }, 500);
+  if (error) return falhar({ error: error.message }, 500);
 
   return json({ cotacao, inalterada: false, falhas });
 });

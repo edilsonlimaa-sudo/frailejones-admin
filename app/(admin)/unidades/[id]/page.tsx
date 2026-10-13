@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
 import { createClient } from "@/lib/supabase/server";
 import type { Unidade } from "@/lib/types/unidades";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
@@ -89,12 +90,14 @@ export default async function UnidadeDetailPage({
       .eq("unidade_id", id)
       .order("created_at", { ascending: false })
       .returns<CreditoRow[]>(),
-    supabase
-      .from("cotacao_bcv")
-      .select("id, data_cotacao, tasa_ves")
-      .order("data_cotacao", { ascending: false })
-      .limit(366)
-      .returns<{ id: string; data_cotacao: string; tasa_ves: number }[]>(),
+    garantirCotacaoBcvAtualizada().then(() =>
+      supabase
+        .from("cotacao_bcv")
+        .select("id, data_cotacao, tasa_ves")
+        .order("data_cotacao", { ascending: false })
+        .limit(366)
+        .returns<{ id: string; data_cotacao: string; tasa_ves: number }[]>(),
+    ),
   ]);
 
   if (cobrancasError || creditosError || cotacaoBcvError) {

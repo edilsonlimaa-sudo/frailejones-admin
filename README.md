@@ -56,18 +56,17 @@ aplique no projeto remoto com `npx supabase db push`.
 ### Cotação BCV automática
 
 A Edge Function `atualizar-cotacao-bcv` busca a taxa oficial (DolarApi, com o site do BCV como
-reserva) e grava em `cotacao_bcv`. O `pg_cron` chama a função de hora em hora (ela só grava quando a
-taxa muda) e o botão "Atualizar cotação agora" usa a mesma função. Se a cotação mais recente for anterior a hoje,
-o painel mostra um aviso. No local, tudo já vem configurado pelo `db:start`/`db:reset`.
+reserva) e grava em `cotacao_bcv` (só quando a taxa muda). Não há cron: toda tela que usa a cotação
+passa por `garantirCotacaoBcvAtualizada()` (`lib/cotacao-bcv.ts`), que chama a função na hora quando
+a vigente está atrasada em relação ao último dia útil. Cada consulta fica em `cotacao_bcv_consulta`,
+e o app não consulta de novo antes de 10 minutos (em feriado o BCV não publica). Abas que ficam
+abertas são cobertas pelo `VigiaCotacaoBcv`, que confere ao voltar pra aba e a cada 5 minutos. O botão
+"Atualizar cotação agora" usa a mesma função.
 
-No projeto remoto, uma vez só:
+No projeto remoto, depois de mudar a função ou as migrations:
 
 1. Publique a função: `npx supabase functions deploy atualizar-cotacao-bcv`
-2. Aplique a migration do agendamento: `npx supabase db push`
-3. No SQL Editor, cadastre a URL do projeto que o cron usa:
-   `select vault.create_secret('https://<ref>.supabase.co', 'project_url');`
-
-Para ver as execuções do cron: `select * from cron.job_run_details order by start_time desc;`
+2. Aplique as migrations: `npx supabase db push`
 
 ## Learn More
 

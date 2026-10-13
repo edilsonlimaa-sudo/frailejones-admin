@@ -711,7 +711,7 @@
   },
   "cotacaoBcvPage": {
     "title": "Cotação BCV",
-    "description": "Taxa oficial do dólar em bolívares, usada para converter os pagamentos recebidos em bolívares. Atualizada automaticamente de hora em hora; use o botão para forçar uma atualização.",
+    "description": "Taxa oficial do dólar em bolívares, usada para converter os pagamentos recebidos em bolívares. O app busca a taxa nova sozinho sempre que a vigente fica atrasada; use o botão para forçar uma atualização.",
     "updateNow": "Atualizar cotação agora",
     "updating": "Atualizando...",
     "errorFetchApi": "Não foi possível atualizar a cotação.",
@@ -724,7 +724,9 @@
     "noRates": "Nenhuma cotação cadastrada ainda. Clique em «Atualizar cotação agora».",
     "historyTitle": "Histórico",
     "noRatesShort": "Nenhuma cotação cadastrada ainda.",
-    "updatedAt": "Atualizada em"
+    "updatedAt": "Atualizada em",
+    "lastCheck": "Última verificação da fonte: {date}",
+    "lastCheckError": "Última verificação da fonte: {date}, sem sucesso ({error})"
   },
   "auth": {
     "login": {

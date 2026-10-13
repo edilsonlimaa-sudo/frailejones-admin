@@ -5,3 +5,9 @@ export type CotacaoBcv = {
   fuente: string;
   created_at: string;
 };
+
+// última vez que a Edge Function consultou a fonte (tabela de uma linha só)
+export type CotacaoBcvConsulta = {
+  consultado_em: string;
+  erro: string | null;
+};

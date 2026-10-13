@@ -7,7 +7,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
-import type { CotacaoBcv } from "@/lib/types/cotacao-bcv";
+import type { CotacaoBcv, CotacaoBcvConsulta } from "@/lib/types/cotacao-bcv";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { FUSO_CARACAS } from "@/lib/fuso";
 import { formatBs, formatTasa } from "@/lib/moeda";
@@ -29,16 +29,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Resposta da Edge Function atualizar-cotacao-bcv (a mesma que o pg_cron chama)
+// Resposta da Edge Function atualizar-cotacao-bcv (a mesma que o servidor chama quando a cotação atrasa)
 type AtualizarCotacaoResponse = {
   cotacao: { dataCotacao: string; tasaVes: number; fuente: string };
 };
 
 type CotacaoBcvManagerProps = {
   cotacoes: CotacaoBcv[];
+  consulta: CotacaoBcvConsulta | null;
 };
 
-export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
+export function CotacaoBcvManager({ cotacoes, consulta }: CotacaoBcvManagerProps) {
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const t = useTranslations("cotacaoBcvPage");
@@ -110,6 +111,16 @@ export function CotacaoBcvManager({ cotacoes }: CotacaoBcvManagerProps) {
           ) : (
             <p className="text-sm text-muted-foreground">{t("noRates")}</p>
           )}
+          {consulta ? (
+            <p className={consulta.erro ? "mt-4 text-xs text-destructive" : "mt-4 text-xs text-muted-foreground"}>
+              {consulta.erro
+                ? t("lastCheckError", {
+                    date: dateTimeFormatter.format(new Date(consulta.consultado_em)),
+                    error: consulta.erro,
+                  })
+                : t("lastCheck", { date: dateTimeFormatter.format(new Date(consulta.consultado_em)) })}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 

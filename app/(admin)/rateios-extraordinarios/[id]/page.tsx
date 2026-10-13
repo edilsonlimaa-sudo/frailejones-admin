@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
+import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
 import { hojeCaracas } from "@/lib/fuso";
@@ -86,12 +87,14 @@ export default async function RateioExtraordinarioDetalhePage({
         .range(de, ate)
         .returns<CobrancaDoRateioRow[]>(),
     ),
-    supabase
-      .from("cotacao_bcv")
-      .select("id, data_cotacao, tasa_ves")
-      .order("data_cotacao", { ascending: false })
-      .limit(366)
-      .returns<{ id: string; data_cotacao: string; tasa_ves: number }[]>(),
+    garantirCotacaoBcvAtualizada().then(() =>
+      supabase
+        .from("cotacao_bcv")
+        .select("id, data_cotacao, tasa_ves")
+        .order("data_cotacao", { ascending: false })
+        .limit(366)
+        .returns<{ id: string; data_cotacao: string; tasa_ves: number }[]>(),
+    ),
     // pra dizer "todas as unidades" quando o rateio foi pra todo o condomínio
     supabase.from("unidades").select("id", { count: "exact", head: true }),
   ]);

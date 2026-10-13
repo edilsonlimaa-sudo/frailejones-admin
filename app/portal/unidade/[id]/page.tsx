@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
+import { hojeCaracas } from "@/lib/fuso";
 import { createClient } from "@/lib/supabase/server";
 import type { Unidade } from "@/lib/types/unidades";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
@@ -10,6 +12,7 @@ import type { CreditoMovimentacao, CreditoOrigemCobranca, MoedaTipo } from "@/li
 import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
 import { Button } from "@/components/ui/button";
 import { PortalUnidadeView } from "@/components/portal/portal-unidade-view";
+import { VigiaCotacaoBcv } from "@/components/vigia-cotacao-bcv";
 import { resolverAbaUnidade } from "@/lib/abas-unidade";
 import { resolverFiltroCobrancas } from "@/lib/lista-cobrancas";
 
@@ -102,12 +105,14 @@ export default async function PortalUnidadePage({
       .eq("unidade_id", id)
       .order("created_at", { ascending: false })
       .returns<CreditoRow[]>(),
-    supabase
-      .from("cotacao_bcv")
-      .select("id, data_cotacao, tasa_ves")
-      .order("data_cotacao", { ascending: false })
-      .limit(366)
-      .returns<{ id: string; data_cotacao: string; tasa_ves: number }[]>(),
+    garantirCotacaoBcvAtualizada().then(() =>
+      supabase
+        .from("cotacao_bcv")
+        .select("id, data_cotacao, tasa_ves")
+        .order("data_cotacao", { ascending: false })
+        .limit(366)
+        .returns<{ id: string; data_cotacao: string; tasa_ves: number }[]>(),
+    ),
   ]);
 
   if (cobrancasError || creditosError || cotacaoBcvError) {
@@ -152,8 +157,13 @@ export default async function PortalUnidadePage({
       }),
   }));
 
+  // a lista vem desc por data; a vigente é a primeira que já vale hoje
+  const hoje = hojeCaracas();
+  const dataVigente = (cotacoes ?? []).find((c) => c.data_cotacao <= hoje)?.data_cotacao ?? null;
+
   return (
     <div className="flex w-full max-w-5xl flex-col gap-6">
+      <VigiaCotacaoBcv dataVigente={dataVigente} />
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"

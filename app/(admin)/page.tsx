@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { Building2, HardHat, InfoIcon, Receipt, TriangleAlert } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
+import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
@@ -154,12 +155,14 @@ export default async function Home({
           .range(de, ate)
           .returns<{ unidade_id: string }[]>(),
       ),
-      supabase
-        .from("cotacao_bcv")
-        .select("data_cotacao, tasa_ves")
-        .order("data_cotacao", { ascending: false })
-        .limit(1)
-        .maybeSingle<{ data_cotacao: string; tasa_ves: number }>(),
+      garantirCotacaoBcvAtualizada().then(() =>
+        supabase
+          .from("cotacao_bcv")
+          .select("data_cotacao, tasa_ves")
+          .order("data_cotacao", { ascending: false })
+          .limit(1)
+          .maybeSingle<{ data_cotacao: string; tasa_ves: number }>(),
+      ),
       // caixa do mês e gráfico de evolução somados no banco: a janela de 6 meses passa das 1000
       // linhas que a API devolve por consulta, e as somas sairiam cortadas sem erro
       supabase.rpc("resumo_dashboard", {

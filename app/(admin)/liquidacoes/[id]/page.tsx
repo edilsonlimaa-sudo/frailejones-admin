@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
+import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
 import { createClient } from "@/lib/supabase/server";
 import type { CobrancaStatus, CobrancaTipo } from "@/lib/types/cobrancas";
 import type {
@@ -114,12 +115,14 @@ export default async function LiquidacaoDetalhePage({
   const cobranca = pagamentoCobranca?.cobranca ?? null;
 
   const [{ data: cotacoes, error: cotacaoError }, siblingsResult] = await Promise.all([
-    supabase
-      .from("cotacao_bcv")
-      .select("data_cotacao, tasa_ves")
-      .order("data_cotacao", { ascending: false })
-      .limit(366)
-      .returns<CotacaoHistorico[]>(),
+    garantirCotacaoBcvAtualizada().then(() =>
+      supabase
+        .from("cotacao_bcv")
+        .select("data_cotacao, tasa_ves")
+        .order("data_cotacao", { ascending: false })
+        .limit(366)
+        .returns<CotacaoHistorico[]>(),
+    ),
     cobranca
       ? supabase
           .from("pagamento_cobrancas")
