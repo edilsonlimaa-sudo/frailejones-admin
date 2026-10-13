@@ -155,7 +155,114 @@
       }
     },
     "feesNotIssued": "{count, plural, one {Falta emitir # cuota} other {Faltan emitir # cuotas}} de {month}: {names}.",
-    "goToFees": "Emitir cuotas"
+    "goToFees": "Emitir cuotas",
+    "view": {
+      "label": "Modo de visualización",
+      "classico": "Clásico",
+      "foco": "Enfoque"
+    },
+    "focus": {
+      "jump": {
+        "label": "Ir a la sección",
+        "pulso": "Mes",
+        "divida": "Deuda",
+        "caixa": "Ingresos",
+        "pendencias": "Pendientes",
+        "tendencia": "Tendencia"
+      },
+      "pulse": {
+        "title": "Recaudación de {month}",
+        "subtitle": "Cobros emitidos para el mes y cuánto de ellos ya se saldó",
+        "collected": "recaudado",
+        "ofIssued": "de {value} emitidos",
+        "onTime": "{percent}% pagado en día",
+        "onTimePending": "Plazo aún no vencido",
+        "deltaUp": "+{points} p.p. vs. {month}",
+        "deltaDown": "−{points} p.p. vs. {month}",
+        "deltaSame": "igual que {month}",
+        "rows": {
+          "noMes": "Saldado en el mes",
+          "depois": "Saldado después",
+          "emAberto": "Por cobrar"
+        },
+        "charges": "Cobros",
+        "pending": "Pendientes",
+        "overdue": "En atraso",
+        "empty": "Aún no hay cobros emitidos para este mes.",
+        "emptyAction": "Ir a cuotas",
+        "rounding": "{diff} de redondeo de prorrateos"
+      },
+      "attention": {
+        "title": "Requiere atención",
+        "allClear": "Todo en orden",
+        "allClearDescription": "Tasa al día, cuotas emitidas y ningún cobro vencido.",
+        "staleRate": "Tasa BCV desactualizada",
+        "staleRateDescription": "La más reciente es del {date}. Los pagos en bolívares usarían una tasa vencida.",
+        "missingRate": "Sin tasa BCV",
+        "missingRateDescription": "Los pagos en bolívares no están disponibles hasta registrar una.",
+        "rateAction": "Actualizar",
+        "feesNotIssued": "{count, plural, one {# cuota sin emitir} other {# cuotas sin emitir}} en {month}",
+        "feesAction": "Emitir",
+        "overdue": "{count, plural, one {# cobro vencido} other {# cobros vencidos}}",
+        "overdueDescription": "{value} con multa e intereses, en {units, plural, one {# unidad} other {# unidades}}",
+        "overdueAction": "Ver",
+        "dueSoon": "{count, plural, one {# cobro vence} other {# cobros vencen}} en hasta {days} días",
+        "dueSoonDescription": "{value} por cobrar en plazo",
+        "dueSoonAction": "Ver"
+      },
+      "cash": {
+        "title": "Ingresos del mes",
+        "subtitle": "Dinero recibido, en la moneda en que entró",
+        "viewPayments": "Pagos",
+        "usd": "Dólares",
+        "ves": "Bolívares",
+        "payments": "{count, plural, =0 {Ningún pago} one {# pago} other {# pagos}}",
+        "settled": "Abonó {value} a cobros",
+        "settledRows": {
+          "doMes": "del mes",
+          "atrasado": "atrasados",
+          "adiantado": "futuros",
+          "encargos": "multa e intereses"
+        },
+        "noSettlement": "Ningún pago abonó cobros este mes."
+      },
+      "debt": {
+        "title": "Deuda al día de hoy",
+        "subtitle": "Todo lo pendiente, de cualquier mes, con multa e intereses de hoy",
+        "total": "Por cobrar",
+        "principal": "Cuotas y prorrateos",
+        "charges": "Multa e intereses",
+        "aging": "Por tiempo de atraso",
+        "agingCount": "{count, plural, one {# cobro} other {# cobros}}",
+        "buckets": {
+          "aVencer": "En plazo",
+          "ate30": "1–30 días",
+          "ate60": "31–60 días",
+          "ate90": "61–90 días",
+          "mais90": "+90 días"
+        },
+        "top": "Mayores deudores",
+        "topCharges": "{count, plural, one {# cobro} other {# cobros}}",
+        "daysShort": "{count} d",
+        "onTime": "en plazo",
+        "viewAll": "Ver unidades en atraso",
+        "empty": "Ninguna deuda pendiente. Todas las unidades están al día."
+      },
+      "pending": {
+        "title": "Pendientes del mes",
+        "subtitle": "Cobros de {month} aún no saldados",
+        "empty": "Ningún cobro pendiente este mes.",
+        "overdue": "{count, plural, one {# día} other {# días}} de atraso",
+        "dueOn": "Vence el {date}",
+        "graceUntil": "Gracia hasta el {date}",
+        "showMore": "Mostrar {count} más"
+      },
+      "trend": {
+        "title": "Tendencia",
+        "subtitle": "Emitido × abonado y % pagado en día, últimos {count} meses",
+        "howToRead": "Cómo leer este gráfico"
+      }
+    }
   },
   "unidades": {
     "title": "Unidades",

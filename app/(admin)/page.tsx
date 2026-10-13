@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Building2, HardHat, InfoIcon, Receipt, TriangleAlert } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
@@ -25,6 +26,11 @@ import {
   EvolucaoArrecadacaoChart,
   type PontoEvolucao,
 } from "@/components/admin/painel/evolucao-arrecadacao-chart";
+import { SeletorVisao } from "@/components/admin/painel/seletor-visao";
+import { PainelFoco } from "@/components/admin/painel/foco/painel-foco";
+import { ICONES_ATENCAO, type ItemAtencao } from "@/components/admin/painel/foco/cartao-atencao";
+import { DIAS_VENCENDO_EM_BREVE, resumirDivida } from "@/lib/painel/divida";
+import { COOKIE_VISAO_PAINEL, resolverVisaoPainel } from "@/lib/painel/visao";
 import { formatUsd, formatVes } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { Badge } from "@/components/ui/badge";
@@ -304,15 +310,121 @@ export default async function Home({
   );
   const mesDeHojeLabel = mesLabelFormatter.format(new Date(`${mesDeHoje}-01T00:00:00Z`));
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-medium">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{mesLabelCapitalizado}</p>
-        </div>
+  const visao = resolverVisaoPainel((await cookies()).get(COOKIE_VISAO_PAINEL)?.value);
+  const cabecalho = (
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
+      <div>
+        <h1 className="text-lg font-medium">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{mesLabelCapitalizado}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <SeletorVisao visao={visao} />
         <NavegadorMes ano={ano} mes={mes} basePath="/" />
       </div>
+    </div>
+  );
+
+  if (visao === "foco") {
+    const tAtencao = await getTranslations("dashboard.focus.attention");
+    const divida = resumirDivida(pendentesTotaisRaw ?? [], hojeIso);
+
+    // do mais grave pro menos grave: sem cotação válida não dá pra liquidar em bolívar
+    const itensAtencao: ItemAtencao[] = [];
+    if (cotacaoDesatualizada) {
+      itensAtencao.push({
+        chave: "cotacao",
+        tom: "critico",
+        icone: ICONES_ATENCAO.cotacao,
+        titulo: tAtencao(cotacaoBcv ? "staleRate" : "missingRate"),
+        descricao: cotacaoBcv
+          ? tAtencao("staleRateDescription", { date: formatDate(cotacaoBcv.data_cotacao) })
+          : tAtencao("missingRateDescription"),
+        href: "/cotacao-bcv",
+        acao: tAtencao("rateAction"),
+      });
+    }
+    if (divida.vencidas > 0) {
+      itensAtencao.push({
+        chave: "vencidas",
+        tom: "critico",
+        icone: ICONES_ATENCAO.vencidas,
+        titulo: tAtencao("overdue", { count: divida.vencidas }),
+        descricao: tAtencao("overdueDescription", {
+          value: formatUsd(divida.valorVencido),
+          units: divida.unidadesEmAtraso,
+        }),
+        href: "/unidades?situacion=enAtraso&orden=deuda",
+        acao: tAtencao("overdueAction"),
+      });
+    }
+    if (taxasSemEmissao.length > 0) {
+      itensAtencao.push({
+        chave: "taxas",
+        tom: "alerta",
+        icone: ICONES_ATENCAO.taxas,
+        titulo: tAtencao("feesNotIssued", { count: taxasSemEmissao.length, month: mesDeHojeLabel }),
+        descricao: taxasSemEmissao.map((taxa) => taxa.titulo).join(", "),
+        href: taxasSemEmissao.length === 1 ? `/taxas-condominio/${taxasSemEmissao[0].id}` : "/taxas-condominio",
+        acao: tAtencao("feesAction"),
+      });
+    }
+    if (divida.vencendoEmBreve.quantidade > 0) {
+      itensAtencao.push({
+        chave: "vencendo",
+        tom: "info",
+        icone: ICONES_ATENCAO.vencendo,
+        titulo: tAtencao("dueSoon", { count: divida.vencendoEmBreve.quantidade, days: DIAS_VENCENDO_EM_BREVE }),
+        descricao: tAtencao("dueSoonDescription", { value: formatUsd(divida.vencendoEmBreve.valor) }),
+        href: "/unidades?situacion=porVencer",
+        acao: tAtencao("dueSoonAction"),
+      });
+    }
+
+    const mesNomeFormatter = new Intl.DateTimeFormat(intlLocale, { month: "long", timeZone: "UTC" });
+    const pontoAnterior = evolucao.at(-2);
+    const emDiaAnterior =
+      pontoAnterior && pontoAnterior.emDia !== null
+        ? {
+            percentual: pontoAnterior.emDia,
+            mesLabel: mesNomeFormatter.format(new Date(`${pontoAnterior.mes}-01T00:00:00Z`)),
+          }
+        : null;
+
+    return (
+      <PainelFoco
+        cabecalho={cabecalho}
+        mes={mesSelecionado}
+        mesLabel={mesLabel}
+        tasaVes={cotacaoBcv?.tasa_ves ?? null}
+        itensAtencao={itensAtencao}
+        recaudacao={recaudacao}
+        cobrancasEmitidas={ativas.length}
+        pendentes={{ quantidade: pendentes.length, valor: valorEmAberto }}
+        emAtraso={{ quantidade: emAtraso.length, valor: valorEmAtrasoComEncargos }}
+        diferencaRedondeo={diferencaRedondeo}
+        emDiaAnterior={emDiaAnterior}
+        entradas={resumoEntradas}
+        divida={divida}
+        pendencias={linhasPendentes.map(({ cobranca: c, encargos }) => ({
+          id: c.id,
+          unidadeId: c.unidade?.id ?? null,
+          unidade: c.unidade?.identificacao ?? null,
+          origem: c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao,
+          vencimento: c.data_vencimento,
+          fimCarencia:
+            c.dias_graca > 0 && c.data_vencimento < hojeIso ? somarDias(c.data_vencimento, c.dias_graca) : null,
+          diasAtraso: encargos.diasAtraso,
+          total: encargos.valorTotalComEncargos,
+        }))}
+        evolucao={evolucao}
+        mesesEvolucao={MESES_EVOLUCAO}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {cabecalho}
 
       {cotacaoDesatualizada && (
         <div

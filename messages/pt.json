@@ -155,7 +155,114 @@
       }
     },
     "feesNotIssued": "{count, plural, one {Falta emitir # taxa} other {Faltam emitir # taxas}} de {month}: {names}.",
-    "goToFees": "Emitir taxas"
+    "goToFees": "Emitir taxas",
+    "view": {
+      "label": "Modo de visualização",
+      "classico": "Clássico",
+      "foco": "Foco"
+    },
+    "focus": {
+      "jump": {
+        "label": "Ir para seção",
+        "pulso": "Mês",
+        "divida": "Dívida",
+        "caixa": "Entradas",
+        "pendencias": "Pendências",
+        "tendencia": "Tendência"
+      },
+      "pulse": {
+        "title": "Arrecadação de {month}",
+        "subtitle": "Cobranças emitidas para o mês e quanto delas já foi quitado",
+        "collected": "arrecadado",
+        "ofIssued": "de {value} emitidos",
+        "onTime": "{percent}% pago em dia",
+        "onTimePending": "Prazo ainda não venceu",
+        "deltaUp": "+{points} p.p. vs. {month}",
+        "deltaDown": "−{points} p.p. vs. {month}",
+        "deltaSame": "igual a {month}",
+        "rows": {
+          "noMes": "Quitado no mês",
+          "depois": "Quitado depois",
+          "emAberto": "Em aberto"
+        },
+        "charges": "Cobranças",
+        "pending": "Pendentes",
+        "overdue": "Em atraso",
+        "empty": "Nenhuma cobrança emitida para este mês ainda.",
+        "emptyAction": "Ir para taxas",
+        "rounding": "{diff} de arredondamento de rateios"
+      },
+      "attention": {
+        "title": "Precisa de atenção",
+        "allClear": "Tudo em ordem",
+        "allClearDescription": "Cotação em dia, taxas emitidas e nenhuma cobrança vencida.",
+        "staleRate": "Cotação BCV desatualizada",
+        "staleRateDescription": "A mais recente é de {date}. Pagamentos em bolívares usariam uma taxa vencida.",
+        "missingRate": "Sem cotação BCV",
+        "missingRateDescription": "Pagamentos em bolívares ficam indisponíveis até cadastrar uma.",
+        "rateAction": "Atualizar",
+        "feesNotIssued": "{count, plural, one {# taxa sem emissão} other {# taxas sem emissão}} em {month}",
+        "feesAction": "Emitir",
+        "overdue": "{count, plural, one {# cobrança vencida} other {# cobranças vencidas}}",
+        "overdueDescription": "{value} com multa e juros, em {units, plural, one {# unidade} other {# unidades}}",
+        "overdueAction": "Ver",
+        "dueSoon": "{count, plural, one {# cobrança vence} other {# cobranças vencem}} em até {days} dias",
+        "dueSoonDescription": "{value} a receber no prazo",
+        "dueSoonAction": "Ver"
+      },
+      "cash": {
+        "title": "Entradas do mês",
+        "subtitle": "Dinheiro recebido, na moeda em que entrou",
+        "viewPayments": "Pagamentos",
+        "usd": "Dólares",
+        "ves": "Bolívares",
+        "payments": "{count, plural, =0 {Nenhum pagamento} one {# pagamento} other {# pagamentos}}",
+        "settled": "Abateu {value} em cobranças",
+        "settledRows": {
+          "doMes": "do mês",
+          "atrasado": "atrasadas",
+          "adiantado": "futuras",
+          "encargos": "multa e juros"
+        },
+        "noSettlement": "Nenhum pagamento abateu cobranças neste mês."
+      },
+      "debt": {
+        "title": "Dívida até hoje",
+        "subtitle": "Tudo que está pendente, de qualquer mês, com multa e juros de hoje",
+        "total": "A receber",
+        "principal": "Taxas e rateios",
+        "charges": "Multa e juros",
+        "aging": "Por tempo de atraso",
+        "agingCount": "{count, plural, one {# cobrança} other {# cobranças}}",
+        "buckets": {
+          "aVencer": "No prazo",
+          "ate30": "1–30 dias",
+          "ate60": "31–60 dias",
+          "ate90": "61–90 dias",
+          "mais90": "+90 dias"
+        },
+        "top": "Maiores devedores",
+        "topCharges": "{count, plural, one {# cobrança} other {# cobranças}}",
+        "daysShort": "{count} d",
+        "onTime": "no prazo",
+        "viewAll": "Ver unidades em atraso",
+        "empty": "Nenhuma dívida pendente. Todas as unidades estão em dia."
+      },
+      "pending": {
+        "title": "Pendências do mês",
+        "subtitle": "Cobranças de {month} ainda não quitadas",
+        "empty": "Nenhuma cobrança pendente neste mês.",
+        "overdue": "{count, plural, one {# dia} other {# dias}} de atraso",
+        "dueOn": "Vence {date}",
+        "graceUntil": "Carência até {date}",
+        "showMore": "Mostrar mais {count}"
+      },
+      "trend": {
+        "title": "Tendência",
+        "subtitle": "Emitido × abatido e % pago em dia, últimos {count} meses",
+        "howToRead": "Como ler este gráfico"
+      }
+    }
   },
   "unidades": {
     "title": "Unidades",
