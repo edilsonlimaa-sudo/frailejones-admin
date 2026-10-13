@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { ArrowRightIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -34,8 +35,8 @@ export async function CartaoCaixa({ entradas, mes }: { entradas: ResumoEntradas;
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
-          <BlocoMoeda moeda="USD" rotulo={t("usd")} entradas={entradas.usd} />
-          <BlocoMoeda moeda="VES" rotulo={t("ves")} entradas={entradas.ves} />
+          <BlocoMoeda moeda="USD" rotulo={t("usd")} entradas={entradas.usd} mes={mes} />
+          <BlocoMoeda moeda="VES" rotulo={t("ves")} entradas={entradas.ves} mes={mes} />
         </div>
 
         <div className="mt-auto rounded-xl border border-dashed p-3">
@@ -44,8 +45,19 @@ export async function CartaoCaixa({ entradas, mes }: { entradas: ResumoEntradas;
           ) : (
             <>
               <p className="text-sm font-medium">{t("settled", { value: formatUsd(q.total) })}</p>
+              {/* cada parte abre Liquidações já filtrada naquele tipo de dívida */}
               <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                {partesQuitacao.map((p) => `${formatUsd(p.valor)} ${t(`settledRows.${p.chave}`)}`).join(" · ")}
+                {partesQuitacao.map((p, i) => (
+                  <Fragment key={p.chave}>
+                    {i > 0 && " · "}
+                    <Link
+                      href={`/liquidacoes?mes=${mes}&abono=${p.chave}`}
+                      className="underline-offset-2 hover:text-foreground hover:underline"
+                    >
+                      {`${formatUsd(p.valor)} ${t(`settledRows.${p.chave}`)}`}
+                    </Link>
+                  </Fragment>
+                ))}
               </p>
             </>
           )}
@@ -59,10 +71,12 @@ async function BlocoMoeda({
   moeda,
   rotulo,
   entradas,
+  mes,
 }: {
   moeda: MoedaTipo;
   rotulo: string;
   entradas: EntradasNaMoeda;
+  mes: string;
 }) {
   const t = await getTranslations("dashboard.focus.cash");
   const tForma = await getTranslations("liquidacoes.paymentMethod");
@@ -79,19 +93,25 @@ async function BlocoMoeda({
       {entradas.canais.length > 0 && (
         <ul className="flex flex-col gap-1.5">
           {entradas.canais.map((canal) => (
-            <li key={canal.forma} className="flex flex-col gap-1">
-              <div className="flex items-baseline justify-between gap-2 text-[11px]">
-                <span className="min-w-0 truncate text-muted-foreground">{tForma(canal.forma)}</span>
-                <span className="shrink-0 font-medium tabular-nums">
-                  {entradas.total > 0 ? Math.round((canal.valor / entradas.total) * 100) : 0}%
-                </span>
-              </div>
-              <div className="h-1 overflow-hidden rounded-full bg-background">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${entradas.total > 0 ? (canal.valor / entradas.total) * 100 : 0}%` }}
-                />
-              </div>
+            <li key={canal.forma}>
+              {/* o canal abre Liquidações já filtrada nele, pra conferir com o extrato */}
+              <Link
+                href={`/liquidacoes?mes=${mes}&moneda=${moeda}&forma=${canal.forma}`}
+                className="-mx-1 flex flex-col gap-1 rounded-md px-1 py-0.5 transition-colors hover:bg-background/70"
+              >
+                <div className="flex items-baseline justify-between gap-2 text-[11px]">
+                  <span className="min-w-0 truncate text-muted-foreground">{tForma(canal.forma)}</span>
+                  <span className="shrink-0 font-medium tabular-nums">
+                    {entradas.total > 0 ? Math.round((canal.valor / entradas.total) * 100) : 0}%
+                  </span>
+                </div>
+                <div className="h-1 overflow-hidden rounded-full bg-background">
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${entradas.total > 0 ? (canal.valor / entradas.total) * 100 : 0}%` }}
+                  />
+                </div>
+              </Link>
             </li>
           ))}
         </ul>

@@ -656,23 +656,70 @@
   },
   "liquidacoes": {
     "title": "Liquidações",
-    "summary": "{count, plural, one {# pagamento registrado} other {# pagamentos registrados}}: {usd} em dólares e {ves} em bolívares.",
-    "noLiquidations": "Nenhum pagamento recebido neste mês.",
-    "date": "Data",
-    "unit": "Unidade",
-    "charge": "Cobrança",
-    "amountReceived": "Valor recebido",
-    "equivalentUsd": "Equivalente em dólares",
-    "paymentMethodLabel": "Forma de pagamento",
-    "reference": "Referência",
-    "viewDetails": "Ver detalhes",
+    "subtitle": "Entradas de {month}, pela data do pagamento",
+    "summaryLabel": "Resumo do caixa do mês",
+    "currency": {
+      "USD": "dólares",
+      "VES": "bolívares"
+    },
+    "cash": {
+      "received": {
+        "USD": "Recebido em dólares",
+        "VES": "Recebido em bolívares"
+      },
+      "payments": "{count, plural, =0 {Nenhum pagamento} one {# pagamento} other {# pagamentos}}",
+      "noEntries": "Nenhum pagamento nesta moeda."
+    },
+    "settled": {
+      "title": "Abatido em cobranças",
+      "hint": "Em dólares, pelo que cada pagamento abateu da dívida",
+      "rows": {
+        "doMes": "Cobranças do mês",
+        "atrasado": "Cobranças atrasadas",
+        "adiantado": "Cobranças futuras",
+        "encargos": "Multa e juros"
+      }
+    },
+    "listTitle": "Pagamentos recebidos",
+    "results": {
+      "all": "{count, plural, one {# pagamento} other {# pagamentos}}",
+      "filtered": "{count} de {total} pagamentos"
+    },
+    "searchPlaceholder": "Buscar por unidade, referência ou cobrança",
+    "filters": {
+      "label": "Filtrando:",
+      "currency": "Em {currency}",
+      "channel": "{method} em {currency}",
+      "remove": "Remover filtro {name}",
+      "clear": "Limpar filtros"
+    },
+    "columns": {
+      "time": "Hora",
+      "unit": "Unidade",
+      "charge": "Cobrança",
+      "method": "Forma / referência",
+      "amount": "Recebido"
+    },
+    "row": {
+      "settled": "abateu {value}",
+      "credit": "+{value} a favor",
+      "atrasado": "Atrasada · {month}",
+      "adiantado": "Adiantada · {month}",
+      "noCharge": "Sem cobrança vinculada",
+      "reference": "Ref. {value}"
+    },
+    "empty": {
+      "title": "Nenhum pagamento recebido em {month}",
+      "hint": "Os pagamentos aparecem aqui quando uma cobrança é liquidada na ficha da unidade.",
+      "action": "Ir para unidades"
+    },
+    "noFilterResults": "Nenhum pagamento com esses filtros.",
     "paymentMethod": {
       "pago_movil": "Pago móvil",
       "transferencia": "Transferência",
       "efectivo_usd": "Dinheiro em dólares",
       "zelle": "Zelle"
-    },
-    "filteredByMonth": "Pagamentos recebidos em {month}"
+    }
   },
   "liquidacaoDetail": {
     "title": "Detalhes da liquidação",

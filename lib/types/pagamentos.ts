@@ -13,7 +13,12 @@ export type Liquidacao = {
   referencia_bancaria: string | null;
   observacao: string | null;
   unidade: { id: string; identificacao: string } | null;
-  cobranca: { id: string; descricao: string; tipo: CobrancaTipo } | null;
+  cobranca: { id: string; descricao: string; tipo: CobrancaTipo; competencia: string } | null;
+  // o que o pagamento abateu da cobrança, em dólares (0 quando não liquidou cobrança)
+  principal_abatido_usd: number;
+  encargos_pagos_usd: number;
+  // sobra que virou saldo a favor da unidade, na moeda do pagamento
+  credito_gerado: number;
 };
 
 // a cobrança que este pagamento (parcial ou total) liquidou, vista a partir da tela de detalhe da liquidação

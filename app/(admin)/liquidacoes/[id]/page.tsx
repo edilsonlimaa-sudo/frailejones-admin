@@ -196,7 +196,7 @@ export default async function LiquidacaoDetalhePage({
           size="icon-sm"
           aria-label={t("back")}
           nativeButton={false}
-          render={<Link href="/liquidacoes" />}
+          render={<Link href={`/liquidacoes?mes=${dataPagamentoIso.slice(0, 7)}`} />}
         >
           <ArrowLeftIcon />
         </Button>
@@ -447,7 +447,7 @@ export default async function LiquidacaoDetalhePage({
                   <TableHead>{tDetail("equivalentUsd")}</TableHead>
                   <TableHead>{tDetail("principalPaid")}</TableHead>
                   <TableHead>{tDetail("penaltyInterest")}</TableHead>
-                  <TableHead>{tLiquidacoes("actions")}</TableHead>
+                  <TableHead>{t("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

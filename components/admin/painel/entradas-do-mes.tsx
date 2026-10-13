@@ -48,8 +48,8 @@ export async function EntradasDoMes({ usd, ves, mes, children }: EntradasDoMesPr
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <CardDaMoeda moeda="USD" entradas={usd} />
-        <CardDaMoeda moeda="VES" entradas={ves} />
+        <CardDaMoeda moeda="USD" entradas={usd} mes={mes} />
+        <CardDaMoeda moeda="VES" entradas={ves} mes={mes} />
       </div>
 
       {children}
@@ -57,7 +57,7 @@ export async function EntradasDoMes({ usd, ves, mes, children }: EntradasDoMesPr
   );
 }
 
-async function CardDaMoeda({ moeda, entradas }: { moeda: MoedaTipo; entradas: EntradasNaMoeda }) {
+async function CardDaMoeda({ moeda, entradas, mes }: { moeda: MoedaTipo; entradas: EntradasNaMoeda; mes: string }) {
   const t = await getTranslations("dashboard.entries");
   const tForma = await getTranslations("liquidacoes.paymentMethod");
 
@@ -78,25 +78,31 @@ async function CardDaMoeda({ moeda, entradas }: { moeda: MoedaTipo; entradas: En
         ) : (
           <ul className="flex flex-col gap-3">
             {entradas.canais.map((canal) => (
-              <li key={canal.forma} className="flex flex-col gap-1.5">
-                <div className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="min-w-0 truncate">
-                    {tForma(canal.forma)}
-                    <span className="text-xs text-muted-foreground">
-                      {" "}
-                      · {t("paymentsCount", { count: canal.quantidade })}
+              <li key={canal.forma}>
+                {/* o canal abre Liquidações já filtrada nele */}
+                <Link
+                  href={`/liquidacoes?mes=${mes}&moneda=${moeda}&forma=${canal.forma}`}
+                  className="-mx-1.5 flex flex-col gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-muted/60"
+                >
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="min-w-0 truncate">
+                      {tForma(canal.forma)}
+                      <span className="text-xs text-muted-foreground">
+                        {" "}
+                        · {t("paymentsCount", { count: canal.quantidade })}
+                      </span>
                     </span>
-                  </span>
-                  <span className="shrink-0 font-medium tabular-nums">
-                    {formatMoeda(canal.valor, moeda)}
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${entradas.total > 0 ? (canal.valor / entradas.total) * 100 : 0}%` }}
-                  />
-                </div>
+                    <span className="shrink-0 font-medium tabular-nums">
+                      {formatMoeda(canal.valor, moeda)}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${entradas.total > 0 ? (canal.valor / entradas.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>
