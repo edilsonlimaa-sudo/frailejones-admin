@@ -49,6 +49,7 @@
     "bcvChip": {
       "today": "Tasa BCV de hoy: {tasa}",
       "current": "Tasa BCV vigente: {tasa}, del {date}",
+      "noNewRate": "Tasa BCV vigente: {tasa}, del {date}. El BCV no publicó una tasa nueva desde entonces (feriado bancario)",
       "stale": "Sin tasa BCV registrada para hoy. Última: {tasa} el {date}",
       "missing": "Ninguna tasa BCV registrada",
       "missingShort": "Sin tasa"

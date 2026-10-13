@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { garantirCotacaoBcvAtualizada, ultimoDiaUtil } from "@/lib/cotacao-bcv";
+import {
+  buscarConsultaCotacaoBcv,
+  cotacaoBcvEmDia,
+  garantirCotacaoBcvAtualizada,
+  ultimoDiaUtil,
+} from "@/lib/cotacao-bcv";
 import { hojeCaracas } from "@/lib/fuso";
 import { formatBs } from "@/lib/moeda";
 import { createClient } from "@/lib/supabase/server";
@@ -14,29 +19,37 @@ function diaMes(dataIso: string): string {
   return `${dia}/${mes}`;
 }
 
-// chip do header com a cotação BCV vigente hoje (Caracas). Fica âmbar quando a fonte ainda não
-// publicou a do dia (ou estava fora do ar na última tentativa)
+// chip do header com a cotação BCV vigente hoje (Caracas). Fica âmbar só quando falta a do dia e a
+// fonte não confirmou que não houve publicação (fora do ar, ou ainda não consultada hoje)
 export async function BcvChip() {
   await garantirCotacaoBcvAtualizada();
   const supabase = await createClient();
   const t = await getTranslations("nav.bcvChip");
   const hoje = hojeCaracas();
 
-  // cotação lançada com data futura (o BCV publica a do dia útil seguinte) ainda não vale hoje
-  const { data: cotacao } = await supabase
-    .from("cotacao_bcv")
-    .select("data_cotacao, tasa_ves")
-    .lte("data_cotacao", hoje)
-    .order("data_cotacao", { ascending: false })
-    .limit(1)
-    .maybeSingle<{ data_cotacao: string; tasa_ves: number }>();
+  const [{ data: cotacao }, consulta] = await Promise.all([
+    // cotação lançada com data futura (o BCV publica a do dia útil seguinte) ainda não vale hoje
+    supabase
+      .from("cotacao_bcv")
+      .select("data_cotacao, tasa_ves")
+      .lte("data_cotacao", hoje)
+      .order("data_cotacao", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ data_cotacao: string; tasa_ves: number }>(),
+    buscarConsultaCotacaoBcv(),
+  ]);
 
-  const emDia = cotacao != null && cotacao.data_cotacao >= ultimoDiaUtil(hoje);
+  const emDia = cotacaoBcvEmDia(cotacao?.data_cotacao ?? null, consulta, hoje);
+  // em dia sem ser a do último dia útil: a fonte confirmou que não houve publicação (feriado)
+  const semPublicacaoNova = emDia && cotacao != null && cotacao.data_cotacao < ultimoDiaUtil(hoje);
   const descricao = !cotacao
     ? t("missing")
     : cotacao.data_cotacao === hoje
       ? t("today", { tasa: formatBs(cotacao.tasa_ves) })
-      : t(emDia ? "current" : "stale", { tasa: formatBs(cotacao.tasa_ves), date: diaMes(cotacao.data_cotacao) });
+      : t(semPublicacaoNova ? "noNewRate" : emDia ? "current" : "stale", {
+          tasa: formatBs(cotacao.tasa_ves),
+          date: diaMes(cotacao.data_cotacao),
+        });
 
   return (
     <>

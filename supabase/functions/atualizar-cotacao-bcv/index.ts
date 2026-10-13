@@ -63,7 +63,9 @@ Deno.serve(async (req) => {
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   // gravado antes de ir à fonte: requisições simultâneas do app já veem a consulta em andamento
-  await supabase.from("cotacao_bcv_consulta").upsert({ id: true, consultado_em: new Date().toISOString(), erro: null });
+  await supabase
+    .from("cotacao_bcv_consulta")
+    .upsert({ id: true, consultado_em: new Date().toISOString(), erro: null, data_fonte: null });
 
   const falhar = async (body: { error: string } & Record<string, unknown>, status: number) => {
     await supabase.from("cotacao_bcv_consulta").update({ erro: body.error }).eq("id", true);
@@ -89,6 +91,9 @@ Deno.serve(async (req) => {
   if (cotacao.tasaVes <= 0) {
     return falhar({ error: `Taxa inválida: ${cotacao.tasaVes}`, cotacao }, 422);
   }
+
+  // com erro null, diz ao app que a fonte não tem nada além do que está gravado (feriado não é atraso)
+  await supabase.from("cotacao_bcv_consulta").update({ data_fonte: cotacao.dataCotacao }).eq("id", true);
 
   const { data: anterior, error: anteriorError } = await supabase
     .from("cotacao_bcv")

@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { Building2, HardHat, InfoIcon, Receipt, TriangleAlert } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
-import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
+import { buscarConsultaCotacaoBcv, cotacaoBcvEmDia, garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
@@ -82,13 +82,6 @@ const somarDias = (dataIso: string, dias: number) => {
   return data.toISOString().slice(0, 10);
 };
 
-// último dia útil (seg–sex) até a data: o BCV não publica taxa com fecha valor de sábado ou
-// domingo, então no fim de semana a vigente é a de sexta (feriados não são considerados)
-const ultimoDiaUtil = (dataIso: string) => {
-  const diaDaSemana = new Date(`${dataIso}T00:00:00Z`).getUTCDay();
-  return somarDias(dataIso, diaDaSemana === 6 ? -1 : diaDaSemana === 0 ? -2 : 0);
-};
-
 export default async function Home({
   searchParams,
 }: {
@@ -130,6 +123,7 @@ export default async function Home({
     { data: resumoRaw, error: resumoError },
     { data: pendentesTotaisRaw, error: pendentesTotaisError },
     { data: taxasRaw, error: taxasError },
+    consultaCotacaoBcv,
   ] = await Promise.all([
       // paginadas (buscarTodas): um mês de ~300 unidades com 2 taxas e 2 rateios passa das 1000
       // linhas que a API devolve por consulta
@@ -199,6 +193,8 @@ export default async function Home({
             faturamentos_competencia: { competencia: string }[];
           }[]
         >(),
+      // depois da verificação: o aviso precisa saber se a fonte confirmou hoje que não há taxa nova
+      garantirCotacaoBcvAtualizada().then(() => buscarConsultaCotacaoBcv()),
     ]);
 
   const loadError =
@@ -293,11 +289,9 @@ export default async function Home({
     percentualEmDia: evolucao.at(-1)?.emDia ?? null,
   };
 
-  // a cotação é atualizada pelo cron; se a mais recente for anterior ao último dia útil (no fuso de
-  // Caracas), a atualização falhou e liquidações em VES usariam uma taxa vencida. Comparar com hoje
-  // dava aviso falso todo fim de semana: a DolarApi (fonte principal) só traz a taxa de segunda
-  // quando ela passa a valer, então no sábado e no domingo a mais recente é a de sexta.
-  const cotacaoDesatualizada = !cotacaoBcv || cotacaoBcv.data_cotacao < ultimoDiaUtil(hojeIso);
+  // atrasada = falta a do último dia útil e a fonte não confirmou hoje que não houve publicação
+  // (feriado bancário não é atraso); aí liquidações em VES usariam uma taxa vencida
+  const cotacaoDesatualizada = !cotacaoBcvEmDia(cotacaoBcv?.data_cotacao ?? null, consultaCotacaoBcv, hojeIso);
 
   // pelo mês de hoje, não pelo selecionado: o aviso é sobre a emissão que falta fazer agora
   const mesDeHoje = hojeIso.slice(0, 7);

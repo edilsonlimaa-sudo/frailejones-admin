@@ -10,4 +10,6 @@ export type CotacaoBcv = {
 export type CotacaoBcvConsulta = {
   consultado_em: string;
   erro: string | null;
+  // "fecha valor" que a fonte devolveu; null quando nenhuma fonte respondeu
+  data_fonte: string | null;
 };

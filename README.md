@@ -63,6 +63,11 @@ e o app não consulta de novo antes de 10 minutos (em feriado o BCV não publica
 abertas são cobertas pelo `VigiaCotacaoBcv`, que confere ao voltar pra aba e a cada 5 minutos. O botão
 "Atualizar cotação agora" usa a mesma função.
 
+Os avisos de cotação atrasada (chip do header e painel) não usam calendário de feriados: se a fonte
+foi consultada hoje com sucesso, tudo o que ela publicou já está gravado e a cotação vigente é a
+correta, mesmo anterior ao último dia útil (`cotacaoBcvEmDia`). O aviso só aparece quando falta a
+do dia e a fonte falhou ou ainda não foi consultada.
+
 No projeto remoto, depois de mudar a função ou as migrations:
 
 1. Publique a função: `npx supabase functions deploy atualizar-cotacao-bcv`
