@@ -37,8 +37,11 @@ export function resolverFiltrosLiquidacoes(params: {
 // de que mês era a dívida que o pagamento abateu, em relação ao mês de caixa listado. Mesma regra
 // de resumo_dashboard: compara só o mês da competência (a de rateio é o vencimento, não o dia 1)
 export function abonoDaLiquidacao(liquidacao: Liquidacao, mesCaixa: string): Exclude<FiltroAbono, "encargos"> | null {
-  if (!liquidacao.cobranca) return null;
-  const mesCobranca = liquidacao.cobranca.competencia.slice(0, 7);
+  return liquidacao.cobranca ? abonoDaCompetencia(liquidacao.cobranca.competencia, mesCaixa) : null;
+}
+
+export function abonoDaCompetencia(competencia: string, mesCaixa: string): Exclude<FiltroAbono, "encargos"> {
+  const mesCobranca = competencia.slice(0, 7);
   if (mesCobranca < mesCaixa) return "atrasado";
   if (mesCobranca > mesCaixa) return "adiantado";
   return "doMes";

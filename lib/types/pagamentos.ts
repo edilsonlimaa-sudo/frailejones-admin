@@ -37,13 +37,14 @@ export type CobrancaDaLiquidacao = {
   status: CobrancaStatus;
 };
 
-// outro pagamento (parcial) da mesma cobrança, visto a partir da tela de detalhe de uma liquidação
+// um pagamento (parcial ou total) da mesma cobrança, visto a partir da tela de detalhe de uma
+// liquidação: o histórico da cobrança inclui o próprio pagamento aberto
 export type PagamentoIrmao = {
   id: string;
   data_pagamento: string;
   moeda: MoedaTipo;
   valor_recebido: number;
-  valor_equivalente_usd: number;
+  forma_pagamento: FormaPagamentoTipo;
   valor_principal_abatido_usd: number;
   valor_juros_pago_usd: number;
 };
