@@ -35,7 +35,7 @@
     "unidades": "Unidades",
     "taxasCondominio": "Cuotas de Condominio",
     "rateiosExtraordinarios": "Prorrateos Extraordinarios",
-    "liquidacoes": "Liquidaciones",
+    "liquidacoes": "Pagos",
     "cotacaoBcv": "Cotización BCV",
     "groups": {
       "cadastros": "Registros",
@@ -145,7 +145,7 @@
     "evolutionNote": "Los cobros son en dólares, así que el gráfico mide deuda, no caja. \"Abonado en el mes\" es cuánto abonaron los pagos del mes a los cobros: un pago en bolívares cuenta por el monto que abonó, a la tasa BCV del día en que se liquidó. Lo emitido cuenta por el mes del cobro y lo abonado por la fecha de pago, así que un mes puede abonar más de lo que emitió cuando se pagan atrasos. Multa, intereses y saldo a favor no se incluyen. El dinero que entró, en cada moneda, está en \"Ingresos del mes\". \"Pagado en día\" es el % de lo emitido en el mes que se pagó hasta el vencimiento más los días de gracia; solo cuentan los cobros cuyo plazo ya terminó.",
     "settlement": {
       "title": "Deuda abonada en el mes",
-      "description": "Cuánto abonaron a los cobros los pagos recibidos en el mes, en dólares (pagos en bolívares a la tasa BCV del día de la liquidación)",
+      "description": "Cuánto abonaron a los cobros los pagos recibidos en el mes, en dólares (pagos en bolívares a la tasa BCV del día del pago)",
       "empty": "Ningún pago abonó cobros este mes.",
       "total": "Total abonado",
       "rows": {
@@ -655,7 +655,7 @@
     "chargesByUnitTitle": "Cobros por unidad"
   },
   "liquidacoes": {
-    "title": "Liquidaciones",
+    "title": "Pagos",
     "subtitle": "Ingresos de {month}, por la fecha del pago",
     "summaryLabel": "Resumen de caja del mes",
     "currency": {
@@ -722,7 +722,7 @@
     }
   },
   "liquidacaoDetail": {
-    "title": "Detalles de la liquidación",
+    "title": "Detalles del pago",
     "paymentCardTitle": "Datos del pago",
     "date": "Fecha",
     "amountReceived": "Valor recibido",

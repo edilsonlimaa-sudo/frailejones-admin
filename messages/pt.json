@@ -35,7 +35,7 @@
     "unidades": "Unidades",
     "taxasCondominio": "Taxas de Condomínio",
     "rateiosExtraordinarios": "Rateios Extraordinários",
-    "liquidacoes": "Liquidações",
+    "liquidacoes": "Pagamentos",
     "cotacaoBcv": "Cotação BCV",
     "groups": {
       "cadastros": "Cadastros",
@@ -142,10 +142,10 @@
       "noEntriesVes": "Nenhum pagamento em bolívares neste mês."
     },
     "chartSettled": "Abatido no mês",
-    "evolutionNote": "As cobranças são em dólares, então o gráfico mede dívida, não caixa. \"Abatido no mês\" é quanto os pagamentos do mês abateram das cobranças: um pagamento em bolívares entra pelo valor que abateu, na taxa BCV do dia em que foi liquidado. O emitido conta pelo mês da cobrança e o abatido pela data do pagamento, então um mês pode abater mais do que emitiu quando há atrasados sendo pagos. Multa, juros e saldo a favor não entram. O dinheiro que entrou, em cada moeda, está em \"Entradas do mês\". \"Pago em dia\" é o % do emitido no mês que foi pago até o vencimento mais os dias de carência; só entram as cobranças cujo prazo já acabou.",
+    "evolutionNote": "As cobranças são em dólares, então o gráfico mede dívida, não caixa. \"Abatido no mês\" é quanto os pagamentos do mês abateram das cobranças: um pagamento em bolívares entra pelo valor que abateu, na taxa BCV do dia do pagamento. O emitido conta pelo mês da cobrança e o abatido pela data do pagamento, então um mês pode abater mais do que emitiu quando há atrasados sendo pagos. Multa, juros e saldo a favor não entram. O dinheiro que entrou, em cada moeda, está em \"Entradas do mês\". \"Pago em dia\" é o % do emitido no mês que foi pago até o vencimento mais os dias de carência; só entram as cobranças cujo prazo já acabou.",
     "settlement": {
       "title": "Dívida abatida no mês",
-      "description": "Quanto os pagamentos recebidos no mês abateram das cobranças, em dólares (pagamentos em bolívares pela taxa BCV do dia da liquidação)",
+      "description": "Quanto os pagamentos recebidos no mês abateram das cobranças, em dólares (pagamentos em bolívares pela taxa BCV do dia do pagamento)",
       "empty": "Nenhum pagamento abateu cobranças neste mês.",
       "total": "Total abatido",
       "rows": {
@@ -655,7 +655,7 @@
     "chargesByUnitTitle": "Cobranças por unidade"
   },
   "liquidacoes": {
-    "title": "Liquidações",
+    "title": "Pagamentos",
     "subtitle": "Entradas de {month}, pela data do pagamento",
     "summaryLabel": "Resumo do caixa do mês",
     "currency": {
@@ -722,7 +722,7 @@
     }
   },
   "liquidacaoDetail": {
-    "title": "Detalhes da liquidação",
+    "title": "Detalhes do pagamento",
     "paymentCardTitle": "Dados do pagamento",
     "date": "Data",
     "amountReceived": "Valor recebido",
