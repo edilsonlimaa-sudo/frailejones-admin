@@ -1116,7 +1116,7 @@
     }
   },
   "acordos": {
-    "title": "Acordo de pagamento",
+    "title": "Acordos de pagamento",
     "new": "Registrar acordo",
     "emptyHint": "Para quem combinou pagar a dívida aos poucos: o acordo congela os juros das cobranças em atraso enquanto o combinado é cumprido.",
     "since": "Desde {date}",

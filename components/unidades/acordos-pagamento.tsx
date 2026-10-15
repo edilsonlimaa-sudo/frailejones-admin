@@ -113,37 +113,38 @@ export function AcordosPagamento({ unidadeId, acordos, cobrancas, podeEditar }: 
   const podeRegistrar = podeEditar && emAtrasoForaDeAcordo(cobrancas, hojeIso).length > 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="max-w-2xl">
-          <h2 className="flex items-center gap-2 text-base font-medium">
-            <HandshakeIcon className="size-4 text-muted-foreground" />
-            {t("title")}
-          </h2>
-          <p className="text-sm text-muted-foreground">{t("emptyHint")}</p>
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex max-w-2xl flex-col gap-1.5">
+            <CardTitle>{t("title")}</CardTitle>
+            <CardDescription>{t("emptyHint")}</CardDescription>
+          </div>
+          {podeRegistrar && (
+            <Button size="sm" onClick={() => setRegistrando(true)}>
+              {t("new")}
+            </Button>
+          )}
         </div>
-        {podeRegistrar && <Button onClick={() => setRegistrando(true)}>{t("new")}</Button>}
-      </div>
+      </CardHeader>
 
-      {acordos.length === 0 ? (
-        <Card>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {podeEditar && !podeRegistrar ? t("emptyNoOverdue") : t("empty")}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        acordos.map((acordo) => (
-          <DetalheAcordo
-            key={acordo.id}
-            acordo={acordo}
-            cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
-            hojeIso={hojeIso}
-            onQuebrar={podeEditar ? () => setQuebrando(acordo) : null}
-          />
-        ))
-      )}
+      <CardContent className="flex flex-col gap-4">
+        {acordos.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {podeEditar && !podeRegistrar ? t("emptyNoOverdue") : t("empty")}
+          </p>
+        ) : (
+          acordos.map((acordo) => (
+            <DetalheAcordo
+              key={acordo.id}
+              acordo={acordo}
+              cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
+              hojeIso={hojeIso}
+              onQuebrar={podeEditar ? () => setQuebrando(acordo) : null}
+            />
+          ))
+        )}
+      </CardContent>
 
       {podeEditar && (
         <>
@@ -167,7 +168,7 @@ export function AcordosPagamento({ unidadeId, acordos, cobrancas, podeEditar }: 
           </Dialog>
         </>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -198,104 +199,103 @@ function DetalheAcordo({
   const progresso = pago + falta > 0 ? (pago / (pago + falta)) * 100 : 100;
 
   return (
-    <Card>
-      <CardHeader>
+    <section className="flex flex-col gap-5 rounded-xl border p-4">
+      <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="flex flex-wrap items-center gap-2">
+          <h3 className="flex flex-wrap items-center gap-2 font-medium">
+            <HandshakeIcon className="size-4 text-muted-foreground" />
             {t("since", { date: formatDate(acordo.data_inicio) })}
             <Badge
               variant={situacao === "quebrado" ? "destructive" : situacao === "cumprido" ? "secondary" : "default"}
             >
               {t(`status.${situacao}`)}
             </Badge>
-          </CardTitle>
+          </h3>
           {onQuebrar && situacao === "vigente" && (
             <Button size="sm" variant="ghost" className="text-destructive" onClick={onQuebrar}>
               {t("break")}
             </Button>
           )}
         </div>
-        <CardDescription>
+        <p className="text-sm text-muted-foreground">
           {t(`explanation.${situacao}`, {
             date: formatDate(acordo.data_inicio),
             broken: acordo.quebrado_em ? formatDate(acordo.quebrado_em) : "",
           })}
-        </CardDescription>
+        </p>
         {acordo.observacao && (
           <p className="mt-1 rounded-lg border-l-2 border-primary/40 bg-muted/50 px-3 py-2 text-sm">
             {acordo.observacao}
           </p>
         )}
-      </CardHeader>
+      </div>
 
-      <CardContent className="flex flex-col gap-5">
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Metrica rotulo={t("detail.debtAtStart")} valor={formatUsd(devidoNoInicio)} />
-          <Metrica rotulo={t("detail.paid")} valor={formatUsd(pago)} />
+      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <Metrica rotulo={t("detail.debtAtStart")} valor={formatUsd(devidoNoInicio)} />
+        <Metrica rotulo={t("detail.paid")} valor={formatUsd(pago)} />
+        <Metrica
+          rotulo={t("detail.remaining")}
+          valor={formatUsd(falta)}
+          className={falta > 0 ? "text-destructive" : undefined}
+        />
+        {situacao === "vigente" && (
           <Metrica
-            rotulo={t("detail.remaining")}
-            valor={formatUsd(falta)}
-            className={falta > 0 ? "text-destructive" : undefined}
+            rotulo={t("detail.interestAvoided")}
+            valor={formatUsd(evitados)}
+            dica={t("detail.interestAvoidedHint")}
+            className="text-primary"
           />
-          {situacao === "vigente" && (
-            <Metrica
-              rotulo={t("detail.interestAvoided")}
-              valor={formatUsd(evitados)}
-              dica={t("detail.interestAvoidedHint")}
-              className="text-primary"
-            />
-          )}
-        </dl>
+        )}
+      </dl>
 
-        <div className="flex flex-col gap-1.5">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
-            <div className="h-full rounded-full bg-primary" style={{ width: `${progresso}%` }} />
-          </div>
-          <p className="text-xs text-muted-foreground">{t("detail.progress", { pct: Math.round(progresso) })}</p>
+      <div className="flex flex-col gap-1.5">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+          <div className="h-full rounded-full bg-primary" style={{ width: `${progresso}%` }} />
         </div>
+        <p className="text-xs text-muted-foreground">{t("detail.progress", { pct: Math.round(progresso) })}</p>
+      </div>
 
-        <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">{t("detail.chargesTitle", { count: cobrancas.length })}</h3>
-          <ul className="flex flex-col divide-y rounded-lg border">
-            {cobrancas.map((c) => {
-              const pagaEm =
-                c.status !== "pendente" && c.data_ultimo_pagamento ? dataCaixaCaracas(c.data_ultimo_pagamento) : null;
-              const pagoAqui = pagoNoAcordo(c, acordo);
-              const faltaAqui = faltaHoje(c, hojeIso);
-              return (
-                <li key={c.id} className="flex flex-col gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {c.titulo_origem}
-                      <span className="font-normal text-muted-foreground"> · {formatMes(c.competencia)}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("detail.dueOn", { date: formatDate(c.data_vencimento) })}
-                      {" · "}
-                      {c.status === "pendente"
-                        ? t("detail.pendingStatus")
-                        : pagaEm
-                          ? t("detail.paidOn", { date: formatDate(pagaEm) })
-                          : t("detail.settled")}
-                    </p>
+      <div className="flex flex-col gap-2">
+        <h4 className="text-sm font-medium">{t("detail.chargesTitle", { count: cobrancas.length })}</h4>
+        <ul className="flex flex-col divide-y rounded-lg border">
+          {cobrancas.map((c) => {
+            const pagaEm =
+              c.status !== "pendente" && c.data_ultimo_pagamento ? dataCaixaCaracas(c.data_ultimo_pagamento) : null;
+            const pagoAqui = pagoNoAcordo(c, acordo);
+            const faltaAqui = faltaHoje(c, hojeIso);
+            return (
+              <li key={c.id} className="flex flex-col gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {c.titulo_origem}
+                    <span className="font-normal text-muted-foreground"> · {formatMes(c.competencia)}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("detail.dueOn", { date: formatDate(c.data_vencimento) })}
+                    {" · "}
+                    {c.status === "pendente"
+                      ? t("detail.pendingStatus")
+                      : pagaEm
+                        ? t("detail.paidOn", { date: formatDate(pagaEm) })
+                        : t("detail.settled")}
+                  </p>
+                </div>
+                <div className="flex gap-6 text-sm tabular-nums sm:justify-end">
+                  <div className="sm:w-32 sm:text-right">
+                    <p className="text-xs text-muted-foreground">{t("detail.paidHere")}</p>
+                    <p>{formatUsd(pagoAqui)}</p>
                   </div>
-                  <div className="flex gap-6 text-sm tabular-nums sm:justify-end">
-                    <div className="sm:w-32 sm:text-right">
-                      <p className="text-xs text-muted-foreground">{t("detail.paidHere")}</p>
-                      <p>{formatUsd(pagoAqui)}</p>
-                    </div>
-                    <div className="sm:w-32 sm:text-right">
-                      <p className="text-xs text-muted-foreground">{t("detail.remainingHere")}</p>
-                      <p className={cn("font-medium", faltaAqui > 0 && "text-destructive")}>{formatUsd(faltaAqui)}</p>
-                    </div>
+                  <div className="sm:w-32 sm:text-right">
+                    <p className="text-xs text-muted-foreground">{t("detail.remainingHere")}</p>
+                    <p className={cn("font-medium", faltaAqui > 0 && "text-destructive")}>{formatUsd(faltaAqui)}</p>
                   </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
   );
 }
 

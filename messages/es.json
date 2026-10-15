@@ -1116,7 +1116,7 @@
     }
   },
   "acordos": {
-    "title": "Acuerdo de pago",
+    "title": "Acuerdos de pago",
     "new": "Registrar acuerdo",
     "emptyHint": "Para quien acordó pagar la deuda poco a poco: el acuerdo congela los intereses de los cobros vencidos mientras se cumple lo acordado.",
     "since": "Desde el {date}",
