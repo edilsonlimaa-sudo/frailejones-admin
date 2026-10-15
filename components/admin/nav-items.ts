@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import { Building2, HandCoins, HardHat, Landmark, LayoutDashboard, Plug, Receipt } from "lucide-react";
 
+import { INTEGRACOES_VISIVEIS } from "@/lib/integracoes";
+
 export type NavItem = {
   titleKey:
     | "painel"
@@ -34,10 +36,9 @@ export const navGroups: NavGroup[] = [
       { titleKey: "cotacaoBcv", url: "/cotacao-bcv", icon: Landmark },
     ],
   },
-  {
-    labelKey: "sistema",
-    items: [{ titleKey: "integracoes", url: "/integracoes", icon: Plug }],
-  },
+  ...(INTEGRACOES_VISIVEIS
+    ? [{ labelKey: "sistema" as const, items: [{ titleKey: "integracoes" as const, url: "/integracoes", icon: Plug }] }]
+    : []),
 ];
 
 const navItems: NavItem[] = navGroups.flatMap((group) => group.items);

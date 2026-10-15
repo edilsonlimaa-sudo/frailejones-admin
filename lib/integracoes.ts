@@ -5,6 +5,9 @@ import { BadgeDollarSign, HardDrive, Mail, MessageCircle, Send, Smartphone, Webh
 // ficam nas mensagens (integracoes.items.<chave>); aqui só a estrutura. Todas são de demonstração:
 // a configuração é salva na tabela integracao, mas nada a usa para chamar serviços externos.
 
+// oculta por enquanto: some da sidebar e /integracoes responde 404. Volta ligando aqui
+export const INTEGRACOES_VISIVEIS = false;
+
 export type CategoriaIntegracao = "comunicacao" | "pagamentos" | "dados";
 
 export type CampoIntegracao = {
