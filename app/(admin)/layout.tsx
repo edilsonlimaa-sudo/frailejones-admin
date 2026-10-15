@@ -28,7 +28,8 @@ export default async function AdminLayout({
   return (
     <SidebarProvider>
       <AppSidebar userEmail={data.claims.email ?? ""} />
-      <SidebarInset>
+      {/* min-w-0: conteúdo largo (abas, tabelas) rola dentro dele em vez de alargar a página */}
+      <SidebarInset className="min-w-0">
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
