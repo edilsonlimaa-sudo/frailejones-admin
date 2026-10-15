@@ -1,14 +1,21 @@
 import type { LucideIcon } from "lucide-react";
-import { Building2, HandCoins, HardHat, Landmark, LayoutDashboard, Receipt } from "lucide-react";
+import { Building2, HandCoins, HardHat, Landmark, LayoutDashboard, Plug, Receipt } from "lucide-react";
 
 export type NavItem = {
-  titleKey: "painel" | "unidades" | "taxasCondominio" | "rateiosExtraordinarios" | "liquidacoes" | "cotacaoBcv";
+  titleKey:
+    | "painel"
+    | "unidades"
+    | "taxasCondominio"
+    | "rateiosExtraordinarios"
+    | "liquidacoes"
+    | "cotacaoBcv"
+    | "integracoes";
   url: string;
   icon: LucideIcon;
 };
 
 export type NavGroup = {
-  labelKey: "cadastros" | "financeiro" | null;
+  labelKey: "cadastros" | "financeiro" | "sistema" | null;
   items: NavItem[];
 };
 
@@ -26,6 +33,10 @@ export const navGroups: NavGroup[] = [
       { titleKey: "liquidacoes", url: "/liquidacoes", icon: HandCoins },
       { titleKey: "cotacaoBcv", url: "/cotacao-bcv", icon: Landmark },
     ],
+  },
+  {
+    labelKey: "sistema",
+    items: [{ titleKey: "integracoes", url: "/integracoes", icon: Plug }],
   },
 ];
 

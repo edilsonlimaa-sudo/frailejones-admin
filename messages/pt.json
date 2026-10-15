@@ -37,9 +37,11 @@
     "rateiosExtraordinarios": "Rateios Extraordinários",
     "liquidacoes": "Pagamentos",
     "cotacaoBcv": "Cotação BCV",
+    "integracoes": "Integrações",
     "groups": {
       "cadastros": "Cadastros",
-      "financeiro": "Financeiro"
+      "financeiro": "Financeiro",
+      "sistema": "Sistema"
     },
     "account": "Conta",
     "detail": "Detalhe",
@@ -958,6 +960,137 @@
       "previewDays": "{days, plural, =0 {em dia} one {# dia de atraso} other {# dias de atraso}}",
       "previewNoCharges": "sem encargos",
       "previewCharges": "+ {value} de encargos"
+    }
+  },
+  "integracoes": {
+    "title": "Integrações",
+    "description": "Conecte o Frailejones a outros serviços para avisar moradores, conciliar pagamentos e guardar backups.",
+    "summary": "{active, plural, =0 {Nenhuma ativa} one {# ativa} other {# ativas}} de {total} disponíveis.",
+    "demoBadge": "Demonstração",
+    "demoNotice": "Integração de demonstração: a configuração fica salva, mas nenhuma mensagem, cobrança ou arquivo é enviado ao serviço.",
+    "categories": {
+      "comunicacao": "Comunicação com moradores",
+      "pagamentos": "Pagamentos",
+      "dados": "Dados e automação"
+    },
+    "status": {
+      "notConfigured": "Não configurada",
+      "active": "Ativa",
+      "paused": "Pausada"
+    },
+    "configure": "Configurar",
+    "edit": "Editar configuração",
+    "toggleLabel": "Ativar {name}",
+    "dialogTitle": "Configurar {name}",
+    "activeHint": "Desligada, a configuração fica guardada mas a integração não é usada",
+    "missingFields": "Preencha os campos obrigatórios",
+    "test": "Testar conexão",
+    "testing": "Testando...",
+    "testSuccess": "Conexão com {name} simulada com sucesso",
+    "remove": "Desconectar",
+    "confirmRemove": "Confirmar: apagar configuração",
+    "saveSuccess": "{name} configurado",
+    "removeSuccess": "{name} desconectado",
+    "activated": "{name} ativado",
+    "paused": "{name} pausado",
+    "saveError": "Erro ao salvar a integração",
+    "items": {
+      "whatsapp": {
+        "name": "WhatsApp Business",
+        "description": "Envia lembretes de vencimento e confirmações de pagamento pelo WhatsApp de cada morador.",
+        "fields": {
+          "telefone": "Número do remetente",
+          "token": "Token de acesso",
+          "diasAntes": "Lembrar quantos dias antes do vencimento"
+        },
+        "placeholders": {
+          "telefone": "+58 412 000 0000"
+        }
+      },
+      "email": {
+        "name": "E-mail",
+        "description": "Manda o estado de conta e os recibos por e-mail, com o remetente do condomínio.",
+        "fields": {
+          "remetente": "E-mail do remetente",
+          "nomeRemetente": "Nome do remetente",
+          "apiKey": "Chave da API de envio"
+        },
+        "placeholders": {
+          "remetente": "administracao@condominio.com",
+          "nomeRemetente": "Condomínio Frailejones"
+        }
+      },
+      "telegram": {
+        "name": "Telegram",
+        "description": "Avisa a administração num grupo do Telegram a cada pagamento registrado.",
+        "fields": {
+          "botToken": "Token do bot",
+          "chatId": "ID do grupo"
+        },
+        "placeholders": {
+          "chatId": "-1001234567890"
+        }
+      },
+      "pagoMovil": {
+        "name": "Pago Móvil",
+        "description": "Mostra os dados de Pago Móvil no portal e concilia os pagamentos recebidos em bolívares.",
+        "fields": {
+          "banco": "Banco",
+          "telefone": "Telefone afiliado",
+          "documento": "Cédula ou RIF"
+        },
+        "placeholders": {
+          "banco": "Escolha o banco",
+          "telefone": "0412 000 0000",
+          "documento": "J-12345678-9"
+        },
+        "options": {
+          "banco": {
+            "banesco": "Banesco",
+            "mercantil": "Mercantil",
+            "venezuela": "Banco de Venezuela",
+            "provincial": "BBVA Provincial",
+            "bnc": "BNC"
+          }
+        }
+      },
+      "zelle": {
+        "name": "Zelle",
+        "description": "Identifica as transferências em dólares pelo e-mail de aviso do Zelle.",
+        "fields": {
+          "emailRecebedor": "E-mail que recebe os pagamentos",
+          "titular": "Nome do titular"
+        },
+        "placeholders": {
+          "emailRecebedor": "pagos@condominio.com"
+        }
+      },
+      "googleDrive": {
+        "name": "Google Drive",
+        "description": "Guarda uma cópia das cobranças e pagamentos numa pasta do Drive.",
+        "fields": {
+          "pasta": "ID da pasta",
+          "frequencia": "Frequência do backup"
+        },
+        "options": {
+          "frequencia": {
+            "diaria": "Diária",
+            "semanal": "Semanal",
+            "mensal": "Mensal"
+          }
+        }
+      },
+      "webhook": {
+        "name": "Webhook",
+        "description": "Avisa outro sistema por HTTP sempre que uma cobrança é emitida ou paga.",
+        "fields": {
+          "url": "URL de destino",
+          "segredo": "Segredo de assinatura"
+        },
+        "placeholders": {
+          "url": "https://exemplo.com/webhooks/frailejones"
+        }
+      }
     }
   }
 }
