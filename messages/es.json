@@ -55,7 +55,8 @@
       "stale": "Sin tasa BCV registrada para hoy. Última: {tasa} el {date}",
       "missing": "Ninguna tasa BCV registrada",
       "missingShort": "Sin tasa"
-    }
+    },
+    "acordos": "Acuerdos de pago"
   },
   "cobrancas": {
     "tipo": {
@@ -1168,6 +1169,33 @@
       "settled": "Saldado",
       "paidHere": "Pagado en el acuerdo",
       "remainingHere": "Falta hoy"
+    }
+  },
+  "acordosPage": {
+    "title": "Acuerdos de pago",
+    "description": "Unidades que acordaron pagar la deuda poco a poco, con los intereses de los cobros vencidos congelados. Para registrar o romper un acuerdo, abra la unidad.",
+    "empty": "No hay acuerdos de pago registrados. Para registrar uno, abra la unidad y vaya a la pestaña Acuerdos.",
+    "emptyFilter": "No hay acuerdos en esta situación.",
+    "filterLabel": "Filtrar por situación",
+    "filter": {
+      "todos": "Todos ({count})",
+      "vigente": "Vigentes ({count})",
+      "cumprido": "Cumplidos ({count})",
+      "quebrado": "Rotos ({count})"
+    },
+    "summary": {
+      "active": "Acuerdos vigentes",
+      "paid": "Pagado en los vigentes",
+      "remaining": "Falta pagar en los vigentes",
+      "frozen": "Intereses congelados hoy"
+    },
+    "row": {
+      "since": "Desde el {date}",
+      "charges": "{count, plural, one {# cobro} other {# cobros}}",
+      "brokenOn": "roto el {date}",
+      "paid": "{value} pagado · {pct}%",
+      "remaining": "falta pagar",
+      "nothingLeft": "Saldado"
     }
   }
 }

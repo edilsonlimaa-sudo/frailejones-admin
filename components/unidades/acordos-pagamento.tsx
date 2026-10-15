@@ -8,7 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import { dataCaixaCaracas } from "@/lib/arrecadacao";
-import { calcularEncargos } from "@/lib/encargos";
+import { faltaHoje, pagoNoAcordo, resumirAcordo } from "@/lib/acordos";
 import { hojeCaracas } from "@/lib/fuso";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { formatUsd } from "@/lib/moeda";
@@ -30,15 +30,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export type SituacaoAcordo = "vigente" | "cumprido" | "quebrado";
-
-// cumprido não tem coluna: é o acordo não quebrado cujas cobranças já foram todas pagas
-export function situacaoDoAcordo(acordo: AcordoPagamento, cobrancas: CobrancaDaUnidade[]): SituacaoAcordo {
-  if (acordo.quebrado_em) return "quebrado";
-  const doAcordo = cobrancas.filter((c) => c.acordo?.id === acordo.id);
-  return doAcordo.some((c) => c.status === "pendente") ? "vigente" : "cumprido";
-}
-
 const somarDias = (dataIso: string, dias: number) => {
   const data = new Date(`${dataIso}T00:00:00Z`);
   data.setUTCDate(data.getUTCDate() + dias);
@@ -51,36 +42,6 @@ const emAtrasoForaDeAcordo = (cobrancas: CobrancaDaUnidade[], dataIso: string) =
   cobrancas.filter(
     (c) => c.status === "pendente" && !c.acordo && somarDias(c.data_vencimento, c.dias_graca) < dataIso,
   );
-
-// o que a cobrança deve hoje (cota em aberto + multa/juros de hoje); 0 se já foi paga
-const faltaHoje = (c: CobrancaDaUnidade, hojeIso: string) =>
-  c.status === "pendente" ? calcularEncargos(c, hojeIso).valorTotalComEncargos : 0;
-
-// o que a cobrança devia num dia passado: só os pagamentos feitos até ele contam
-const devidoNaData = (c: CobrancaDaUnidade, dataIso: string) =>
-  calcularEncargos(
-    {
-      ...c,
-      status: "pendente",
-      pagamentos: c.pagamentos.filter((p) => dataCaixaCaracas(p.data_pagamento) <= dataIso),
-    },
-    dataIso,
-  ).valorTotalComEncargos;
-
-// pagamentos feitos depois do início do acordo (cota + multa/juros)
-const pagoNoAcordo = (c: CobrancaDaUnidade, acordo: AcordoPagamento) =>
-  c.pagamentos
-    .filter((p) => dataCaixaCaracas(p.data_pagamento) > acordo.data_inicio)
-    .reduce((acc, p) => acc + p.valor_principal_abatido_usd + p.valor_juros_pago_usd, 0);
-
-// quanto de juros o acordo vigente já evitou hoje: o devido sem acordo menos o devido com ele
-const jurosEvitados = (c: CobrancaDaUnidade, hojeIso: string) =>
-  c.status === "pendente"
-    ? calcularEncargos({ ...c, acordo: null }, hojeIso).valorTotalComEncargos - faltaHoje(c, hojeIso)
-    : 0;
-
-const soma = (lista: CobrancaDaUnidade[], valor: (c: CobrancaDaUnidade) => number) =>
-  lista.reduce((acc, c) => acc + valor(c), 0);
 
 function useFormatos() {
   const locale = useLocale();
@@ -186,17 +147,11 @@ function DetalheAcordo({
 }) {
   const t = useTranslations("acordos");
   const { formatDate, formatMes } = useFormatos();
-  const situacao: SituacaoAcordo = acordo.quebrado_em
-    ? "quebrado"
-    : cobrancas.some((c) => c.status === "pendente")
-      ? "vigente"
-      : "cumprido";
-
-  const devidoNoInicio = soma(cobrancas, (c) => devidoNaData(c, acordo.data_inicio));
-  const pago = soma(cobrancas, (c) => pagoNoAcordo(c, acordo));
-  const falta = soma(cobrancas, (c) => faltaHoje(c, hojeIso));
-  const evitados = situacao === "vigente" ? soma(cobrancas, (c) => jurosEvitados(c, hojeIso)) : 0;
-  const progresso = pago + falta > 0 ? (pago / (pago + falta)) * 100 : 100;
+  const { situacao, devidoNoInicio, pago, falta, jurosEvitados: evitados, progresso } = resumirAcordo(
+    acordo,
+    cobrancas,
+    hojeIso,
+  );
 
   return (
     <section className="flex flex-col gap-5 rounded-xl border p-4">
@@ -393,7 +348,7 @@ function RegistrarAcordo({
         <div className="flex flex-col gap-2 rounded-xl bg-muted px-3 py-2.5 text-xs">
           <p className="font-medium">
             {entram.length > 0
-              ? t("preview", { count: entram.length, value: formatUsd(soma(entram, (c) => faltaHoje(c, hojeIso))) })
+              ? t("preview", { count: entram.length, value: formatUsd(entram.reduce((acc, c) => acc + faltaHoje(c, hojeIso), 0)) })
               : t("noCharges")}
           </p>
           {entram.length > 0 && (

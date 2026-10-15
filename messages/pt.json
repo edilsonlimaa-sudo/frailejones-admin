@@ -55,7 +55,8 @@
       "stale": "Sem cotação BCV lançada para hoje. Última: {tasa} em {date}",
       "missing": "Nenhuma cotação BCV cadastrada",
       "missingShort": "Sem cotação"
-    }
+    },
+    "acordos": "Acordos de pagamento"
   },
   "cobrancas": {
     "tipo": {
@@ -1168,6 +1169,33 @@
       "settled": "Quitada",
       "paidHere": "Pago no acordo",
       "remainingHere": "Falta hoje"
+    }
+  },
+  "acordosPage": {
+    "title": "Acordos de pagamento",
+    "description": "Unidades que combinaram pagar a dívida aos poucos, com os juros das cobranças em atraso congelados. Para registrar ou quebrar um acordo, abra a unidade.",
+    "empty": "Nenhum acordo de pagamento registrado. Para registrar um, abra a unidade e vá na aba Acordos.",
+    "emptyFilter": "Nenhum acordo nesta situação.",
+    "filterLabel": "Filtrar por situação",
+    "filter": {
+      "todos": "Todos ({count})",
+      "vigente": "Vigentes ({count})",
+      "cumprido": "Cumpridos ({count})",
+      "quebrado": "Quebrados ({count})"
+    },
+    "summary": {
+      "active": "Acordos vigentes",
+      "paid": "Pago nos vigentes",
+      "remaining": "Falta pagar nos vigentes",
+      "frozen": "Juros congelados hoje"
+    },
+    "row": {
+      "since": "Desde {date}",
+      "charges": "{count, plural, one {# cobrança} other {# cobranças}}",
+      "brokenOn": "quebrado em {date}",
+      "paid": "{value} pago · {pct}%",
+      "remaining": "falta pagar",
+      "nothingLeft": "Quitado"
     }
   }
 }

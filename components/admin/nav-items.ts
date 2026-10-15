@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Building2, HandCoins, HardHat, Landmark, LayoutDashboard, Plug, Receipt } from "lucide-react";
+import { Building2, HandCoins, Handshake, HardHat, Landmark, LayoutDashboard, Plug, Receipt } from "lucide-react";
 
 import { INTEGRACOES_VISIVEIS } from "@/lib/integracoes";
 
@@ -10,6 +10,7 @@ export type NavItem = {
     | "taxasCondominio"
     | "rateiosExtraordinarios"
     | "liquidacoes"
+    | "acordos"
     | "cotacaoBcv"
     | "integracoes";
   url: string;
@@ -33,6 +34,7 @@ export const navGroups: NavGroup[] = [
       { titleKey: "taxasCondominio", url: "/taxas-condominio", icon: Receipt },
       { titleKey: "rateiosExtraordinarios", url: "/rateios-extraordinarios", icon: HardHat },
       { titleKey: "liquidacoes", url: "/liquidacoes", icon: HandCoins },
+      { titleKey: "acordos", url: "/acordos", icon: Handshake },
       { titleKey: "cotacaoBcv", url: "/cotacao-bcv", icon: Landmark },
     ],
   },
