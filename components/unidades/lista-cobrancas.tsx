@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { LiquidarCobrancaDialog } from "@/components/admin/cobrancas/liquidar-cobranca-dialog";
 import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-dialog";
 import { COR_ESTADO_COBRANCA } from "@/components/unidades/cores-estado";
+import { MemoriaEncargosPopover } from "@/components/unidades/memoria-encargos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,12 +277,27 @@ function LinhaCobranca({
           </p>
           {pendente && multaJuros > 0 && (
             <p className="text-xs text-muted-foreground">
-              {t("amount.pendingSplit", { principal: formatUsd(encargos.saldoDevedor), charges: formatUsd(multaJuros) })}
+              {t.rich("amount.pendingSplit", {
+                principal: formatUsd(encargos.saldoDevedor),
+                charges: formatUsd(multaJuros),
+                method: cobranca.metodo_encargos,
+                memoria: (chunks) =>
+                  encargos.memoria ? (
+                    <MemoriaEncargosPopover memoria={encargos.memoria} total={multaJuros}>
+                      {chunks}
+                    </MemoriaEncargosPopover>
+                  ) : (
+                    chunks
+                  ),
+              })}
             </p>
           )}
           {!pendente && cobranca.valor_juros_pago_usd > 0 && (
             <p className="text-xs text-muted-foreground">
-              {t("amount.paidCharges", { charges: formatUsd(cobranca.valor_juros_pago_usd) })}
+              {t("amount.paidCharges", {
+                charges: formatUsd(cobranca.valor_juros_pago_usd),
+                method: cobranca.metodo_encargos,
+              })}
             </p>
           )}
           {cobranca.valor_credito_abatido_usd > 0 && (

@@ -35,6 +35,24 @@ export type CobrancaParaEncargos = RegrasEncargos & {
   pagamentos: PagamentoParaEncargos[];
 };
 
+// um trecho de juros com a mesma base: no mensal, meses completos seguidos (de/ate = dias em que
+// fecharam o primeiro e o último); no diário, dias entre dois pagamentos (de/ate = o intervalo)
+export type TrechoJuros = { de: string; ate: string; quantidade: number; base: number; valor: number };
+
+// o passo a passo que levou aos encargos, pra explicar o valor na tela (os valores dos trechos
+// não são arredondados: o total arredondado é o de Encargos)
+export type MemoriaEncargos = {
+  regras: RegrasEncargos;
+  // diário: fim da carência, a partir de quando corre a multa e os juros
+  prazo: string;
+  multa: { base: number; valor: number } | null;
+  trechos: TrechoJuros[];
+  // multa/juros já quitados por pagamentos anteriores
+  jaPago: number;
+  // mensal: quando fecha o próximo mês e quanto ele acrescenta sobre o saldo de hoje
+  proximoMes: { data: string; valor: number } | null;
+};
+
 export type Encargos = {
   diasAtraso: number;
   saldoDevedor: number;
@@ -42,9 +60,21 @@ export type Encargos = {
   valorMulta: number;
   valorJuros: number;
   valorTotalComEncargos: number;
+  // null quando a cobrança não tem encargos (paga, cancelada ou ainda no prazo)
+  memoria: MemoriaEncargos | null;
 };
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
+
+// só as regras (a memória vai pra tela; não precisa carregar a cobrança inteira junto)
+const regrasDe = (c: RegrasEncargos): RegrasEncargos => ({
+  metodo_encargos: c.metodo_encargos,
+  dias_graca: c.dias_graca,
+  pct_multa_atraso: c.pct_multa_atraso,
+  pct_juros_diario: c.pct_juros_diario,
+  pct_juros_mensal: c.pct_juros_mensal,
+  criterio_mes: c.criterio_mes,
+});
 
 const diasEntre = (deIso: string, ateIso: string) =>
   Math.round((Date.parse(`${ateIso}T00:00:00Z`) - Date.parse(`${deIso}T00:00:00Z`)) / MS_POR_DIA);
@@ -52,7 +82,7 @@ const diasEntre = (deIso: string, ateIso: string) =>
 // os insumos têm no máximo 8 casas (valor 2 × juros 4 + /100), então o valor exato nunca fica a
 // menos de 1e-6 centavo de um meio centavo; a folga de 1e-7 só absorve o erro do ponto flutuante e
 // faz o arredondamento bater com o round(numeric, 2) do Postgres (meio centavo arredonda pra cima)
-const arredondarCentavos = (valor: number) => Math.round(valor * 100 + 1e-7) / 100;
+export const arredondarCentavos = (valor: number) => Math.round(valor * 100 + 1e-7) / 100;
 
 // dias de atraso em relação ao vencimento (já descontada a carência) numa data de referência
 // qualquer — não depende do status atual da cobrança. Usado tanto pelo cálculo de encargos "hoje"
@@ -94,6 +124,7 @@ export function calcularEncargos(cobranca: CobrancaParaEncargos, dataReferenciaI
     valorMulta: 0,
     valorJuros: 0,
     valorTotalComEncargos: saldoDevedor,
+    memoria: null,
   };
 
   if (cobranca.status !== "pendente" || saldoDevedor <= 0) {
@@ -124,15 +155,24 @@ export function calcularEncargos(cobranca: CobrancaParaEncargos, dataReferenciaI
     pagamentos.filter((p) => p.dia <= prazoIso).reduce((acc, p) => acc + p.principal, 0);
   const multa = arredondarCentavos((Math.max(saldo, 0) * cobranca.pct_multa_atraso) / 100);
 
-  let juros = 0;
+  const baseMulta = Math.max(saldo, 0);
+
+  const trechos: TrechoJuros[] = [];
   let desde = prazoIso;
+  const somarTrecho = (ate: string) => {
+    const dias = diasEntre(desde, ate);
+    const base = Math.max(saldo, 0);
+    if (dias > 0 && base > 0) {
+      trechos.push({ de: desde, ate, quantidade: dias, base, valor: (base * cobranca.pct_juros_diario * dias) / 100 });
+    }
+  };
   for (const p of pagamentos.filter((p) => p.dia > prazoIso)) {
-    juros += (Math.max(saldo, 0) * cobranca.pct_juros_diario * diasEntre(desde, p.dia)) / 100;
+    somarTrecho(p.dia);
     saldo -= p.principal;
     desde = p.dia;
   }
-  juros += (Math.max(saldo, 0) * cobranca.pct_juros_diario * diasEntre(desde, dataReferenciaIso)) / 100;
-  juros = arredondarCentavos(juros);
+  somarTrecho(dataReferenciaIso);
+  const juros = arredondarCentavos(trechos.reduce((acc, t) => acc + t.valor, 0));
 
   const encargosPagos = cobranca.pagamentos.reduce((acc, p) => acc + p.valor_juros_pago_usd, 0);
   const valorMulta = arredondarCentavos(Math.max(multa - encargosPagos, 0));
@@ -144,6 +184,14 @@ export function calcularEncargos(cobranca: CobrancaParaEncargos, dataReferenciaI
     valorMulta,
     valorJuros,
     valorTotalComEncargos: arredondarCentavos(saldoDevedor + valorMulta + valorJuros),
+    memoria: {
+      regras: regrasDe(cobranca),
+      prazo: prazoIso,
+      multa: cobranca.pct_multa_atraso > 0 ? { base: baseMulta, valor: multa } : null,
+      trechos,
+      jaPago: encargosPagos,
+      proximoMes: null,
+    },
   };
 }
 
@@ -175,14 +223,25 @@ function calcularJurosMensais(
     principal: p.valor_principal_abatido_usd,
   }));
 
-  let juros = 0;
-  for (let n = 1; ; n++) {
+  // meses seguidos com a mesma base viram um trecho só ("9 meses × 3% de $ 33,00")
+  const trechos: TrechoJuros[] = [];
+  let n = 1;
+  for (; ; n++) {
     const fim = fimDoMesDeAtraso(cobranca.data_vencimento, cobranca.criterio_mes, n);
     if (fim > dataReferenciaIso) break;
     const abatido = pagamentos.filter((p) => p.dia < fim).reduce((acc, p) => acc + p.principal, 0);
     const emAberto = Math.max(cobranca.valor_usd - cobranca.valor_credito_abatido_usd - abatido, 0);
-    juros += (emAberto * cobranca.pct_juros_mensal) / 100;
+    const valor = (emAberto * cobranca.pct_juros_mensal) / 100;
+    const ultimo = trechos.at(-1);
+    if (ultimo && arredondarCentavos(ultimo.base) === arredondarCentavos(emAberto)) {
+      ultimo.ate = fim;
+      ultimo.quantidade += 1;
+      ultimo.valor += valor;
+    } else if (emAberto > 0) {
+      trechos.push({ de: fim, ate: fim, quantidade: 1, base: emAberto, valor });
+    }
   }
+  const juros = trechos.reduce((acc, t) => acc + t.valor, 0);
 
   const encargosPagos = cobranca.pagamentos.reduce((acc, p) => acc + p.valor_juros_pago_usd, 0);
   const valorJuros = arredondarCentavos(Math.max(arredondarCentavos(juros) - encargosPagos, 0));
@@ -193,6 +252,20 @@ function calcularJurosMensais(
     valorMulta: 0,
     valorJuros,
     valorTotalComEncargos: arredondarCentavos(saldoDevedor + valorJuros),
+    memoria: {
+      regras: regrasDe(cobranca),
+      prazo: cobranca.data_vencimento,
+      multa: null,
+      trechos,
+      jaPago: encargosPagos,
+      proximoMes:
+        cobranca.pct_juros_mensal > 0
+          ? {
+              data: fimDoMesDeAtraso(cobranca.data_vencimento, cobranca.criterio_mes, n),
+              valor: arredondarCentavos((saldoDevedor * cobranca.pct_juros_mensal) / 100),
+            }
+          : null,
+    },
   };
 }
 

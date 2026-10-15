@@ -931,8 +931,8 @@
       "cancelado": "Cancelado"
     },
     "amount": {
-      "pendingSplit": "{principal} + {charges} de multa e intereses",
-      "paidCharges": "incluye {charges} de multa e intereses",
+      "pendingSplit": "{principal} + <memoria>{charges} de {method, select, mensal {intereses} other {multa e intereses}}</memoria>",
+      "paidCharges": "incluye {charges} de {method, select, mensal {intereses} other {multa e intereses}}",
       "creditApplied": "Crédito aplicado: -{value}"
     },
     "searchPlaceholder": "Buscar por unidad o propietario..."
@@ -966,6 +966,16 @@
       "previewDays": "{days, plural, =0 {al día} one {# día de atraso} other {# días de atraso}}",
       "previewNoCharges": "sin recargos",
       "previewCharges": "+ {value} de recargos"
+    },
+    "memoria": {
+      "title": "Cómo llegamos a {value}",
+      "grace": "Período de gracia hasta el {date}: la multa y los intereses corren desde ahí.",
+      "penalty": "Multa {pct}% de {base}",
+      "monthlyStretch": "{count, plural, one {# mes completo ({from})} other {# meses completos ({from} al {to})}} × {pct}% de {base}",
+      "dailyStretch": "{count, plural, one {# día} other {# días}} ({from} al {to}) × {pct}% por día de {base}",
+      "alreadyPaid": "Ya pagado en pagos anteriores",
+      "total": "Total",
+      "nextMonth": "El próximo mes se cumple el {date} y suma {value}."
     }
   },
   "integracoes": {
