@@ -112,9 +112,18 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
                     >
                       <div className="min-w-0 flex-1">
                         <p className="flex flex-wrap items-center gap-2">
-                          <Link href={href} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
-                            {acordo.unidade?.identificacao ?? "—"}
-                          </Link>
+                          {/* a unidade leva pra aba de acordos dela; o resto da linha, pro acordo */}
+                          {acordo.unidade ? (
+                            <Link
+                              href={`/unidades/${acordo.unidade.id}?aba=acordos`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-medium hover:underline"
+                            >
+                              {acordo.unidade.identificacao}
+                            </Link>
+                          ) : (
+                            <span className="font-medium">—</span>
+                          )}
                           {acordo.unidade?.proprietario && (
                             <span className="truncate text-sm text-muted-foreground">
                               {acordo.unidade.proprietario.nome}
