@@ -12,21 +12,24 @@ type AcordoBase = { data_inicio: string; quebrado_em: string | null };
 export const faltaHoje = (c: CobrancaParaEncargos, hojeIso: string) =>
   c.status === "pendente" ? calcularEncargos(c, hojeIso).valorTotalComEncargos : 0;
 
-// o que a cobrança devia num dia passado: só os pagamentos feitos até ele contam
-export const devidoNaData = (c: CobrancaParaEncargos, dataIso: string) =>
+// O dia do início já é do acordo: um pagamento feito nesse dia é pagamento do acordo (é o caso
+// comum, combinar e pagar a primeira parte no mesmo dia), não reduz a dívida com que ele começou.
+
+// o que a cobrança devia no começo do dia do início do acordo: só pagamentos de antes contam
+export const devidoNoInicio = (c: CobrancaParaEncargos, acordo: AcordoBase) =>
   calcularEncargos(
     {
       ...c,
       status: "pendente",
-      pagamentos: c.pagamentos.filter((p) => dataCaixaCaracas(p.data_pagamento) <= dataIso),
+      pagamentos: c.pagamentos.filter((p) => dataCaixaCaracas(p.data_pagamento) < acordo.data_inicio),
     },
-    dataIso,
+    acordo.data_inicio,
   ).valorTotalComEncargos;
 
-// pagamentos feitos depois do início do acordo (cota + multa/juros)
+// pagamentos feitos a partir do dia do início do acordo (cota + multa/juros)
 export const pagoNoAcordo = (c: CobrancaParaEncargos, acordo: AcordoBase) =>
   c.pagamentos
-    .filter((p) => dataCaixaCaracas(p.data_pagamento) > acordo.data_inicio)
+    .filter((p) => dataCaixaCaracas(p.data_pagamento) >= acordo.data_inicio)
     .reduce((acc, p) => acc + p.valor_principal_abatido_usd + p.valor_juros_pago_usd, 0);
 
 // quanto de juros o acordo já evitou hoje: o devido sem acordo menos o devido com ele
@@ -60,7 +63,7 @@ export function resumirAcordo(acordo: AcordoBase, cobrancas: CobrancaParaEncargo
   return {
     situacao,
     cobrancas: cobrancas.length,
-    devidoNoInicio: soma((c) => devidoNaData(c, acordo.data_inicio)),
+    devidoNoInicio: soma((c) => devidoNoInicio(c, acordo)),
     pago,
     falta,
     jurosEvitados: situacao === "vigente" ? soma((c) => jurosEvitados(c, hojeIso)) : 0,
