@@ -19,6 +19,7 @@ import { TabsNaUrl } from "@/components/tabs-na-url";
 import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
 import { EmitirCobrancasDoMesButton } from "@/components/admin/taxas-condominio/emitir-cobrancas-do-mes-button";
 import { VincularUnidadesTaxaForm } from "@/components/admin/taxas-condominio/vincular-unidades-taxa-form";
+import { ResumoRegrasEncargos } from "@/components/admin/encargos/resumo-regras-encargos";
 
 type TaxaCondominioDetailTabsProps = {
   abaInicial: AbaTaxa;
@@ -69,9 +70,6 @@ export async function TaxaCondominioDetailTabs({
     timeStyle: "short",
     timeZone: FUSO_CARACAS,
   });
-  // percentuais vêm do banco como número cru (0.1): formata no idioma da tela (0,1)
-  const formatPercentual = (valor: number) =>
-    new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 4 }).format(valor);
   const emitidas = resumo.cobrancas;
   const progresso = resumo.esperado > 0 ? Math.min(100, (resumo.recaudado / resumo.esperado) * 100) : 0;
 
@@ -81,9 +79,7 @@ export async function TaxaCondominioDetailTabs({
       competencia={mes.competencia}
       dataVencimento={mes.dataVencimento}
       valorUsd={taxa.valor_usd}
-      pctMultaAtraso={taxa.pct_multa_atraso}
-      pctJurosDiario={taxa.pct_juros_diario}
-      diasGraca={taxa.dias_graca}
+      regras={taxa}
       unidades={naoEmitidas}
       mesLabel={mes.label}
       className="self-center"
@@ -178,10 +174,9 @@ export async function TaxaCondominioDetailTabs({
               {t("rules", {
                 value: formatUsd(taxa.valor_usd),
                 day: taxa.dia_vencimento,
-                penalty: formatPercentual(taxa.pct_multa_atraso),
-                interest: formatPercentual(taxa.pct_juros_diario),
-                grace: taxa.dias_graca,
               })}
+              {" · "}
+              <ResumoRegrasEncargos regras={taxa} />
             </p>
           </CardContent>
         </Card>

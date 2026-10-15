@@ -20,6 +20,7 @@ import { resumirProgresso, type SituacaoProgresso } from "@/lib/progresso-cobran
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { cn } from "@/lib/utils";
 import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
+import { ResumoRegrasEncargos } from "@/components/admin/encargos/resumo-regras-encargos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,13 +52,11 @@ export default async function RateioExtraordinarioDetalhePage({
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
   const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
   const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
-  const formatPercentual = (valor: number) =>
-    new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 4 }).format(valor);
 
   const { data: despesa, error: despesaError } = await supabase
     .from("despesas_extraordinarias")
     .select(
-      "id, titulo, descricao, valor_total_usd, valor_por_unidade_usd, data_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, created_at",
+      "id, titulo, descricao, valor_total_usd, valor_por_unidade_usd, data_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, metodo_encargos, pct_juros_mensal, criterio_mes, created_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -214,11 +213,9 @@ export default async function RateioExtraordinarioDetalhePage({
             <p>
               {tRateio("rules", {
                 value: formatUsd(despesa.valor_por_unidade_usd),
-                // percentuais vêm do banco como número cru (0.1): formata no idioma da tela (0,1)
-                penalty: formatPercentual(despesa.pct_multa_atraso),
-                interest: formatPercentual(despesa.pct_juros_diario),
-                grace: despesa.dias_graca,
               })}
+              {" · "}
+              <ResumoRegrasEncargos regras={despesa} />
             </p>
             <p>{tRateio("lockedNote", { date: formatDate(dataCaixaCaracas(despesa.created_at)), count: participantes })}</p>
           </div>

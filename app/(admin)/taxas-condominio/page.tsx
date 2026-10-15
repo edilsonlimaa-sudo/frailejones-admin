@@ -28,7 +28,7 @@ export default async function TaxasCondominioPage() {
   const { data: taxas, error } = await supabase
     .from("taxa_condominio")
     .select(
-      "id, titulo, valor_usd, dia_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, ativo, created_at, taxa_condominio_unidades(count), cobrancas(count), faturamentos_competencia(competencia)",
+      "id, titulo, valor_usd, dia_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, metodo_encargos, pct_juros_mensal, criterio_mes, ativo, created_at, taxa_condominio_unidades(count), cobrancas(count), faturamentos_competencia(competencia)",
     )
     .order("ativo", { ascending: false })
     .order("titulo", { ascending: true })
@@ -114,9 +114,12 @@ export default async function TaxasCondominioPage() {
         titulo: taxa.titulo,
         valor_usd: taxa.valor_usd,
         dia_vencimento: taxa.dia_vencimento,
+        metodo_encargos: taxa.metodo_encargos,
         pct_multa_atraso: taxa.pct_multa_atraso,
         pct_juros_diario: taxa.pct_juros_diario,
         dias_graca: taxa.dias_graca,
+        pct_juros_mensal: taxa.pct_juros_mensal,
+        criterio_mes: taxa.criterio_mes,
         ativo: taxa.ativo,
         created_at: taxa.created_at,
       }))}

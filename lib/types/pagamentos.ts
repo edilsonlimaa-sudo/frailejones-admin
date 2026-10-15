@@ -1,3 +1,4 @@
+import type { RegrasEncargos } from "@/lib/encargos";
 import type { MoedaTipo } from "@/lib/types/creditos";
 import type { CobrancaStatus, CobrancaTipo } from "@/lib/types/cobrancas";
 
@@ -22,7 +23,7 @@ export type Liquidacao = {
 };
 
 // a cobrança que este pagamento (parcial ou total) liquidou, vista a partir da tela de detalhe da liquidação
-export type CobrancaDaLiquidacao = {
+export type CobrancaDaLiquidacao = RegrasEncargos & {
   id: string;
   tipo: CobrancaTipo;
   descricao: string;
@@ -31,9 +32,6 @@ export type CobrancaDaLiquidacao = {
   valor_credito_abatido_usd: number;
   data_emissao: string;
   data_vencimento: string;
-  dias_graca: number;
-  pct_multa_atraso: number;
-  pct_juros_diario: number;
   status: CobrancaStatus;
 };
 

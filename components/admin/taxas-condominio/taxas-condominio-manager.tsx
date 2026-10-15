@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TaxaCondominioFormDialog } from "@/components/admin/taxas-condominio/taxa-condominio-form-dialog";
+import { ResumoRegrasEncargos } from "@/components/admin/encargos/resumo-regras-encargos";
 
 // situação operacional de cada cuota, calculada no servidor
 export type SituacaoTaxa = {
@@ -77,9 +78,6 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
     );
     return texto.charAt(0).toUpperCase() + texto.slice(1);
   };
-  // percentuais vêm do banco como número cru (0.1): formata no idioma da tela (0,1)
-  const formatPercentual = (valor: number) =>
-    new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 4 }).format(valor);
 
   const [taxasList, setTaxasList] = useState(taxas);
 
@@ -199,10 +197,9 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
                         {t("rulesLine", {
                           day: taxa.dia_vencimento,
                           units: s.unidadesVinculadas,
-                          penalty: formatPercentual(taxa.pct_multa_atraso),
-                          interest: formatPercentual(taxa.pct_juros_diario),
-                          grace: taxa.dias_graca,
                         })}
+                        {" · "}
+                        <ResumoRegrasEncargos regras={taxa} />
                       </p>
                     </div>
 

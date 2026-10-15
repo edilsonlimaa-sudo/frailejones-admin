@@ -87,7 +87,7 @@ export default async function LiquidacaoDetalhePage({
   const { data: pagamentoRow, error: pagamentoError } = await supabase
     .from("pagamentos")
     .select(
-      "id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, tasa_bcv_aplicada, forma_pagamento, referencia_bancaria, comprovante_url, observacao, unidade:unidades(id, identificacao, proprietario:proprietarios(id, nome)), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, cobranca:cobrancas(id, tipo, descricao, competencia, valor_usd, valor_credito_abatido_usd, data_emissao, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, status)), creditos_movimentacoes(id, valor, moeda, descricao, created_at)",
+      "id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, tasa_bcv_aplicada, forma_pagamento, referencia_bancaria, comprovante_url, observacao, unidade:unidades(id, identificacao, proprietario:proprietarios(id, nome)), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, cobranca:cobrancas(id, tipo, descricao, competencia, valor_usd, valor_credito_abatido_usd, data_emissao, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, status)), creditos_movimentacoes(id, valor, moeda, descricao, created_at)",
     )
     .eq("id", id)
     .maybeSingle<PagamentoRow>();

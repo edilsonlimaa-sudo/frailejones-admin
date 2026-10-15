@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { CircleCheck, CircleAlert } from "lucide-react";
 
 import { dataCaixaCaracas } from "@/lib/arrecadacao";
-import { calcularDiasAtrasoNaData, calcularEncargos } from "@/lib/encargos";
+import { calcularDiasAtrasoNaData, calcularEncargos, type RegrasEncargos } from "@/lib/encargos";
 import { formatBs, formatMoeda, formatTasa, formatUsd, encontrarTasaNaData, type CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { FUSO_CARACAS } from "@/lib/fuso";
@@ -17,16 +17,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 const round2 = (valor: number) => Math.round(valor * 100) / 100;
 
-type CobrancaDoPagamento = Pick<
-  CobrancaDaUnidade,
-  | "descricao"
-  | "valor_usd"
-  | "valor_credito_abatido_usd"
-  | "data_vencimento"
-  | "dias_graca"
-  | "pct_multa_atraso"
-  | "pct_juros_diario"
->;
+type CobrancaDoPagamento = RegrasEncargos &
+  Pick<CobrancaDaUnidade, "descricao" | "valor_usd" | "valor_credito_abatido_usd" | "data_vencimento">;
 
 // reconstrói, pra um pagamento, o que a cobrança devia no momento e o que o pagamento registrou.
 // Cota pendente é exata (valor - saldo a favor aplicado na emissão - principal dos pagamentos

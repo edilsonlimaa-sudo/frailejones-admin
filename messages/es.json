@@ -494,9 +494,6 @@
       "titlePlaceholder": "Ej: Cuota ordinaria 2026",
       "valueLabel": "Valor ($)",
       "dueDayLabel": "Día de vencimiento",
-      "penaltyLabel": "Multa (%)",
-      "dailyInterestLabel": "Interés/día (%)",
-      "gracePeriodLabel": "Carencia (días)",
       "activeHint": "Solo las cuotas activas deben usarse para generar nuevos cobros.",
       "invalidDueDay": "El día de vencimiento debe ser un número entre 1 y 31.",
       "updateSuccess": "Cuota de condominio actualizada.",
@@ -504,7 +501,7 @@
       "saveError": "Error al guardar la cuota de condominio."
     },
     "inactive": "Inactiva",
-    "rulesLine": "Vence el día {day} · {units, plural, one {# unidad} other {# unidades}} · Multa {penalty}% · Interés {interest}% por día · {grace, plural, =0 {sin gracia} one {# día de gracia} other {# días de gracia}}",
+    "rulesLine": "Vence el día {day} · {units, plural, one {# unidad} other {# unidades}}",
     "notIssuedAlert": "{count, plural, one {# cuota sin emitir} other {# cuotas sin emitir}} en {month}:",
     "monthNotIssued": "{month}: sin emitir",
     "issueAction": "Emitir",
@@ -542,7 +539,7 @@
     "toCollect": "Por cobrar",
     "toCollectDetail": "{count, plural, one {# cobro pendiente} other {# cobros pendientes}}, con multa e intereses de hoy",
     "chargesCount": "{count, plural, one {# cobro} other {# cobros}}",
-    "rules": "{value} por unidad · vence el día {day} · Multa {penalty}% · Interés {interest}% por día · {grace, plural, =0 {sin período de gracia} one {# día de gracia} other {# días de gracia}}",
+    "rules": "{value} por unidad · vence el día {day}",
     "noChargesYet": "Aún no hay cobros emitidos para {month}. {count, plural, one {# unidad vinculada recibirá} other {# unidades vinculadas recibirán}} el cobro.",
     "remainingUnits": "{count, plural, one {# unidad vinculada todavía no tiene} other {# unidades vinculadas todavía no tienen}} cobro este mes.",
     "linkedUnitsCount": "{linked} de {total} unidades reciben esta cuota"
@@ -603,9 +600,6 @@
       "descriptionPlaceholder": "Detalles de la reparación o gasto",
       "totalValueLabel": "Valor total ($)",
       "dueDateLabel": "Vencimiento",
-      "penaltyLabel": "Multa (%)",
-      "dailyInterestLabel": "Interés/día (%)",
-      "gracePeriodLabel": "Carencia (días)",
       "next": "Siguiente",
       "createSuccess": "{count, plural, one {Prorrateo extraordinario registrado y # cobro generado.} other {Prorrateo extraordinario registrado y # cobros generados.}}",
       "saveError": "Error al guardar el prorrateo extraordinario.",
@@ -650,7 +644,7 @@
     "toCollectDetail": "{count, plural, one {# cobro pendiente} other {# cobros pendientes}}, con multa e intereses de hoy",
     "expected": "Esperado",
     "expectedRounding": "Gasto de {total} ({diff} por redondeo)",
-    "rules": "{value} por unidad · Multa {penalty}% · Interés {interest}% por día · {grace, plural, =0 {sin período de gracia} one {# día de gracia} other {# días de gracia}}",
+    "rules": "{value} por unidad",
     "lockedNote": "Cobros emitidos el {date} a {count, plural, one {# unidad} other {# unidades}}. Un prorrateo con cobros emitidos no se puede editar.",
     "chargesByUnitTitle": "Cobros por unidad"
   },
@@ -934,5 +928,36 @@
       "creditApplied": "Crédito aplicado: -{value}"
     },
     "searchPlaceholder": "Buscar por unidad o propietario..."
+  },
+  "encargos": {
+    "resumo": {
+      "diario": "Multa {penalty}% · Interés {interest}% por día · {grace, plural, =0 {sin período de gracia} one {# día de gracia} other {# días de gracia}}",
+      "mensal": "Interés {interest}% por mes completo de atraso ({criterion, select, dias_corridos {cada 30 días} other {el mismo día del mes siguiente}}) · sin multa"
+    },
+    "form": {
+      "methodLabel": "Multa e intereses por atraso",
+      "methods": {
+        "mensal": "Interés mensual",
+        "diario": "Recargos diarios"
+      },
+      "methodHints": {
+        "mensal": "Un porcentaje por cada mes completo de atraso, sin multa ni período de gracia.",
+        "diario": "Multa única + interés por día, con período de gracia."
+      },
+      "penaltyLabel": "Multa (%)",
+      "dailyInterestLabel": "Interés/día (%)",
+      "gracePeriodLabel": "Carencia (días)",
+      "monthlyInterestLabel": "Interés/mes (%)",
+      "monthCriterionLabel": "El mes de atraso se cumple",
+      "criteria": {
+        "dias_corridos": "Cada 30 días",
+        "mesmo_dia": "El mismo día del mes siguiente"
+      },
+      "previewTitle": "Ejemplo con una cuota de {value} vencida el {date}:",
+      "previewRow": "Pagada el {date}",
+      "previewDays": "{days, plural, =0 {al día} one {# día de atraso} other {# días de atraso}}",
+      "previewNoCharges": "sin recargos",
+      "previewCharges": "+ {value} de recargos"
+    }
   }
 }

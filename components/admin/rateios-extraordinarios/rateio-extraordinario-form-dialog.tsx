@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { TriangleAlertIcon } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { hojeCaracas } from "@/lib/fuso";
+import { paramsRegrasEncargos } from "@/lib/encargos";
 import { formatUsd } from "@/lib/moeda";
 import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias";
 import type { Unidade } from "@/lib/types/unidades";
@@ -22,6 +24,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SeletorUnidades } from "@/components/admin/unidades/seletor-unidades";
+import {
+  CamposEncargos,
+  regrasDoForm,
+  regrasFormIniciais,
+} from "@/components/admin/encargos/campos-encargos";
 
 type RateioExtraordinarioFormDialogProps = {
   open: boolean;
@@ -72,9 +79,7 @@ function RateioExtraordinarioFormFields({
   const [descricao, setDescricao] = useState("");
   const [valorTotalUsd, setValorTotalUsd] = useState("");
   const [dataVencimento, setDataVencimento] = useState("");
-  const [pctMultaAtraso, setPctMultaAtraso] = useState("0");
-  const [pctJurosDiario, setPctJurosDiario] = useState("0");
-  const [diasGraca, setDiasGraca] = useState("0");
+  const [regras, setRegras] = useState(() => regrasFormIniciais());
   const [selecionados, setSelecionados] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,9 +125,7 @@ function RateioExtraordinarioFormFields({
           p_valor_total_usd: Number(valorTotalUsd),
           p_valor_por_unidade_usd: valorPorUnidadeUsd,
           p_data_vencimento: dataVencimento,
-          p_pct_multa_atraso: Number(pctMultaAtraso || 0),
-          p_pct_juros_diario: Number(pctJurosDiario || 0),
-          p_dias_graca: Number(diasGraca || 0),
+          ...paramsRegrasEncargos(regrasDoForm(regras)),
           p_unidade_ids: unidadeIds,
         })
         .single<Omit<DespesaExtraordinaria, "unidade_ids">>();
@@ -202,41 +205,12 @@ function RateioExtraordinarioFormFields({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="pct_multa_atraso">{t("penaltyLabel")}</Label>
-                  <Input
-                    id="pct_multa_atraso"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={pctMultaAtraso}
-                    onChange={(e) => setPctMultaAtraso(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="pct_juros_diario">{t("dailyInterestLabel")}</Label>
-                  <Input
-                    id="pct_juros_diario"
-                    type="number"
-                    min="0"
-                    step="0.0001"
-                    value={pctJurosDiario}
-                    onChange={(e) => setPctJurosDiario(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="dias_graca">{t("gracePeriodLabel")}</Label>
-                  <Input
-                    id="dias_graca"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={diasGraca}
-                    onChange={(e) => setDiasGraca(e.target.value)}
-                  />
-                </div>
-              </div>
+              <CamposEncargos
+                value={regras}
+                onChange={setRegras}
+                valorExemplo={100}
+                vencimentoExemplo={dataVencimento || hojeCaracas()}
+              />
             </>
           ) : (
             <SeletorUnidades

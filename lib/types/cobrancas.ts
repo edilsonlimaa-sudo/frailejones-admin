@@ -1,9 +1,10 @@
+import type { RegrasEncargos } from "@/lib/encargos";
 import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
 
 export type CobrancaTipo = "ordinaria" | "extraordinaria";
 export type CobrancaStatus = "pendente" | "pago" | "cancelado";
 
-export type CobrancaDaUnidade = {
+export type CobrancaDaUnidade = RegrasEncargos & {
   id: string;
   tipo: CobrancaTipo;
   descricao: string;
@@ -17,8 +18,5 @@ export type CobrancaDaUnidade = {
   data_ultimo_pagamento: string | null;
   pagamentos: PagamentoDaCobranca[];
   data_vencimento: string;
-  dias_graca: number;
-  pct_multa_atraso: number;
-  pct_juros_diario: number;
   status: CobrancaStatus;
 };

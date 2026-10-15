@@ -40,6 +40,9 @@ erDiagram
         numeric pct_multa_atraso "congelado em cobrancas na emissao"
         numeric pct_juros_diario "congelado em cobrancas na emissao"
         int dias_graca "congelado em cobrancas na emissao"
+        metodo_encargos_tipo metodo_encargos "diario ou mensal, congelado em cobrancas na emissao"
+        numeric pct_juros_mensal "so no metodo mensal, congelado em cobrancas na emissao"
+        criterio_mes_tipo criterio_mes "so no metodo mensal, congelado em cobrancas na emissao"
         boolean ativo
         timestamptz created_at
     }
@@ -70,6 +73,9 @@ erDiagram
         numeric pct_multa_atraso "congelado em cobrancas na emissao"
         numeric pct_juros_diario "congelado em cobrancas na emissao"
         int dias_graca "congelado em cobrancas na emissao"
+        metodo_encargos_tipo metodo_encargos "diario ou mensal, congelado em cobrancas na emissao"
+        numeric pct_juros_mensal "so no metodo mensal, congelado em cobrancas na emissao"
+        criterio_mes_tipo criterio_mes "so no metodo mensal, congelado em cobrancas na emissao"
         timestamptz created_at
     }
 
@@ -92,6 +98,9 @@ erDiagram
         numeric pct_multa_atraso "snapshot congelado na emissao"
         numeric pct_juros_diario "snapshot congelado na emissao"
         int dias_graca "snapshot congelado na emissao"
+        metodo_encargos_tipo metodo_encargos "diario ou mensal, snapshot congelado na emissao"
+        numeric pct_juros_mensal "so no metodo mensal, snapshot congelado na emissao"
+        criterio_mes_tipo criterio_mes "so no metodo mensal, snapshot congelado na emissao"
         cobranca_status status "pendente, pago ou cancelado"
         uuid taxa_condominio_id FK "obrigatorio se tipo=ordinaria, senao nulo"
         uuid despesa_extraordinaria_id FK "obrigatorio se tipo=extraordinaria, senao nulo"

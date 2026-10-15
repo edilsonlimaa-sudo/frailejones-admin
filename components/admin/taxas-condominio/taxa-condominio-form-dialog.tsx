@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
+import { hojeCaracas } from "@/lib/fuso";
 import { createClient } from "@/lib/supabase/client";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  CamposEncargos,
+  regrasDoForm,
+  regrasFormIniciais,
+} from "@/components/admin/encargos/campos-encargos";
 
 type TaxaCondominioFormDialogProps = {
   open: boolean;
@@ -47,6 +53,15 @@ export function TaxaCondominioFormDialog({
   );
 }
 
+// vencimento da taxa no mês corrente (Caracas), só pra prévia dos encargos: dia inválido vira 1
+// e dia maior que o mês cai no último dia
+function vencimentoNoMesAtual(dia: number): string {
+  const [ano, mes] = hojeCaracas().split("-").map(Number);
+  const ultimoDia = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+  const diaValido = Number.isInteger(dia) && dia >= 1 ? Math.min(dia, ultimoDia) : 1;
+  return `${ano}-${String(mes).padStart(2, "0")}-${String(diaValido).padStart(2, "0")}`;
+}
+
 type TaxaCondominioFormFieldsProps = {
   taxa: TaxaCondominio | null;
   onSaved: (taxa: TaxaCondominio) => void;
@@ -61,13 +76,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
   const [titulo, setTitulo] = useState(taxa?.titulo ?? "");
   const [valorUsd, setValorUsd] = useState(taxa ? String(taxa.valor_usd) : "");
   const [diaVencimento, setDiaVencimento] = useState(taxa ? String(taxa.dia_vencimento) : "");
-  const [pctMultaAtraso, setPctMultaAtraso] = useState(
-    taxa ? String(taxa.pct_multa_atraso) : "0",
-  );
-  const [pctJurosDiario, setPctJurosDiario] = useState(
-    taxa ? String(taxa.pct_juros_diario) : "0",
-  );
-  const [diasGraca, setDiasGraca] = useState(taxa ? String(taxa.dias_graca) : "0");
+  const [regras, setRegras] = useState(() => regrasFormIniciais(taxa ?? undefined));
   const [ativo, setAtivo] = useState(taxa?.ativo ?? true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,9 +99,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
         titulo: titulo.trim(),
         valor_usd: Number(valorUsd),
         dia_vencimento: dia,
-        pct_multa_atraso: Number(pctMultaAtraso || 0),
-        pct_juros_diario: Number(pctJurosDiario || 0),
-        dias_graca: Number(diasGraca || 0),
+        ...regrasDoForm(regras),
         ativo,
       };
 
@@ -102,7 +109,7 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
 
       const { data, error: saveError } = await query
         .select(
-          "id, titulo, valor_usd, dia_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, ativo, created_at",
+          "id, titulo, valor_usd, dia_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, metodo_encargos, pct_juros_mensal, criterio_mes, ativo, created_at",
         )
         .single();
 
@@ -163,41 +170,12 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="pct_multa_atraso">{t("penaltyLabel")}</Label>
-            <Input
-              id="pct_multa_atraso"
-              type="number"
-              min="0"
-              step="0.01"
-              value={pctMultaAtraso}
-              onChange={(e) => setPctMultaAtraso(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="pct_juros_diario">{t("dailyInterestLabel")}</Label>
-            <Input
-              id="pct_juros_diario"
-              type="number"
-              min="0"
-              step="0.0001"
-              value={pctJurosDiario}
-              onChange={(e) => setPctJurosDiario(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="dias_graca">{t("gracePeriodLabel")}</Label>
-            <Input
-              id="dias_graca"
-              type="number"
-              min="0"
-              step="1"
-              value={diasGraca}
-              onChange={(e) => setDiasGraca(e.target.value)}
-            />
-          </div>
-        </div>
+        <CamposEncargos
+          value={regras}
+          onChange={setRegras}
+          valorExemplo={Number(valorUsd) > 0 ? Number(valorUsd) : 100}
+          vencimentoExemplo={vencimentoNoMesAtual(Number(diaVencimento))}
+        />
 
         <div className="flex items-center justify-between rounded-2xl border border-input bg-input/30 px-3 py-2.5">
           <div className="flex flex-col">

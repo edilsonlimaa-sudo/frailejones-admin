@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 
+import { paramsRegrasEncargos, type RegrasEncargos } from "@/lib/encargos";
 import { createClient } from "@/lib/supabase/client";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { formatUsd } from "@/lib/moeda";
@@ -26,9 +27,7 @@ type EmitirCobrancasDoMesButtonProps = {
   competencia: string;
   dataVencimento: string;
   valorUsd: number;
-  pctMultaAtraso: number;
-  pctJurosDiario: number;
-  diasGraca: number;
+  regras: RegrasEncargos;
   unidades: { id: string; identificacao: string }[];
   // "Octubre de 2026", pro título da confirmação
   mesLabel: string;
@@ -40,9 +39,7 @@ export function EmitirCobrancasDoMesButton({
   competencia,
   dataVencimento,
   valorUsd,
-  pctMultaAtraso,
-  pctJurosDiario,
-  diasGraca,
+  regras,
   unidades,
   mesLabel,
   className,
@@ -69,9 +66,7 @@ export function EmitirCobrancasDoMesButton({
         p_competencia: competencia,
         p_data_vencimento: dataVencimento,
         p_valor_usd: valorUsd,
-        p_pct_multa_atraso: pctMultaAtraso,
-        p_pct_juros_diario: pctJurosDiario,
-        p_dias_graca: diasGraca,
+        ...paramsRegrasEncargos(regras),
         p_unidade_ids: unidades.map((unidade) => unidade.id),
       });
 

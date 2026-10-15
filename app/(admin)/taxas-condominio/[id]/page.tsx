@@ -50,7 +50,7 @@ export default async function TaxaCondominioDetalhePage({
   const { data: taxa, error: taxaError } = await supabase
     .from("taxa_condominio")
     .select(
-      "id, titulo, valor_usd, dia_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, ativo, created_at",
+      "id, titulo, valor_usd, dia_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, metodo_encargos, pct_juros_mensal, criterio_mes, ativo, created_at",
     )
     .eq("id", id)
     .maybeSingle<TaxaCondominio>();
