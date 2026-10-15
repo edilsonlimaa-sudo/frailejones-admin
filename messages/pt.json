@@ -363,10 +363,8 @@
       "actions": "Ações"
     },
     "credits": {
-      "walletUsd": "Dólares ($)",
-      "walletVes": "Bolívares (Bs.)",
-      "emptyUsd": "Nenhuma movimentação no saldo em dólares.",
-      "emptyVes": "Nenhuma movimentação no saldo em bolívares.",
+      "balance": "Saldo a favor",
+      "empty": "Nenhuma movimentação no saldo a favor.",
       "date": "Data",
       "type": "Tipo",
       "value": "Valor",
@@ -397,9 +395,8 @@
     "useTotal": "Usar o total",
     "equivalentInUsd": "Equivale a {value} · taxa {rate}",
     "coversTotal": "Cobre o total devido.",
-    "surplusBelowMinimum": "Os {value} restantes são menores que o mínimo de {minimum} para saldo a favor e não serão registrados.",
-    "surplusVes": "Sobram {value}, que ficarão como saldo a favor em bolívares da unidade.",
-    "surplusUsd": "Sobram {value}, que ficarão como saldo a favor em dólares da unidade.",
+    "surplusVes": "Sobram {value}, que ficarão como {usd} de saldo a favor da unidade.",
+    "surplusUsd": "Sobram {value}, que ficarão como saldo a favor da unidade.",
     "remaining": "Faltam {value}. A cobrança continua pendente pela diferença.",
     "paymentMethodLabel": "Forma de pagamento",
     "paymentMethod": {
@@ -452,7 +449,7 @@
     "toPenalty": "Para multa e juros",
     "toFee": "Para a cota",
     "creditGenerated": "Saldo a favor gerado",
-    "notCredited": "Não creditado (abaixo do mínimo)",
+    "notCredited": "Não creditado (regra antiga de mínimo)",
     "remaining": "Ficaram {value} pendentes na cobrança.",
     "settled": "Este pagamento quitou a cobrança.",
     "observation": "Observação"
@@ -736,7 +733,7 @@
         "principal": "Abateu a cobrança",
         "encargos": "Multa e juros",
         "credito": "Virou saldo a favor da unidade",
-        "absorvido": "Sobra absorvida (abaixo de {min})"
+        "absorvido": "Sobra absorvida (regra antiga de mínimo de $ 1)"
       }
     },
     "lateBy": "{count, plural, one {Pago # dia depois do prazo} other {Pago # dias depois do prazo}}",

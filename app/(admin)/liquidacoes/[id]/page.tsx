@@ -16,7 +16,7 @@ import type { MoedaTipo } from "@/lib/types/creditos";
 import { dataCaixaCaracas } from "@/lib/arrecadacao";
 import { calcularDiasAtrasoNaData } from "@/lib/encargos";
 import { abonoDaCompetencia } from "@/lib/listagem-liquidacoes";
-import { formatMoeda, formatTasa, formatUsd, SOBRA_MINIMA_USD } from "@/lib/moeda";
+import { formatMoeda, formatTasa, formatUsd } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { FUSO_CARACAS } from "@/lib/fuso";
 import { cn } from "@/lib/utils";
@@ -148,14 +148,9 @@ export default async function LiquidacaoDetalhePage({
   const encargosDestePagamento = pagamentoCobranca?.valor_juros_pago_usd ?? 0;
   const principalTotalPago = historico.reduce((acc, p) => acc + p.valor_principal_abatido_usd, 0);
 
-  // sobra que virou saldo a favor: na moeda em que entrou, e em dólar pela tasa congelada deste pagamento
-  const creditoNaMoeda = pagamentoRow.creditos_movimentacoes.reduce((acc, c) => acc + c.valor, 0);
-  const creditoUsd = pagamentoRow.creditos_movimentacoes.reduce(
-    (acc, c) =>
-      acc + (c.moeda === "VES" && pagamentoRow.tasa_bcv_aplicada ? c.valor / pagamentoRow.tasa_bcv_aplicada : c.valor),
-    0,
-  );
-  // sobra abaixo de SOBRA_MINIMA_USD não vira crédito: fica absorvida no pagamento
+  // sobra que virou saldo a favor (sempre em dólar, migration saldo_a_favor_em_dolar)
+  const creditoUsd = pagamentoRow.creditos_movimentacoes.reduce((acc, c) => acc + c.valor, 0);
+  // sobra que não virou crédito: só em pagamentos antigos, de quando havia o mínimo de $ 1
   const absorvidoUsd = Math.max(
     pagamentoRow.valor_equivalente_usd - principalDestePagamento - encargosDestePagamento - creditoUsd,
     0,
@@ -279,7 +274,7 @@ export default async function LiquidacaoDetalhePage({
                     <span className="flex min-w-0 items-start gap-2">
                       <span aria-hidden className={cn("mt-1.5 size-2 shrink-0 rounded-full", parte.cor)} />
                       <span className="min-w-0">
-                        {tDetail(`destination.parts.${parte.chave}`, { min: formatUsd(SOBRA_MINIMA_USD) })}
+                        {tDetail(`destination.parts.${parte.chave}`)}
                         {parte.chave === "encargos" && diasAtrasoNoPagamento > 0 && (
                           <span className="block text-xs text-muted-foreground">
                             {tDetail("lateBy", { count: diasAtrasoNoPagamento })}
@@ -297,9 +292,6 @@ export default async function LiquidacaoDetalhePage({
                     </span>
                     <span className="flex shrink-0 flex-col items-end tabular-nums">
                       <span className="font-medium">{formatUsd(parte.valor)}</span>
-                      {parte.chave === "credito" && moeda === "VES" && (
-                        <span className="text-xs text-muted-foreground">{formatMoeda(creditoNaMoeda, moeda)}</span>
-                      )}
                     </span>
                   </li>
                 ))}

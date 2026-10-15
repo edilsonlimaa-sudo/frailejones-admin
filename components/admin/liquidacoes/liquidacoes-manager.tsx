@@ -432,7 +432,7 @@ export function LiquidacoesManager({
                               className="sm:order-last"
                               valor={formatMoeda(l.valor_recebido, l.moeda)}
                               abatido={mostrarAbatido ? t("row.settled", { value: formatUsd(abatido) }) : null}
-                              credito={l.credito_gerado > 0 ? t("row.credit", { value: formatMoeda(l.credito_gerado, l.moeda) }) : null}
+                              credito={l.credito_gerado > 0 ? t("row.credit", { value: formatUsd(l.credito_gerado) }) : null}
                             />
                           </div>
 

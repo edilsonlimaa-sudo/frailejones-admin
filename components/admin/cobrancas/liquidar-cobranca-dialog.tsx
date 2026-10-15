@@ -15,7 +15,6 @@ import type { MoedaTipo } from "@/lib/types/creditos";
 import type { FormaPagamentoTipo } from "@/lib/types/pagamentos";
 import {
   SIMBOLO_MOEDA,
-  SOBRA_MINIMA_USD,
   formatBs,
   formatMoeda,
   formatTasa,
@@ -197,8 +196,8 @@ function LiquidarCobrancaForm({
   const valorJurosPago = Math.min(valorEquivalenteUsd, encargosUsd);
   const valorPrincipalAbatido = Math.min(Math.max(valorEquivalenteUsd - valorJurosPago, 0), saldoDevedorUsd);
   const valorAlocadoUsd = valorJurosPago + valorPrincipalAbatido;
-  // o que sobra depois de quitar, na MESMA moeda do pagamento; em bolívares é calculado sobre os
-  // Bs. recebidos, não convertido de volta a partir do equivalente em dólares
+  // o que sobra depois de quitar vira saldo a favor em dólar (como no banco, sem mínimo); em
+  // bolívares o modal mostra também quanto isso é em Bs., calculado sobre os Bs. recebidos
   const sobraUsd = round2(valorEquivalenteUsd - valorAlocadoUsd);
   const faltandoUsd = round2(totalDevidoUsd - valorAlocadoUsd);
   const sobraNaMoeda =
@@ -207,9 +206,7 @@ function LiquidarCobrancaForm({
       : moeda === "VES" && tasaVes
         ? round2(valorRecebidoNumero - round2(valorAlocadoUsd * tasaVes))
         : sobraUsd;
-  // como no banco: só vira saldo a favor a partir de SOBRA_MINIMA_USD (equivalente em dólar);
-  // abaixo disso fica absorvida no pagamento e o modal avisa antes de confirmar
-  const sobraViraSaldo = sobraUsd >= SOBRA_MINIMA_USD;
+  const sobraViraSaldo = faltandoUsd <= 0 && sobraUsd > 0;
   const precisaReferencia = formaPagamento !== "efectivo_usd";
 
   const handleSubmit = async (e: FormEvent) => {
@@ -384,19 +381,11 @@ function LiquidarCobrancaForm({
                   {faltandoUsd > 0
                     ? t("remaining", { value: formatUsd(faltandoUsd) })
                     : sobraViraSaldo
-                      ? t(moeda === "VES" ? "surplusVes" : "surplusUsd", {
-                          value: formatMoeda(sobraNaMoeda, moeda),
-                        })
+                      ? moeda === "VES"
+                        ? t("surplusVes", { value: formatMoeda(sobraNaMoeda, moeda), usd: formatUsd(sobraUsd) })
+                        : t("surplusUsd", { value: formatUsd(sobraUsd) })
                       : t("coversTotal")}
                 </p>
-                {!sobraViraSaldo && sobraNaMoeda > 0 && (
-                  <p className="text-muted-foreground">
-                    {t("surplusBelowMinimum", {
-                      value: formatMoeda(sobraNaMoeda, moeda),
-                      minimum: formatUsd(SOBRA_MINIMA_USD),
-                    })}
-                  </p>
-                )}
               </div>
             )}
           </div>

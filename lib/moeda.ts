@@ -10,11 +10,6 @@ const numberFormatter = new Intl.NumberFormat("es-VE", {
 
 export const SIMBOLO_MOEDA: Record<MoedaTipo, string> = { USD: "$", VES: "Bs." };
 
-// sobra de pagamento abaixo disso (equivalente em dólar) não vira saldo a favor: fica absorvida
-// no pagamento. Tem que ser igual a c_sobra_minima_usd em liquidar_cobranca (migration
-// 20261006120000_funcoes_transacionais_creditos.sql), que é quem aplica a regra de fato.
-export const SOBRA_MINIMA_USD = 1;
-
 export function formatUsd(valor: number): string {
   return `$ ${numberFormatter.format(valor)}`;
 }

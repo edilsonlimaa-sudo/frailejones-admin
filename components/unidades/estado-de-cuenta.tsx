@@ -7,7 +7,7 @@ import {
   type SituacaoConta,
 } from "@/lib/estado-de-cuenta";
 import { INTL_LOCALE } from "@/lib/intl-locale";
-import { formatBs, formatMoeda, formatUsd, formatVes } from "@/lib/moeda";
+import { formatMoeda, formatUsd, formatVes } from "@/lib/moeda";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +20,8 @@ import { COR_ESTADO_COBRANCA } from "@/components/unidades/cores-estado";
 
 type EstadoDeCuentaProps = {
   cobrancas: CobrancaDaUnidade[];
-  saldoFavorUsd: number;
-  saldoFavorVes: number;
+  // saldo a favor (carteira única em dólar)
+  saldoFavor: number;
   // cotação mais recente, pra mostrar a dívida também em bolívares
   tasaVes: number | null;
 };
@@ -42,7 +42,7 @@ const corDaFaixa: Record<FaixaAntiguidade, string> = {
   mas90: "bg-red-800",
 };
 
-export function EstadoDeCuenta({ cobrancas, saldoFavorUsd, saldoFavorVes, tasaVes }: EstadoDeCuentaProps) {
+export function EstadoDeCuenta({ cobrancas, saldoFavor, tasaVes }: EstadoDeCuentaProps) {
   const t = useTranslations("estadoCuenta");
   const tForma = useTranslations("liquidacoes.paymentMethod");
   const locale = useLocale();
@@ -89,8 +89,7 @@ export function EstadoDeCuenta({ cobrancas, saldoFavorUsd, saldoFavorVes, tasaVe
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{t("creditBalance")}</dt>
-            <dd className="font-medium">{formatUsd(saldoFavorUsd)}</dd>
-            {saldoFavorVes > 0 && <dd className="text-xs text-muted-foreground">+ {formatBs(saldoFavorVes)}</dd>}
+            <dd className="font-medium">{formatUsd(saldoFavor)}</dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{t("nextDue")}</dt>

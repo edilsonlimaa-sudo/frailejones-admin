@@ -144,8 +144,8 @@ erDiagram
         uuid id PK
         uuid unidade_id FK
         movimentacao_tipo tipo "ENTRADA (sobra/credito manual) ou SAIDA (consumo p/ abater cobranca)"
-        moeda_tipo moeda "USD ou VES"
-        numeric valor "valor na moeda original"
+        moeda_tipo moeda "sempre USD: carteira unica em dolar"
+        numeric valor "em dolar; sobra em Bs convertida pela tasa do pagamento"
         uuid pagamento_id FK "so em ENTRADA vinda de sobra de pagamento, opcional"
         uuid cobranca_id FK "obrigatorio em SAIDA, nulo em ENTRADA"
         string descricao "opcional"

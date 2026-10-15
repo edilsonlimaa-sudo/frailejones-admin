@@ -48,18 +48,13 @@ function analisarPagamento(
   const tasa =
     pagamento.moeda === "VES" ? pagamento.tasa_bcv_aplicada : encontrarTasaNaData(cotacoes, dataIso);
 
-  // o que sobrou depois de quitar, na moeda do pagamento, menos o que virou saldo a favor: o resto
-  // ficou absorvido no pagamento (abaixo do mínimo pra saldo, ou resíduo de arredondamento)
-  const creditadoNaMoeda = pagamento.creditosGerados
-    .filter((c) => c.moeda === pagamento.moeda)
-    .reduce((acc, c) => acc + c.valor, 0);
-  const sobraNaMoeda =
-    pagamento.moeda === "VES" && pagamento.tasa_bcv_aplicada
-      ? pagamento.valor_recebido - round2(alocadoUsd * pagamento.tasa_bcv_aplicada)
-      : pagamento.valor_equivalente_usd - alocadoUsd;
+  // o que sobrou depois de quitar, em dólar, menos o que virou saldo a favor (sempre em dólar; as
+  // movimentações antigas em Bs. foram convertidas): o resto ficou absorvido no pagamento, o que
+  // só acontece em pagamentos de antes da migration saldo_a_favor_em_dolar (sobra abaixo de $ 1)
+  const creditadoUsd = pagamento.creditosGerados.reduce((acc, c) => acc + c.valor, 0);
   const faltando = round2(totalDevido - alocadoUsd);
-  // em pagamento parcial a "sobra" em Bs. é só ruído da conversão, não dinheiro a mais
-  const naoCreditado = faltando > 0 ? 0 : Math.max(round2(sobraNaMoeda - creditadoNaMoeda), 0);
+  const naoCreditado =
+    faltando > 0 ? 0 : Math.max(round2(pagamento.valor_equivalente_usd - alocadoUsd - creditadoUsd), 0);
 
   return {
     diasAtraso: calcularDiasAtrasoNaData(cobranca.data_vencimento, cobranca.dias_graca, dataIso),
@@ -215,14 +210,14 @@ export function VerPagamentoDialog({ cobranca, pagamentos, cotacoes, triggerClas
                         <Linha
                           key={i}
                           label={t("creditGenerated")}
-                          valor={formatMoeda(credito.valor, credito.moeda)}
+                          valor={formatUsd(credito.valor)}
                           className="font-medium text-primary [&_dt]:text-primary"
                         />
                       ))}
                       {analise.naoCreditado > 0 && (
                         <Linha
                           label={t("notCredited")}
-                          valor={formatMoeda(analise.naoCreditado, pagamento.moeda)}
+                          valor={formatUsd(analise.naoCreditado)}
                         />
                       )}
                     </dl>

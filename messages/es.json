@@ -363,10 +363,8 @@
       "actions": "Acciones"
     },
     "credits": {
-      "walletUsd": "Dólares ($)",
-      "walletVes": "Bolívares (Bs.)",
-      "emptyUsd": "Ningún movimiento en el saldo en dólares.",
-      "emptyVes": "Ningún movimiento en el saldo en bolívares.",
+      "balance": "Saldo a favor",
+      "empty": "Ningún movimiento en el saldo a favor.",
       "date": "Fecha",
       "type": "Tipo",
       "value": "Valor",
@@ -397,9 +395,8 @@
     "useTotal": "Usar el total",
     "equivalentInUsd": "Equivale a {value} · tasa {rate}",
     "coversTotal": "Cubre el total adeudado.",
-    "surplusBelowMinimum": "Los {value} restantes son menores que el mínimo de {minimum} para saldo a favor y no se registrarán.",
-    "surplusVes": "Sobran {value}, que quedarán como saldo a favor en bolívares de la unidad.",
-    "surplusUsd": "Sobran {value}, que quedarán como saldo a favor en dólares de la unidad.",
+    "surplusVes": "Sobran {value}, que quedarán como {usd} de saldo a favor de la unidad.",
+    "surplusUsd": "Sobran {value}, que quedarán como saldo a favor de la unidad.",
     "remaining": "Faltan {value}. El cobro seguirá pendiente por la diferencia.",
     "paymentMethodLabel": "Método de pago",
     "paymentMethod": {
@@ -452,7 +449,7 @@
     "toPenalty": "A multa e intereses",
     "toFee": "A la cuota",
     "creditGenerated": "Saldo a favor generado",
-    "notCredited": "No acreditado (menor que el mínimo)",
+    "notCredited": "No acreditado (regla antigua de mínimo)",
     "remaining": "Quedaron {value} pendientes en el cobro.",
     "settled": "Este pago saldó el cobro.",
     "observation": "Observación"
@@ -736,7 +733,7 @@
         "principal": "Abonó al cobro",
         "encargos": "Multa e intereses",
         "credito": "Quedó como saldo a favor de la unidad",
-        "absorvido": "Sobrante absorbido (menor a {min})"
+        "absorvido": "Sobrante absorbido (regla antigua de mínimo de $ 1)"
       }
     },
     "lateBy": "{count, plural, one {Pagado # día después del plazo} other {Pagado # días después del plazo}}",
