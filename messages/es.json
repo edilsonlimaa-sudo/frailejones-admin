@@ -338,7 +338,8 @@
     "tabs": {
       "general": "Visión general",
       "charges": "Cobros",
-      "creditStatement": "Estado de crédito"
+      "creditStatement": "Estado de crédito",
+      "agreements": "Acuerdos"
     },
     "general": {
       "title": "Datos de registro",
@@ -1129,8 +1130,6 @@
       "cumprido": "Todos los cobros del acuerdo fueron pagados.",
       "quebrado": "Roto el {broken}: los intereses volvieron a correr desde el {date} sobre lo que no se había pagado hasta la ruptura."
     },
-    "charges": "{count, plural, one {# cobro en el acuerdo} other {# cobros en el acuerdo}}",
-    "pending": "Falta pagar {value}",
     "break": "Romper acuerdo",
     "form": {
       "title": "Registrar acuerdo de pago",
@@ -1142,7 +1141,8 @@
       "noCharges": "No hay cobros vencidos en esa fecha para incluir en el acuerdo.",
       "submit": "Registrar acuerdo",
       "success": "Acuerdo registrado.",
-      "error": "Error al registrar el acuerdo."
+      "error": "Error al registrar el acuerdo.",
+      "dueOn": "venció el {date}"
     },
     "breakForm": {
       "title": "Romper acuerdo de pago",
@@ -1151,6 +1151,23 @@
       "submit": "Romper acuerdo",
       "success": "Acuerdo roto.",
       "error": "Error al romper el acuerdo."
+    },
+    "empty": "Esta unidad no tiene acuerdos de pago.",
+    "emptyNoOverdue": "Esta unidad no tiene acuerdos, y no hay cobros vencidos para incluir en uno.",
+    "detail": {
+      "debtAtStart": "Deuda al inicio",
+      "paid": "Pagado en el acuerdo",
+      "remaining": "Falta pagar",
+      "interestAvoided": "Intereses congelados",
+      "interestAvoidedHint": "lo que ya habría acumulado sin el acuerdo",
+      "progress": "{pct}% de la deuda del acuerdo ya fue pagada",
+      "chargesTitle": "{count, plural, one {# cobro en el acuerdo} other {# cobros en el acuerdo}}",
+      "dueOn": "Venció el {date}",
+      "pendingStatus": "Pendiente",
+      "paidOn": "Pagado el {date}",
+      "settled": "Saldado",
+      "paidHere": "Pagado en el acuerdo",
+      "remainingHere": "Falta hoy"
     }
   }
 }

@@ -47,6 +47,10 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
         <TabsTrigger value="geral">{t("tabs.general")}</TabsTrigger>
         <TabsTrigger value="cobrancas">{t("tabs.charges")}</TabsTrigger>
         <TabsTrigger value="creditos">{t("tabs.creditStatement")}</TabsTrigger>
+        <TabsTrigger value="acordos">
+          {t("tabs.agreements")}
+          {acordos.length > 0 && <span className="text-xs text-muted-foreground">{acordos.length}</span>}
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="geral" className="flex flex-col gap-6">
@@ -55,7 +59,6 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
           saldoFavor={saldoFavor}
           tasaVes={cotacaoAtual?.tasa_ves ?? null}
         />
-        <AcordosPagamento unidadeId={unidade.id} acordos={acordos} cobrancas={cobrancas} podeEditar={true} />
         <Card>
           <CardHeader>
             <CardTitle>{t("general.title")}</CardTitle>
@@ -121,6 +124,10 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
             <ExtratoCreditos creditos={creditos} />
           </CardContent>
         </Card>
+      </TabsContent>
+
+      <TabsContent value="acordos">
+        <AcordosPagamento unidadeId={unidade.id} acordos={acordos} cobrancas={cobrancas} podeEditar={true} />
       </TabsContent>
     </TabsNaUrl>
   );

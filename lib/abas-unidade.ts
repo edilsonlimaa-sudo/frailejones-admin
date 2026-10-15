@@ -1,5 +1,5 @@
 // abas da tela de uma unidade (admin e portal), guardadas na URL como ?aba=
-export const ABAS_UNIDADE = ["geral", "cobrancas", "creditos"] as const;
+export const ABAS_UNIDADE = ["geral", "cobrancas", "creditos", "acordos"] as const;
 export type AbaUnidade = (typeof ABAS_UNIDADE)[number];
 export const ABA_UNIDADE_PADRAO: AbaUnidade = "geral";
 

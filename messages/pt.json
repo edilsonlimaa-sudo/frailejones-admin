@@ -338,7 +338,8 @@
     "tabs": {
       "general": "Visão geral",
       "charges": "Cobranças",
-      "creditStatement": "Extrato de crédito"
+      "creditStatement": "Extrato de crédito",
+      "agreements": "Acordos"
     },
     "general": {
       "title": "Dados cadastrais",
@@ -1129,8 +1130,6 @@
       "cumprido": "Todas as cobranças do acordo foram pagas.",
       "quebrado": "Quebrado em {broken}: os juros voltaram a correr desde {date} sobre o que não tinha sido pago até a quebra."
     },
-    "charges": "{count, plural, one {# cobrança no acordo} other {# cobranças no acordo}}",
-    "pending": "Falta pagar {value}",
     "break": "Quebrar acordo",
     "form": {
       "title": "Registrar acordo de pagamento",
@@ -1142,7 +1141,8 @@
       "noCharges": "Não há cobranças em atraso nessa data para incluir no acordo.",
       "submit": "Registrar acordo",
       "success": "Acordo registrado.",
-      "error": "Erro ao registrar o acordo."
+      "error": "Erro ao registrar o acordo.",
+      "dueOn": "venceu em {date}"
     },
     "breakForm": {
       "title": "Quebrar acordo de pagamento",
@@ -1151,6 +1151,23 @@
       "submit": "Quebrar acordo",
       "success": "Acordo quebrado.",
       "error": "Erro ao quebrar o acordo."
+    },
+    "empty": "Esta unidade não tem acordos de pagamento.",
+    "emptyNoOverdue": "Esta unidade não tem acordos, e não há cobranças em atraso para incluir em um.",
+    "detail": {
+      "debtAtStart": "Dívida no início",
+      "paid": "Pago no acordo",
+      "remaining": "Falta pagar",
+      "interestAvoided": "Juros congelados",
+      "interestAvoidedHint": "o que já teria acumulado sem o acordo",
+      "progress": "{pct}% da dívida do acordo já foi paga",
+      "chargesTitle": "{count, plural, one {# cobrança no acordo} other {# cobranças no acordo}}",
+      "dueOn": "Venceu em {date}",
+      "pendingStatus": "Pendente",
+      "paidOn": "Paga em {date}",
+      "settled": "Quitada",
+      "paidHere": "Pago no acordo",
+      "remainingHere": "Falta hoje"
     }
   }
 }

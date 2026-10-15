@@ -7,12 +7,14 @@ import { HandshakeIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
+import { dataCaixaCaracas } from "@/lib/arrecadacao";
 import { calcularEncargos } from "@/lib/encargos";
 import { hojeCaracas } from "@/lib/fuso";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { formatUsd } from "@/lib/moeda";
 import type { AcordoPagamento } from "@/lib/types/acordos";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,9 +45,55 @@ const somarDias = (dataIso: string, dias: number) => {
   return data.toISOString().slice(0, 10);
 };
 
-// o que ainda falta pagar das cobranças (cota em aberto + multa/juros de hoje)
-const totalPendente = (cobrancas: CobrancaDaUnidade[], hojeIso: string) =>
-  cobrancas.reduce((acc, c) => acc + calcularEncargos(c, hojeIso).valorTotalComEncargos, 0);
+// cobranças que ainda podem entrar num acordo: pendentes, fora de acordo e em atraso na data
+// (mesma regra de criar_acordo_pagamento)
+const emAtrasoForaDeAcordo = (cobrancas: CobrancaDaUnidade[], dataIso: string) =>
+  cobrancas.filter(
+    (c) => c.status === "pendente" && !c.acordo && somarDias(c.data_vencimento, c.dias_graca) < dataIso,
+  );
+
+// o que a cobrança deve hoje (cota em aberto + multa/juros de hoje); 0 se já foi paga
+const faltaHoje = (c: CobrancaDaUnidade, hojeIso: string) =>
+  c.status === "pendente" ? calcularEncargos(c, hojeIso).valorTotalComEncargos : 0;
+
+// o que a cobrança devia num dia passado: só os pagamentos feitos até ele contam
+const devidoNaData = (c: CobrancaDaUnidade, dataIso: string) =>
+  calcularEncargos(
+    {
+      ...c,
+      status: "pendente",
+      pagamentos: c.pagamentos.filter((p) => dataCaixaCaracas(p.data_pagamento) <= dataIso),
+    },
+    dataIso,
+  ).valorTotalComEncargos;
+
+// pagamentos feitos depois do início do acordo (cota + multa/juros)
+const pagoNoAcordo = (c: CobrancaDaUnidade, acordo: AcordoPagamento) =>
+  c.pagamentos
+    .filter((p) => dataCaixaCaracas(p.data_pagamento) > acordo.data_inicio)
+    .reduce((acc, p) => acc + p.valor_principal_abatido_usd + p.valor_juros_pago_usd, 0);
+
+// quanto de juros o acordo vigente já evitou hoje: o devido sem acordo menos o devido com ele
+const jurosEvitados = (c: CobrancaDaUnidade, hojeIso: string) =>
+  c.status === "pendente"
+    ? calcularEncargos({ ...c, acordo: null }, hojeIso).valorTotalComEncargos - faltaHoje(c, hojeIso)
+    : 0;
+
+const soma = (lista: CobrancaDaUnidade[], valor: (c: CobrancaDaUnidade) => number) =>
+  lista.reduce((acc, c) => acc + valor(c), 0);
+
+function useFormatos() {
+  const locale = useLocale();
+  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
+  return {
+    formatDate: (iso: string) =>
+      new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`)),
+    formatMes: (iso: string) =>
+      new Intl.DateTimeFormat(intlLocale, { month: "short", year: "numeric", timeZone: "UTC" }).format(
+        new Date(`${iso.slice(0, 7)}-01T00:00:00Z`),
+      ),
+  };
+}
 
 type AcordosPagamentoProps = {
   unidadeId: string;
@@ -55,89 +103,46 @@ type AcordosPagamentoProps = {
   podeEditar: boolean;
 };
 
-// acordos de pagamento da unidade (congelam os juros das cobranças em atraso): o admin registra e
-// quebra; o portal mostra ao morador o acordo e o que ele significa
+// aba de acordos de pagamento da unidade (congelam os juros das cobranças em atraso): o admin
+// registra e quebra; o portal mostra ao morador cada acordo, as cobranças dele e quanto falta
 export function AcordosPagamento({ unidadeId, acordos, cobrancas, podeEditar }: AcordosPagamentoProps) {
   const t = useTranslations("acordos");
-  const locale = useLocale();
-  const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const formatDate = (iso: string) =>
-    new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
   const hojeIso = hojeCaracas();
   const [registrando, setRegistrando] = useState(false);
   const [quebrando, setQuebrando] = useState<AcordoPagamento | null>(null);
-
-  // sem acordo e sem nada em atraso fora de acordo, não há o que mostrar
-  const emAtrasoForaDeAcordo = cobrancas.filter(
-    (c) => c.status === "pendente" && !c.acordo && somarDias(c.data_vencimento, c.dias_graca) < hojeIso,
-  );
-  if (acordos.length === 0 && (!podeEditar || emAtrasoForaDeAcordo.length === 0)) return null;
+  const podeRegistrar = podeEditar && emAtrasoForaDeAcordo(cobrancas, hojeIso).length > 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-2">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="max-w-2xl">
+          <h2 className="flex items-center gap-2 text-base font-medium">
             <HandshakeIcon className="size-4 text-muted-foreground" />
             {t("title")}
-          </CardTitle>
-          {podeEditar && emAtrasoForaDeAcordo.length > 0 && (
-            <Button size="sm" variant="outline" onClick={() => setRegistrando(true)}>
-              {t("new")}
-            </Button>
-          )}
+          </h2>
+          <p className="text-sm text-muted-foreground">{t("emptyHint")}</p>
         </div>
-        {acordos.length === 0 && <CardDescription>{t("emptyHint")}</CardDescription>}
-      </CardHeader>
+        {podeRegistrar && <Button onClick={() => setRegistrando(true)}>{t("new")}</Button>}
+      </div>
 
-      {acordos.length > 0 && (
-        <CardContent>
-          <ul className="flex flex-col divide-y rounded-lg border">
-            {acordos.map((acordo) => {
-              const situacao = situacaoDoAcordo(acordo, cobrancas);
-              const doAcordo = cobrancas.filter((c) => c.acordo?.id === acordo.id);
-              const pendentes = doAcordo.filter((c) => c.status === "pendente");
-              return (
-                <li key={acordo.id} className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-start sm:gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                      {t("since", { date: formatDate(acordo.data_inicio) })}
-                      <Badge
-                        variant={
-                          situacao === "quebrado" ? "destructive" : situacao === "cumprido" ? "secondary" : "default"
-                        }
-                      >
-                        {t(`status.${situacao}`)}
-                      </Badge>
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {t(`explanation.${situacao}`, {
-                        date: formatDate(acordo.data_inicio),
-                        broken: acordo.quebrado_em ? formatDate(acordo.quebrado_em) : "",
-                      })}
-                    </p>
-                    {acordo.observacao && <p className="mt-1 text-sm">{acordo.observacao}</p>}
-                  </div>
-                  <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end">
-                    <div className="text-left text-sm sm:text-right">
-                      <p className="text-muted-foreground">{t("charges", { count: doAcordo.length })}</p>
-                      {pendentes.length > 0 && (
-                        <p className="font-medium tabular-nums">
-                          {t("pending", { value: formatUsd(totalPendente(pendentes, hojeIso)) })}
-                        </p>
-                      )}
-                    </div>
-                    {podeEditar && situacao === "vigente" && (
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setQuebrando(acordo)}>
-                        {t("break")}
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </CardContent>
+      {acordos.length === 0 ? (
+        <Card>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {podeEditar && !podeRegistrar ? t("emptyNoOverdue") : t("empty")}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        acordos.map((acordo) => (
+          <DetalheAcordo
+            key={acordo.id}
+            acordo={acordo}
+            cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
+            hojeIso={hojeIso}
+            onQuebrar={podeEditar ? () => setQuebrando(acordo) : null}
+          />
+        ))
       )}
 
       {podeEditar && (
@@ -162,7 +167,155 @@ export function AcordosPagamento({ unidadeId, acordos, cobrancas, podeEditar }: 
           </Dialog>
         </>
       )}
+    </div>
+  );
+}
+
+function DetalheAcordo({
+  acordo,
+  cobrancas,
+  hojeIso,
+  onQuebrar,
+}: {
+  acordo: AcordoPagamento;
+  // só as cobranças deste acordo
+  cobrancas: CobrancaDaUnidade[];
+  hojeIso: string;
+  onQuebrar: (() => void) | null;
+}) {
+  const t = useTranslations("acordos");
+  const { formatDate, formatMes } = useFormatos();
+  const situacao: SituacaoAcordo = acordo.quebrado_em
+    ? "quebrado"
+    : cobrancas.some((c) => c.status === "pendente")
+      ? "vigente"
+      : "cumprido";
+
+  const devidoNoInicio = soma(cobrancas, (c) => devidoNaData(c, acordo.data_inicio));
+  const pago = soma(cobrancas, (c) => pagoNoAcordo(c, acordo));
+  const falta = soma(cobrancas, (c) => faltaHoje(c, hojeIso));
+  const evitados = situacao === "vigente" ? soma(cobrancas, (c) => jurosEvitados(c, hojeIso)) : 0;
+  const progresso = pago + falta > 0 ? (pago / (pago + falta)) * 100 : 100;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
+            {t("since", { date: formatDate(acordo.data_inicio) })}
+            <Badge
+              variant={situacao === "quebrado" ? "destructive" : situacao === "cumprido" ? "secondary" : "default"}
+            >
+              {t(`status.${situacao}`)}
+            </Badge>
+          </CardTitle>
+          {onQuebrar && situacao === "vigente" && (
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={onQuebrar}>
+              {t("break")}
+            </Button>
+          )}
+        </div>
+        <CardDescription>
+          {t(`explanation.${situacao}`, {
+            date: formatDate(acordo.data_inicio),
+            broken: acordo.quebrado_em ? formatDate(acordo.quebrado_em) : "",
+          })}
+        </CardDescription>
+        {acordo.observacao && (
+          <p className="mt-1 rounded-lg border-l-2 border-primary/40 bg-muted/50 px-3 py-2 text-sm">
+            {acordo.observacao}
+          </p>
+        )}
+      </CardHeader>
+
+      <CardContent className="flex flex-col gap-5">
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Metrica rotulo={t("detail.debtAtStart")} valor={formatUsd(devidoNoInicio)} />
+          <Metrica rotulo={t("detail.paid")} valor={formatUsd(pago)} />
+          <Metrica
+            rotulo={t("detail.remaining")}
+            valor={formatUsd(falta)}
+            className={falta > 0 ? "text-destructive" : undefined}
+          />
+          {situacao === "vigente" && (
+            <Metrica
+              rotulo={t("detail.interestAvoided")}
+              valor={formatUsd(evitados)}
+              dica={t("detail.interestAvoidedHint")}
+              className="text-primary"
+            />
+          )}
+        </dl>
+
+        <div className="flex flex-col gap-1.5">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+            <div className="h-full rounded-full bg-primary" style={{ width: `${progresso}%` }} />
+          </div>
+          <p className="text-xs text-muted-foreground">{t("detail.progress", { pct: Math.round(progresso) })}</p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium">{t("detail.chargesTitle", { count: cobrancas.length })}</h3>
+          <ul className="flex flex-col divide-y rounded-lg border">
+            {cobrancas.map((c) => {
+              const pagaEm =
+                c.status !== "pendente" && c.data_ultimo_pagamento ? dataCaixaCaracas(c.data_ultimo_pagamento) : null;
+              const pagoAqui = pagoNoAcordo(c, acordo);
+              const faltaAqui = faltaHoje(c, hojeIso);
+              return (
+                <li key={c.id} className="flex flex-col gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {c.titulo_origem}
+                      <span className="font-normal text-muted-foreground"> · {formatMes(c.competencia)}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("detail.dueOn", { date: formatDate(c.data_vencimento) })}
+                      {" · "}
+                      {c.status === "pendente"
+                        ? t("detail.pendingStatus")
+                        : pagaEm
+                          ? t("detail.paidOn", { date: formatDate(pagaEm) })
+                          : t("detail.settled")}
+                    </p>
+                  </div>
+                  <div className="flex gap-6 text-sm tabular-nums sm:justify-end">
+                    <div className="sm:w-32 sm:text-right">
+                      <p className="text-xs text-muted-foreground">{t("detail.paidHere")}</p>
+                      <p>{formatUsd(pagoAqui)}</p>
+                    </div>
+                    <div className="sm:w-32 sm:text-right">
+                      <p className="text-xs text-muted-foreground">{t("detail.remainingHere")}</p>
+                      <p className={cn("font-medium", faltaAqui > 0 && "text-destructive")}>{formatUsd(faltaAqui)}</p>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </CardContent>
     </Card>
+  );
+}
+
+function Metrica({
+  rotulo,
+  valor,
+  dica,
+  className,
+}: {
+  rotulo: string;
+  valor: string;
+  dica?: string;
+  className?: string;
+}) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{rotulo}</dt>
+      <dd className={cn("text-lg font-medium tabular-nums", className)}>{valor}</dd>
+      {dica && <dd className="text-xs text-muted-foreground">{dica}</dd>}
+    </div>
   );
 }
 
@@ -185,10 +338,8 @@ function RegistrarAcordo({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // mesma regra de criar_acordo_pagamento: pendentes, fora de acordo e em atraso na data de início
-  const entram = cobrancas.filter(
-    (c) => c.status === "pendente" && !c.acordo && somarDias(c.data_vencimento, c.dias_graca) < dataInicio,
-  );
+  const { formatDate, formatMes } = useFormatos();
+  const entram = dataInicio ? emAtrasoForaDeAcordo(cobrancas, dataInicio) : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,11 +389,27 @@ function RegistrarAcordo({
             onChange={(e) => setObservacao(e.target.value)}
           />
         </div>
-        <p className="rounded-xl bg-muted px-3 py-2 text-xs">
-          {entram.length > 0
-            ? t("preview", { count: entram.length, value: formatUsd(totalPendente(entram, hojeIso)) })
-            : t("noCharges")}
-        </p>
+        {/* as cobranças que vão entrar: a lista fica fixa no acordo, as que vencerem depois ficam fora */}
+        <div className="flex flex-col gap-2 rounded-xl bg-muted px-3 py-2.5 text-xs">
+          <p className="font-medium">
+            {entram.length > 0
+              ? t("preview", { count: entram.length, value: formatUsd(soma(entram, (c) => faltaHoje(c, hojeIso))) })
+              : t("noCharges")}
+          </p>
+          {entram.length > 0 && (
+            <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+              {entram.map((c) => (
+                <li key={c.id} className="flex justify-between gap-3">
+                  <span className="min-w-0 truncate">
+                    {c.titulo_origem} · {formatMes(c.competencia)}
+                    <span className="text-muted-foreground"> · {t("dueOn", { date: formatDate(c.data_vencimento) })}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">{formatUsd(faltaHoje(c, hojeIso))}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
@@ -269,11 +436,7 @@ function QuebrarAcordo({
   const t = useTranslations("acordos.breakForm");
   const tCommon = useTranslations("common");
   const router = useRouter();
-  const locale = useLocale();
-  const formatDate = (iso: string) =>
-    new Intl.DateTimeFormat(INTL_LOCALE[locale as keyof typeof INTL_LOCALE], { timeZone: "UTC" }).format(
-      new Date(`${iso}T00:00:00Z`),
-    );
+  const { formatDate } = useFormatos();
   const [data, setData] = useState(hojeIso);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

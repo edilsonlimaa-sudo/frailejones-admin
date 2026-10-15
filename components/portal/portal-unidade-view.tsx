@@ -44,11 +44,17 @@ export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobranca
   const saldoFavor = saldoDosCreditos(creditos);
 
   return (
-    <TabsNaUrl parametro="aba" abaInicial={abaInicial} abaPadrao={ABA_UNIDADE_PADRAO}>
+    <TabsNaUrl
+      parametro="aba"
+      abaInicial={abaInicial === "acordos" && acordos.length === 0 ? ABA_UNIDADE_PADRAO : abaInicial}
+      abaPadrao={ABA_UNIDADE_PADRAO}
+    >
       <TabsList>
         <TabsTrigger value="geral">{t("tabs.general")}</TabsTrigger>
         <TabsTrigger value="cobrancas">{t("tabs.charges")}</TabsTrigger>
         <TabsTrigger value="creditos">{t("tabs.creditStatement")}</TabsTrigger>
+        {/* o morador só vê a aba quando tem acordo */}
+        {acordos.length > 0 && <TabsTrigger value="acordos">{t("tabs.agreements")}</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="geral" className="flex flex-col gap-6">
@@ -57,7 +63,6 @@ export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobranca
           saldoFavor={saldoFavor}
           tasaVes={cotacaoAtual?.tasa_ves ?? null}
         />
-        <AcordosPagamento unidadeId={unidade.id} acordos={acordos} cobrancas={cobrancas} podeEditar={false} />
         <Card>
           <CardHeader>
             <CardTitle>{t("general.title")}</CardTitle>
@@ -119,6 +124,10 @@ export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobranca
             <ExtratoCreditos creditos={creditos} />
           </CardContent>
         </Card>
+      </TabsContent>
+
+      <TabsContent value="acordos">
+        <AcordosPagamento unidadeId={unidade.id} acordos={acordos} cobrancas={cobrancas} podeEditar={false} />
       </TabsContent>
     </TabsNaUrl>
   );
