@@ -151,7 +151,8 @@ function RateioExtraordinarioFormFields({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>
+        {/* título longo (com o passo do wizard) quebra em 2 linhas: espaço pro botão de fechar */}
+        <DialogTitle className="pr-8 leading-snug">
           {t("createTitle")}
           {" — "}
           {t(`step${step}Title`)}

@@ -140,7 +140,9 @@ export function CamposEncargos({ value, onChange, valorExemplo, vencimentoExempl
       </div>
 
       {value.metodo === "mensal" ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-4">
+          {/* o critério tem textos longos: a taxa fica estreita e o select pega o resto (min-w-0
+              deixa o texto encolher em vez de vazar do modal) */}
           <div className="grid gap-2">
             <Label htmlFor="pct_juros_mensal">{t("monthlyInterestLabel")}</Label>
             <Input
@@ -152,10 +154,10 @@ export function CamposEncargos({ value, onChange, valorExemplo, vencimentoExempl
               onChange={(e) => set("pctJurosMensal", e.target.value)}
             />
           </div>
-          <div className="grid gap-2">
+          <div className="grid min-w-0 gap-2">
             <Label htmlFor="criterio_mes">{t("monthCriterionLabel")}</Label>
             <Select value={value.criterioMes} onValueChange={(v) => v && set("criterioMes", v as CriterioMes)}>
-              <SelectTrigger id="criterio_mes" className="w-full">
+              <SelectTrigger id="criterio_mes" className="w-full min-w-0">
                 <SelectValue>{(v: CriterioMes) => t(`criteria.${v}`)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
