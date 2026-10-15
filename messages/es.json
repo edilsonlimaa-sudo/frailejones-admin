@@ -1173,7 +1173,7 @@
   },
   "acordosPage": {
     "title": "Acuerdos de pago",
-    "description": "Unidades que acordaron pagar la deuda poco a poco, con los intereses de los cobros vencidos congelados. Para registrar o romper un acuerdo, abra la unidad.",
+    "description": "Unidades que acordaron pagar la deuda poco a poco, con los intereses de los cobros vencidos congelados. Para registrar un acuerdo, abra la unidad.",
     "empty": "No hay acuerdos de pago registrados. Para registrar uno, abra la unidad y vaya a la pestaña Acuerdos.",
     "emptyFilter": "No hay acuerdos en esta situación.",
     "filterLabel": "Filtrar por situación",
@@ -1197,5 +1197,9 @@
       "remaining": "falta pagar",
       "nothingLeft": "Saldado"
     }
+  },
+  "acordoDetail": {
+    "title": "Acuerdo de pago · {unit}",
+    "viewUnit": "Ver unidad"
   }
 }

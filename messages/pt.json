@@ -1173,7 +1173,7 @@
   },
   "acordosPage": {
     "title": "Acordos de pagamento",
-    "description": "Unidades que combinaram pagar a dívida aos poucos, com os juros das cobranças em atraso congelados. Para registrar ou quebrar um acordo, abra a unidade.",
+    "description": "Unidades que combinaram pagar a dívida aos poucos, com os juros das cobranças em atraso congelados. Para registrar um acordo, abra a unidade.",
     "empty": "Nenhum acordo de pagamento registrado. Para registrar um, abra a unidade e vá na aba Acordos.",
     "emptyFilter": "Nenhum acordo nesta situação.",
     "filterLabel": "Filtrar por situação",
@@ -1197,5 +1197,9 @@
       "remaining": "falta pagar",
       "nothingLeft": "Quitado"
     }
+  },
+  "acordoDetail": {
+    "title": "Acordo de pagamento · {unit}",
+    "viewUnit": "Ver unidade"
   }
 }

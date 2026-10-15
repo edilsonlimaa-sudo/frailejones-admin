@@ -29,7 +29,8 @@ const VARIANTE_SITUACAO: Record<SituacaoAcordo, "default" | "secondary" | "destr
 };
 
 // todos os acordos de pagamento do condomínio: quem está em acordo, quanto já pagou, quanto falta
-// e quanto de juros o acordo está segurando. Registrar e quebrar ficam na aba de acordos da unidade.
+// e quanto de juros o acordo está segurando. Registrar fica na aba de acordos da unidade; quebrar,
+// na página do acordo.
 export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
   const t = useTranslations("acordosPage");
   const tAcordos = useTranslations("acordos");
@@ -101,26 +102,19 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
               <ul className="divide-y rounded-lg border">
                 {listados.map((acordo) => {
                   const r = acordo.resumo;
-                  const href = acordo.unidade ? `/unidades/${acordo.unidade.id}?aba=acordos` : null;
+                  const href = `/acordos/${acordo.id}`;
                   return (
-                    // a linha toda abre a aba de acordos da unidade
+                    // a linha toda abre a página do acordo
                     <li
                       key={acordo.id}
-                      onClick={href ? () => router.push(href) : undefined}
-                      className={cn(
-                        "flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:gap-6",
-                        href && "cursor-pointer transition-colors hover:bg-muted/50",
-                      )}
+                      onClick={() => router.push(href)}
+                      className="flex cursor-pointer flex-col gap-3 px-3 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-6"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="flex flex-wrap items-center gap-2">
-                          {href ? (
-                            <Link href={href} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
-                              {acordo.unidade!.identificacao}
-                            </Link>
-                          ) : (
-                            <span className="font-medium">—</span>
-                          )}
+                          <Link href={href} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
+                            {acordo.unidade?.identificacao ?? "—"}
+                          </Link>
                           {acordo.unidade?.proprietario && (
                             <span className="truncate text-sm text-muted-foreground">
                               {acordo.unidade.proprietario.nome}

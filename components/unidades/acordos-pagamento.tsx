@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { HandshakeIcon } from "lucide-react";
+import { ChevronRightIcon, HandshakeIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
@@ -64,13 +65,13 @@ type AcordosPagamentoProps = {
   podeEditar: boolean;
 };
 
-// aba de acordos de pagamento da unidade (congelam os juros das cobranças em atraso): o admin
-// registra e quebra; o portal mostra ao morador cada acordo, as cobranças dele e quanto falta
+// aba de acordos de pagamento da unidade (congelam os juros das cobranças em atraso): no admin é
+// uma lista, e cada acordo abre a página dele (/acordos/[id]), onde dá pra quebrar; o portal não
+// tem essa página, então mostra o detalhe de cada acordo direto na aba
 export function AcordosPagamento({ unidadeId, acordos, cobrancas, podeEditar }: AcordosPagamentoProps) {
   const t = useTranslations("acordos");
   const hojeIso = hojeCaracas();
   const [registrando, setRegistrando] = useState(false);
-  const [quebrando, setQuebrando] = useState<AcordoPagamento | null>(null);
   const podeRegistrar = podeEditar && emAtrasoForaDeAcordo(cobrancas, hojeIso).length > 0;
 
   return (
@@ -94,59 +95,126 @@ export function AcordosPagamento({ unidadeId, acordos, cobrancas, podeEditar }: 
           <p className="text-sm text-muted-foreground">
             {podeEditar && !podeRegistrar ? t("emptyNoOverdue") : t("empty")}
           </p>
+        ) : podeEditar ? (
+          <ul className="divide-y rounded-lg border">
+            {acordos.map((acordo) => (
+              <LinhaAcordo
+                key={acordo.id}
+                acordo={acordo}
+                cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
+                hojeIso={hojeIso}
+              />
+            ))}
+          </ul>
         ) : (
           acordos.map((acordo) => (
-            <DetalheAcordo
-              key={acordo.id}
-              acordo={acordo}
-              cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
-              hojeIso={hojeIso}
-              onQuebrar={podeEditar ? () => setQuebrando(acordo) : null}
-            />
+            <section key={acordo.id} className="rounded-xl border p-4">
+              <DetalheAcordo
+                acordo={acordo}
+                cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
+                podeEditar={false}
+              />
+            </section>
           ))
         )}
       </CardContent>
 
       {podeEditar && (
-        <>
-          <Dialog open={registrando} onOpenChange={setRegistrando}>
-            <DialogContent>
-              {/* remount com estado limpo a cada abertura */}
-              {registrando && (
-                <RegistrarAcordo
-                  unidadeId={unidadeId}
-                  cobrancas={cobrancas}
-                  hojeIso={hojeIso}
-                  onClose={() => setRegistrando(false)}
-                />
-              )}
-            </DialogContent>
-          </Dialog>
-          <Dialog open={quebrando !== null} onOpenChange={(open) => !open && setQuebrando(null)}>
-            <DialogContent>
-              {quebrando && <QuebrarAcordo acordo={quebrando} hojeIso={hojeIso} onClose={() => setQuebrando(null)} />}
-            </DialogContent>
-          </Dialog>
-        </>
+        <Dialog open={registrando} onOpenChange={setRegistrando}>
+          <DialogContent>
+            {/* remount com estado limpo a cada abertura */}
+            {registrando && (
+              <RegistrarAcordo
+                unidadeId={unidadeId}
+                cobrancas={cobrancas}
+                hojeIso={hojeIso}
+                onClose={() => setRegistrando(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       )}
     </Card>
   );
 }
 
-function DetalheAcordo({
+// um acordo na aba da unidade: situação, cobranças, quanto já foi pago e quanto falta; abre a página
+function LinhaAcordo({
   acordo,
   cobrancas,
   hojeIso,
-  onQuebrar,
+}: {
+  acordo: AcordoPagamento;
+  cobrancas: CobrancaDaUnidade[];
+  hojeIso: string;
+}) {
+  const t = useTranslations("acordos");
+  const tLista = useTranslations("acordosPage");
+  const { formatDate } = useFormatos();
+  const r = resumirAcordo(acordo, cobrancas, hojeIso);
+
+  return (
+    <li>
+      <Link
+        href={`/acordos/${acordo.id}`}
+        className="flex flex-col gap-3 px-3 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-6"
+      >
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-2 font-medium">
+            {t("since", { date: formatDate(acordo.data_inicio) })}
+            <Badge variant={VARIANTE_SITUACAO[r.situacao]}>{t(`status.${r.situacao}`)}</Badge>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {tLista("row.charges", { count: r.cobrancas })}
+            {acordo.quebrado_em && ` · ${tLista("row.brokenOn", { date: formatDate(acordo.quebrado_em) })}`}
+          </p>
+          {acordo.observacao && <p className="mt-0.5 truncate text-xs text-muted-foreground italic">{acordo.observacao}</p>}
+        </div>
+        <div className="flex flex-col gap-1.5 sm:w-56">
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${r.progresso}%` }} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {tLista("row.paid", { value: formatUsd(r.pago), pct: Math.round(r.progresso) })}
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-3 sm:w-44 sm:justify-end">
+          <div className="sm:text-right">
+            <p className={cn("font-medium tabular-nums", r.falta > 0 && "text-destructive")}>
+              {r.falta > 0 ? formatUsd(r.falta) : tLista("row.nothingLeft")}
+            </p>
+            {r.falta > 0 && <p className="text-xs text-muted-foreground">{tLista("row.remaining")}</p>}
+          </div>
+          <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+const VARIANTE_SITUACAO = {
+  vigente: "default",
+  cumprido: "secondary",
+  quebrado: "destructive",
+} as const;
+
+// detalhe de um acordo: números, progresso e as cobranças vinculadas. Usado na página do acordo
+// (admin, com o botão de quebrar) e na aba de acordos do portal (só leitura)
+export function DetalheAcordo({
+  acordo,
+  cobrancas,
+  podeEditar,
 }: {
   acordo: AcordoPagamento;
   // só as cobranças deste acordo
   cobrancas: CobrancaDaUnidade[];
-  hojeIso: string;
-  onQuebrar: (() => void) | null;
+  // admin: mostra o botão de quebrar o acordo vigente
+  podeEditar: boolean;
 }) {
   const t = useTranslations("acordos");
   const { formatDate, formatMes } = useFormatos();
+  const hojeIso = hojeCaracas();
+  const [quebrando, setQuebrando] = useState(false);
   const { situacao, devidoNoInicio, pago, falta, jurosEvitados: evitados, progresso } = resumirAcordo(
     acordo,
     cobrancas,
@@ -154,20 +222,16 @@ function DetalheAcordo({
   );
 
   return (
-    <section className="flex flex-col gap-5 rounded-xl border p-4">
+    <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="flex flex-wrap items-center gap-2 font-medium">
             <HandshakeIcon className="size-4 text-muted-foreground" />
             {t("since", { date: formatDate(acordo.data_inicio) })}
-            <Badge
-              variant={situacao === "quebrado" ? "destructive" : situacao === "cumprido" ? "secondary" : "default"}
-            >
-              {t(`status.${situacao}`)}
-            </Badge>
+            <Badge variant={VARIANTE_SITUACAO[situacao]}>{t(`status.${situacao}`)}</Badge>
           </h3>
-          {onQuebrar && situacao === "vigente" && (
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={onQuebrar}>
+          {podeEditar && situacao === "vigente" && (
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setQuebrando(true)}>
               {t("break")}
             </Button>
           )}
@@ -250,7 +314,15 @@ function DetalheAcordo({
           })}
         </ul>
       </div>
-    </section>
+
+      {podeEditar && (
+        <Dialog open={quebrando} onOpenChange={setQuebrando}>
+          <DialogContent>
+            {quebrando && <QuebrarAcordo acordo={acordo} hojeIso={hojeIso} onClose={() => setQuebrando(false)} />}
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
   );
 }
 
@@ -301,15 +373,17 @@ function RegistrarAcordo({
     setIsSubmitting(true);
     setError(null);
     try {
-      const { error: rpcError } = await createClient().rpc("criar_acordo_pagamento", {
-        p_unidade_id: unidadeId,
-        p_data_inicio: dataInicio,
-        p_observacao: observacao.trim() || null,
-      });
+      const { data, error: rpcError } = await createClient()
+        .rpc("criar_acordo_pagamento", {
+          p_unidade_id: unidadeId,
+          p_data_inicio: dataInicio,
+          p_observacao: observacao.trim() || null,
+        })
+        .single<{ id: string }>();
       if (rpcError) throw rpcError;
       toast.success(t("success"));
       onClose();
-      router.refresh();
+      router.push(`/acordos/${data.id}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t("error"));
     } finally {
