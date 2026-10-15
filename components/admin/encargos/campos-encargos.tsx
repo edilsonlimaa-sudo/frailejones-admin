@@ -103,6 +103,7 @@ export function CamposEncargos({ value, onChange, valorExemplo, vencimentoExempl
         valor_credito_abatido_usd: 0,
         data_vencimento: vencimentoExemplo,
         pagamentos: [],
+        acordo: null,
       },
       data,
     );

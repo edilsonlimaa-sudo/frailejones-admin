@@ -13,7 +13,12 @@ import {
   percentualEmDia,
   type ResumoDashboard,
 } from "@/lib/arrecadacao";
-import { calcularEncargos, pagamentosParaEncargos, type RegrasEncargos } from "@/lib/encargos";
+import {
+  calcularEncargos,
+  pagamentosParaEncargos,
+  type AcordoParaEncargos,
+  type RegrasEncargos,
+} from "@/lib/encargos";
 import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
 import { taxasSemEmissaoNoMes } from "@/lib/taxas";
 import { hojeCaracas } from "@/lib/fuso";
@@ -58,6 +63,7 @@ type CobrancaDoMes = RegrasEncargos & {
   valor_credito_abatido_usd: number;
   data_vencimento: string;
   status: CobrancaStatus;
+  acordo: AcordoParaEncargos | null;
   unidade: { id: string; identificacao: string } | null;
   // título da origem: a descrição das ordinárias é sempre "Taxa de condomínio", então sem isto
   // a lista de pendentes não distingue a cuota do fundo de reserva
@@ -128,7 +134,7 @@ export default async function Home({
         supabase
           .from("cobrancas")
           .select(
-            "id, descricao, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, status, unidade:unidades(id, identificacao), taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(id, titulo, valor_total_usd, valor_por_unidade_usd), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
+            "id, descricao, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, acordo:acordos_pagamento(id, data_inicio, quebrado_em), status, unidade:unidades(id, identificacao), taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(id, titulo, valor_total_usd, valor_por_unidade_usd), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
             { count: "exact" },
           )
           .gte("competencia", inicioMes)
@@ -169,7 +175,7 @@ export default async function Home({
         supabase
           .from("cobrancas")
           .select(
-            "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
+            "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, acordo:acordos_pagamento(id, data_inicio, quebrado_em), status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
             { count: "exact" },
           )
           .eq("status", "pendente")

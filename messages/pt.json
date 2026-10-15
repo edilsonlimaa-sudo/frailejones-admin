@@ -932,7 +932,11 @@
       "paidCharges": "inclui {charges} de {method, select, mensal {juros} other {multa e juros}}",
       "creditApplied": "Crédito aplicado: -{value}"
     },
-    "searchPlaceholder": "Buscar por unidade ou proprietário..."
+    "searchPlaceholder": "Buscar por unidade ou proprietário...",
+    "agreement": {
+      "active": "Em acordo",
+      "broken": "Acordo quebrado"
+    }
   },
   "encargos": {
     "resumo": {
@@ -972,7 +976,11 @@
       "dailyStretch": "{count, plural, one {# dia} other {# dias}} ({from} a {to}) × {pct}% ao dia de {base}",
       "alreadyPaid": "Já pago em pagamentos anteriores",
       "total": "Total",
-      "nextMonth": "O próximo mês fecha em {date} e acrescenta {value}."
+      "nextMonth": "O próximo mês fecha em {date} e acrescenta {value}.",
+      "agreementActive": "Juros congelados desde {date} por um acordo de pagamento.",
+      "agreementBroken": "Acordo quebrado em {broken}: os juros voltaram a correr desde {date} sobre o que não tinha sido pago.",
+      "frozenMonths": "{count, plural, one {# mês congelado ({from})} other {# meses congelados ({from} a {to})}} pelo acordo",
+      "frozenDays": "{count, plural, one {# dia congelado} other {# dias congelados}} ({from} a {to}) pelo acordo"
     }
   },
   "integracoes": {
@@ -1104,6 +1112,45 @@
           "url": "https://exemplo.com/webhooks/frailejones"
         }
       }
+    }
+  },
+  "acordos": {
+    "title": "Acordo de pagamento",
+    "new": "Registrar acordo",
+    "emptyHint": "Para quem combinou pagar a dívida aos poucos: o acordo congela os juros das cobranças em atraso enquanto o combinado é cumprido.",
+    "since": "Desde {date}",
+    "status": {
+      "vigente": "Vigente",
+      "cumprido": "Cumprido",
+      "quebrado": "Quebrado"
+    },
+    "explanation": {
+      "vigente": "Os juros das cobranças em atraso estão congelados desde {date}. O que acumulou até essa data continua devido.",
+      "cumprido": "Todas as cobranças do acordo foram pagas.",
+      "quebrado": "Quebrado em {broken}: os juros voltaram a correr desde {date} sobre o que não tinha sido pago até a quebra."
+    },
+    "charges": "{count, plural, one {# cobrança no acordo} other {# cobranças no acordo}}",
+    "pending": "Falta pagar {value}",
+    "break": "Quebrar acordo",
+    "form": {
+      "title": "Registrar acordo de pagamento",
+      "description": "Congela os juros das cobranças em atraso desta unidade a partir da data de início. Multa e juros acumulados até essa data continuam devidos, e as cobranças emitidas depois seguem a regra normal.",
+      "startLabel": "Data de início",
+      "noteLabel": "Observação",
+      "notePlaceholder": "Ex: paga $ 50 por mês além da cuota",
+      "preview": "{count, plural, one {# cobrança em atraso entra} other {# cobranças em atraso entram}} no acordo · {value} em aberto hoje",
+      "noCharges": "Não há cobranças em atraso nessa data para incluir no acordo.",
+      "submit": "Registrar acordo",
+      "success": "Acordo registrado.",
+      "error": "Erro ao registrar o acordo."
+    },
+    "breakForm": {
+      "title": "Quebrar acordo de pagamento",
+      "description": "Os juros voltam a correr desde {date} (início do acordo), mas só sobre o que continuava em aberto no dia da quebra. O que foi pago durante o acordo não muda.",
+      "dateLabel": "Data da quebra",
+      "submit": "Quebrar acordo",
+      "success": "Acordo quebrado.",
+      "error": "Erro ao quebrar o acordo."
     }
   }
 }

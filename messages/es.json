@@ -932,7 +932,11 @@
       "paidCharges": "incluye {charges} de {method, select, mensal {intereses} other {multa e intereses}}",
       "creditApplied": "Crédito aplicado: -{value}"
     },
-    "searchPlaceholder": "Buscar por unidad o propietario..."
+    "searchPlaceholder": "Buscar por unidad o propietario...",
+    "agreement": {
+      "active": "En acuerdo",
+      "broken": "Acuerdo roto"
+    }
   },
   "encargos": {
     "resumo": {
@@ -972,7 +976,11 @@
       "dailyStretch": "{count, plural, one {# día} other {# días}} ({from} al {to}) × {pct}% por día de {base}",
       "alreadyPaid": "Ya pagado en pagos anteriores",
       "total": "Total",
-      "nextMonth": "El próximo mes se cumple el {date} y suma {value}."
+      "nextMonth": "El próximo mes se cumple el {date} y suma {value}.",
+      "agreementActive": "Intereses congelados desde el {date} por un acuerdo de pago.",
+      "agreementBroken": "Acuerdo roto el {broken}: los intereses volvieron a correr desde el {date} sobre lo que no se había pagado.",
+      "frozenMonths": "{count, plural, one {# mes congelado ({from})} other {# meses congelados ({from} al {to})}} por el acuerdo",
+      "frozenDays": "{count, plural, one {# día congelado} other {# días congelados}} ({from} al {to}) por el acuerdo"
     }
   },
   "integracoes": {
@@ -1104,6 +1112,45 @@
           "url": "https://ejemplo.com/webhooks/frailejones"
         }
       }
+    }
+  },
+  "acordos": {
+    "title": "Acuerdo de pago",
+    "new": "Registrar acuerdo",
+    "emptyHint": "Para quien acordó pagar la deuda poco a poco: el acuerdo congela los intereses de los cobros vencidos mientras se cumple lo acordado.",
+    "since": "Desde el {date}",
+    "status": {
+      "vigente": "Vigente",
+      "cumprido": "Cumplido",
+      "quebrado": "Roto"
+    },
+    "explanation": {
+      "vigente": "Los intereses de los cobros vencidos están congelados desde el {date}. Lo acumulado hasta esa fecha sigue debiéndose.",
+      "cumprido": "Todos los cobros del acuerdo fueron pagados.",
+      "quebrado": "Roto el {broken}: los intereses volvieron a correr desde el {date} sobre lo que no se había pagado hasta la ruptura."
+    },
+    "charges": "{count, plural, one {# cobro en el acuerdo} other {# cobros en el acuerdo}}",
+    "pending": "Falta pagar {value}",
+    "break": "Romper acuerdo",
+    "form": {
+      "title": "Registrar acuerdo de pago",
+      "description": "Congela los intereses de los cobros vencidos de esta unidad a partir de la fecha de inicio. La multa y los intereses acumulados hasta esa fecha siguen debiéndose, y los cobros emitidos después siguen la regla normal.",
+      "startLabel": "Fecha de inicio",
+      "noteLabel": "Observación",
+      "notePlaceholder": "Ej: paga $ 50 al mes además de la cuota",
+      "preview": "{count, plural, one {# cobro vencido entra} other {# cobros vencidos entran}} en el acuerdo · {value} pendientes hoy",
+      "noCharges": "No hay cobros vencidos en esa fecha para incluir en el acuerdo.",
+      "submit": "Registrar acuerdo",
+      "success": "Acuerdo registrado.",
+      "error": "Error al registrar el acuerdo."
+    },
+    "breakForm": {
+      "title": "Romper acuerdo de pago",
+      "description": "Los intereses vuelven a correr desde el {date} (inicio del acuerdo), pero solo sobre lo que seguía pendiente el día de la ruptura. Lo pagado durante el acuerdo no cambia.",
+      "dateLabel": "Fecha de la ruptura",
+      "submit": "Romper acuerdo",
+      "success": "Acuerdo roto.",
+      "error": "Error al romper el acuerdo."
     }
   }
 }

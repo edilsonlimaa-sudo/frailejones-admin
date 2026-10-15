@@ -3,10 +3,12 @@ import { useLocale, useTranslations } from "next-intl";
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao } from "@/lib/types/creditos";
+import type { AcordoPagamento } from "@/lib/types/acordos";
 import type { CotacaoHistorico } from "@/lib/moeda";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { FUSO_CARACAS } from "@/lib/fuso";
 import { EstadoDeCuenta } from "@/components/unidades/estado-de-cuenta";
+import { AcordosPagamento } from "@/components/unidades/acordos-pagamento";
 import { ExtratoCreditos, saldoDosCreditos } from "@/components/unidades/extrato-creditos";
 import { TabsNaUrl } from "@/components/tabs-na-url";
 import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
@@ -23,12 +25,13 @@ type PortalUnidadeViewProps = {
   unidade: Omit<Unidade, "proprietario"> & { proprietario: Proprietario | null };
   cobrancas: CobrancaDaUnidade[];
   creditos: CreditoMovimentacao[];
+  acordos: AcordoPagamento[];
   cotacoes: (CotacaoHistorico & { id: string })[];
 };
 
 // versão só-leitura de UnidadeDetailTabs pro portal público do condômino: mesma UI/dados, mas
 // sem LiquidarCobrancaDialog (ação exclusiva do admin) — reusa os mesmos namespaces de i18n
-export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobrancas, creditos, cotacoes }: PortalUnidadeViewProps) {
+export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobrancas, creditos, acordos, cotacoes }: PortalUnidadeViewProps) {
   const t = useTranslations("unidadeDetail");
   const locale = useLocale();
   const dateTimeFormatter = new Intl.DateTimeFormat(INTL_LOCALE[locale as keyof typeof INTL_LOCALE], {
@@ -54,6 +57,7 @@ export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobranca
           saldoFavor={saldoFavor}
           tasaVes={cotacaoAtual?.tasa_ves ?? null}
         />
+        <AcordosPagamento unidadeId={unidade.id} acordos={acordos} cobrancas={cobrancas} podeEditar={false} />
         <Card>
           <CardHeader>
             <CardTitle>{t("general.title")}</CardTitle>

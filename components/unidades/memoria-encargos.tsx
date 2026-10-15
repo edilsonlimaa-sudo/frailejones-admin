@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 
-import { arredondarCentavos, type MemoriaEncargos } from "@/lib/encargos";
+import { arredondarCentavos, type MemoriaEncargos, type TrechoJuros } from "@/lib/encargos";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { formatUsd } from "@/lib/moeda";
 import type { Locale } from "@/i18n/config";
@@ -32,6 +32,16 @@ export function MemoriaEncargosPopover({ memoria, total, children }: MemoriaEnca
 
   const { regras } = memoria;
   const mensal = regras.metodo_encargos === "mensal";
+  // trechos congelados seguidos (acordo vigente, base 0) viram uma linha só
+  const trechos = memoria.trechos.reduce<TrechoJuros[]>((acc, trecho) => {
+    const ultimo = acc.at(-1);
+    if (ultimo && ultimo.congelado && trecho.congelado && ultimo.base === 0 && trecho.base === 0) {
+      acc[acc.length - 1] = { ...ultimo, ate: trecho.ate, quantidade: ultimo.quantidade + trecho.quantidade };
+    } else {
+      acc.push(trecho);
+    }
+    return acc;
+  }, []);
 
   return (
     <Popover>
@@ -46,6 +56,16 @@ export function MemoriaEncargosPopover({ memoria, total, children }: MemoriaEnca
         {!mensal && regras.dias_graca > 0 && (
           <p className="text-muted-foreground">{t("grace", { date: formatDate(memoria.prazo) })}</p>
         )}
+        {memoria.acordo && (
+          <p className="rounded-lg bg-muted px-2 py-1.5">
+            {memoria.acordo.quebrado_em
+              ? t("agreementBroken", {
+                  broken: formatDate(memoria.acordo.quebrado_em),
+                  date: formatDate(memoria.acordo.data_inicio),
+                })
+              : t("agreementActive", { date: formatDate(memoria.acordo.data_inicio) })}
+          </p>
+        )}
 
         <ul className="flex flex-col gap-1 border-t pt-2">
           {memoria.multa && (
@@ -54,16 +74,24 @@ export function MemoriaEncargosPopover({ memoria, total, children }: MemoriaEnca
               valor={usd(memoria.multa.valor)}
             />
           )}
-          {memoria.trechos.map((trecho) => (
+          {trechos.map((trecho) => (
             <Linha
               key={trecho.de}
-              rotulo={t(mensal ? "monthlyStretch" : "dailyStretch", {
-                count: trecho.quantidade,
-                from: formatDate(trecho.de),
-                to: formatDate(trecho.ate),
-                pct: formatPct(mensal ? regras.pct_juros_mensal : regras.pct_juros_diario),
-                base: usd(trecho.base),
-              })}
+              rotulo={
+                trecho.congelado && trecho.base === 0
+                  ? t(mensal ? "frozenMonths" : "frozenDays", {
+                      count: trecho.quantidade,
+                      from: formatDate(trecho.de),
+                      to: formatDate(trecho.ate),
+                    })
+                  : t(mensal ? "monthlyStretch" : "dailyStretch", {
+                      count: trecho.quantidade,
+                      from: formatDate(trecho.de),
+                      to: formatDate(trecho.ate),
+                      pct: formatPct(mensal ? regras.pct_juros_mensal : regras.pct_juros_diario),
+                      base: usd(trecho.base),
+                    })
+              }
               valor={usd(trecho.valor)}
             />
           ))}

@@ -28,7 +28,7 @@ export default async function RateiosExtraordinariosPage() {
       supabase
         .from("despesas_extraordinarias")
         .select(
-          "id, titulo, descricao, valor_total_usd, valor_por_unidade_usd, data_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, metodo_encargos, pct_juros_mensal, criterio_mes, created_at, despesa_extraordinaria_unidades(unidade_id), cobrancas(status, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento)))",
+          "id, titulo, descricao, valor_total_usd, valor_por_unidade_usd, data_vencimento, pct_multa_atraso, pct_juros_diario, dias_graca, metodo_encargos, pct_juros_mensal, criterio_mes, created_at, despesa_extraordinaria_unidades(unidade_id), cobrancas(status, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, acordo:acordos_pagamento(id, data_inicio, quebrado_em), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento)))",
         )
         .order("created_at", { ascending: false })
         .returns<DespesaExtraordinariaRow[]>(),

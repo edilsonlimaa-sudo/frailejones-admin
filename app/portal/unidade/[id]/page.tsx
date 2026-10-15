@@ -7,6 +7,7 @@ import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
 import { hojeCaracas } from "@/lib/fuso";
 import { createClient } from "@/lib/supabase/server";
 import type { Unidade } from "@/lib/types/unidades";
+import type { AcordoPagamento } from "@/lib/types/acordos";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao, CreditoOrigemCobranca, MoedaTipo } from "@/lib/types/creditos";
 import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
@@ -88,11 +89,12 @@ export default async function PortalUnidadePage({
     { data: cobrancasRaw, error: cobrancasError },
     { data: creditosRaw, error: creditosError },
     { data: cotacoes, error: cotacaoBcvError },
+    { data: acordos, error: acordosError },
   ] = await Promise.all([
     supabase
       .from("cobrancas")
       .select(
-        "id, tipo, descricao, taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(titulo), competencia, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, status, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, tasa_bcv_aplicada, forma_pagamento, referencia_bancaria, observacao, creditos_movimentacoes(valor, moeda)))",
+        "id, tipo, descricao, taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(titulo), competencia, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, acordo:acordos_pagamento(id, data_inicio, quebrado_em), status, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, tasa_bcv_aplicada, forma_pagamento, referencia_bancaria, observacao, creditos_movimentacoes(valor, moeda)))",
       )
       .eq("unidade_id", id)
       .order("data_vencimento", { ascending: false })
@@ -113,9 +115,15 @@ export default async function PortalUnidadePage({
         .limit(366)
         .returns<{ id: string; data_cotacao: string; tasa_ves: number }[]>(),
     ),
+    supabase
+      .from("acordos_pagamento")
+      .select("id, unidade_id, data_inicio, observacao, quebrado_em, created_at")
+      .eq("unidade_id", id)
+      .order("data_inicio", { ascending: false })
+      .returns<AcordoPagamento[]>(),
   ]);
 
-  if (cobrancasError || creditosError || cotacaoBcvError) {
+  if (cobrancasError || creditosError || cotacaoBcvError || acordosError) {
     return (
       <p className="text-sm text-destructive">
         {t("unitNotFound")}
@@ -188,6 +196,7 @@ export default async function PortalUnidadePage({
         unidade={unidade}
         cobrancas={cobrancas}
         creditos={creditos}
+        acordos={acordos ?? []}
         cotacoes={cotacoes ?? []}
       />
     </div>

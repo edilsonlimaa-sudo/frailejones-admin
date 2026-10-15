@@ -1,4 +1,9 @@
-import { calcularEncargos, pagamentosParaEncargos, type RegrasEncargos } from "@/lib/encargos";
+import {
+  calcularEncargos,
+  pagamentosParaEncargos,
+  type AcordoParaEncargos,
+  type RegrasEncargos,
+} from "@/lib/encargos";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
 
 export type CobrancaPendenteTotal = RegrasEncargos & {
@@ -7,6 +12,7 @@ export type CobrancaPendenteTotal = RegrasEncargos & {
   valor_credito_abatido_usd: number;
   data_vencimento: string;
   status: CobrancaStatus;
+  acordo: AcordoParaEncargos | null;
   unidade: { id: string; identificacao: string; proprietario: { nome: string } | null } | null;
   pagamento_cobrancas: Parameters<typeof pagamentosParaEncargos>[0];
 };

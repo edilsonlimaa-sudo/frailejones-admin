@@ -26,6 +26,11 @@ export type RegrasEncargos = {
   criterio_mes: CriterioMes;
 };
 
+// acordo de pagamento que congela os juros da cobrança (migration acordos_pagamento): vigente,
+// nada gera juros depois de data_inicio; quebrado, os juros voltam desde data_inicio, mas só
+// sobre o principal que seguia em aberto em quebrado_em
+export type AcordoParaEncargos = { data_inicio: string; quebrado_em: string | null };
+
 export type CobrancaParaEncargos = RegrasEncargos & {
   status: CobrancaStatus;
   valor_usd: number;
@@ -33,11 +38,21 @@ export type CobrancaParaEncargos = RegrasEncargos & {
   data_vencimento: string;
   // pagamentos até a data de referência do cálculo
   pagamentos: PagamentoParaEncargos[];
+  acordo: AcordoParaEncargos | null;
 };
 
 // um trecho de juros com a mesma base: no mensal, meses completos seguidos (de/ate = dias em que
-// fecharam o primeiro e o último); no diário, dias entre dois pagamentos (de/ate = o intervalo)
-export type TrechoJuros = { de: string; ate: string; quantidade: number; base: number; valor: number };
+// fecharam o primeiro e o último); no diário, dias entre dois pagamentos (de/ate = o intervalo).
+// congelado: o trecho caiu no período de um acordo (base 0 se vigente, o que seguia em aberto na
+// quebra se foi quebrado)
+export type TrechoJuros = {
+  de: string;
+  ate: string;
+  quantidade: number;
+  base: number;
+  valor: number;
+  congelado: boolean;
+};
 
 // o passo a passo que levou aos encargos, pra explicar o valor na tela (os valores dos trechos
 // não são arredondados: o total arredondado é o de Encargos)
@@ -51,6 +66,7 @@ export type MemoriaEncargos = {
   jaPago: number;
   // mensal: quando fecha o próximo mês e quanto ele acrescenta sobre o saldo de hoje
   proximoMes: { data: string; valor: number } | null;
+  acordo: AcordoParaEncargos | null;
 };
 
 export type Encargos = {
@@ -78,6 +94,29 @@ const regrasDe = (c: RegrasEncargos): RegrasEncargos => ({
 
 const diasEntre = (deIso: string, ateIso: string) =>
   Math.round((Date.parse(`${ateIso}T00:00:00Z`) - Date.parse(`${deIso}T00:00:00Z`)) / MS_POR_DIA);
+
+const menorData = (a: string, b: string) => (a < b ? a : b);
+const maiorData = (a: string, b: string) => (a > b ? a : b);
+const SEM_FIM = "9999-12-31";
+
+// período congelado de um acordo e a base que vale dentro dele (null sem acordo)
+type Congelamento = { inicio: string; fim: string; base: number };
+
+function congelamentoDo(
+  cobranca: CobrancaParaEncargos,
+  pagamentos: { dia: string; principal: number }[],
+): Congelamento | null {
+  const { acordo } = cobranca;
+  if (!acordo) return null;
+  if (!acordo.quebrado_em) return { inicio: acordo.data_inicio, fim: SEM_FIM, base: 0 };
+  const quebra = acordo.quebrado_em;
+  const pagoAteQuebra = pagamentos.filter((p) => p.dia <= quebra).reduce((acc, p) => acc + p.principal, 0);
+  return {
+    inicio: acordo.data_inicio,
+    fim: quebra,
+    base: Math.max(cobranca.valor_usd - cobranca.valor_credito_abatido_usd - pagoAteQuebra, 0),
+  };
+}
 
 // os insumos têm no máximo 8 casas (valor 2 × juros 4 + /100), então o valor exato nunca fica a
 // menos de 1e-6 centavo de um meio centavo; a folga de 1e-7 só absorve o erro do ponto flutuante e
@@ -159,11 +198,34 @@ export function calcularEncargos(cobranca: CobrancaParaEncargos, dataReferenciaI
 
   const trechos: TrechoJuros[] = [];
   let desde = prazoIso;
+  const congelamento = congelamentoDo(cobranca, pagamentos);
+  // espelho de juros_diario_trecho: o trecho (desde, ate] é partido em antes, durante e depois do
+  // período congelado do acordo, cada parte com a sua base
   const somarTrecho = (ate: string) => {
-    const dias = diasEntre(desde, ate);
     const base = Math.max(saldo, 0);
-    if (dias > 0 && base > 0) {
-      trechos.push({ de: desde, ate, quantidade: dias, base, valor: (base * cobranca.pct_juros_diario * dias) / 100 });
+    const partes = congelamento
+      ? [
+          { de: desde, ate: menorData(ate, congelamento.inicio), base, congelado: false },
+          {
+            de: maiorData(desde, congelamento.inicio),
+            ate: menorData(ate, congelamento.fim),
+            base: Math.min(base, congelamento.base),
+            congelado: true,
+          },
+          { de: maiorData(desde, congelamento.fim), ate, base, congelado: false },
+        ]
+      : [{ de: desde, ate, base, congelado: false }];
+    for (const parte of partes) {
+      const dias = diasEntre(parte.de, parte.ate);
+      if (dias <= 0 || base <= 0) continue;
+      trechos.push({
+        de: parte.de,
+        ate: parte.ate,
+        quantidade: dias,
+        base: parte.base,
+        valor: (parte.base * cobranca.pct_juros_diario * dias) / 100,
+        congelado: parte.congelado,
+      });
     }
   };
   for (const p of pagamentos.filter((p) => p.dia > prazoIso)) {
@@ -191,6 +253,7 @@ export function calcularEncargos(cobranca: CobrancaParaEncargos, dataReferenciaI
       trechos,
       jaPago: encargosPagos,
       proximoMes: null,
+      acordo: cobranca.acordo,
     },
   };
 }
@@ -223,6 +286,10 @@ function calcularJurosMensais(
     principal: p.valor_principal_abatido_usd,
   }));
 
+  const congelamento = congelamentoDo(cobranca, pagamentos);
+  const noAcordo = (fim: string) =>
+    congelamento !== null && fim > congelamento.inicio && fim <= congelamento.fim;
+
   // meses seguidos com a mesma base viram um trecho só ("9 meses × 3% de $ 33,00")
   const trechos: TrechoJuros[] = [];
   let n = 1;
@@ -231,14 +298,16 @@ function calcularJurosMensais(
     if (fim > dataReferenciaIso) break;
     const abatido = pagamentos.filter((p) => p.dia < fim).reduce((acc, p) => acc + p.principal, 0);
     const emAberto = Math.max(cobranca.valor_usd - cobranca.valor_credito_abatido_usd - abatido, 0);
-    const valor = (emAberto * cobranca.pct_juros_mensal) / 100;
+    const congelado = noAcordo(fim);
+    const base = congelado ? Math.min(emAberto, congelamento!.base) : emAberto;
+    const valor = (base * cobranca.pct_juros_mensal) / 100;
     const ultimo = trechos.at(-1);
-    if (ultimo && arredondarCentavos(ultimo.base) === arredondarCentavos(emAberto)) {
+    if (ultimo && ultimo.congelado === congelado && arredondarCentavos(ultimo.base) === arredondarCentavos(base)) {
       ultimo.ate = fim;
       ultimo.quantidade += 1;
       ultimo.valor += valor;
     } else if (emAberto > 0) {
-      trechos.push({ de: fim, ate: fim, quantidade: 1, base: emAberto, valor });
+      trechos.push({ de: fim, ate: fim, quantidade: 1, base, valor, congelado });
     }
   }
   const juros = trechos.reduce((acc, t) => acc + t.valor, 0);
@@ -258,8 +327,11 @@ function calcularJurosMensais(
       multa: null,
       trechos,
       jaPago: encargosPagos,
+      acordo: cobranca.acordo,
+      // com o acordo vigente o próximo mês não acrescenta nada
       proximoMes:
-        cobranca.pct_juros_mensal > 0
+        cobranca.pct_juros_mensal > 0 &&
+        !(noAcordo(fimDoMesDeAtraso(cobranca.data_vencimento, cobranca.criterio_mes, n)) && congelamento!.base === 0)
           ? {
               data: fimDoMesDeAtraso(cobranca.data_vencimento, cobranca.criterio_mes, n),
               valor: arredondarCentavos((saldoDevedor * cobranca.pct_juros_mensal) / 100),

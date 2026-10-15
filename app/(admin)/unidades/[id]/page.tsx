@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
 import { createClient } from "@/lib/supabase/server";
 import type { Unidade } from "@/lib/types/unidades";
+import type { AcordoPagamento } from "@/lib/types/acordos";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao, CreditoOrigemCobranca } from "@/lib/types/creditos";
 import {
@@ -75,6 +76,7 @@ export default async function UnidadeDetailPage({
     { data: cobrancasRaw, error: cobrancasError },
     { data: creditosRaw, error: creditosError },
     { data: cotacoes, error: cotacaoBcvError },
+    { data: acordos, error: acordosError },
   ] = await Promise.all([
     supabase
       .from("cobrancas")
@@ -98,13 +100,24 @@ export default async function UnidadeDetailPage({
         .limit(366)
         .returns<{ id: string; data_cotacao: string; tasa_ves: number }[]>(),
     ),
+    supabase
+      .from("acordos_pagamento")
+      .select("id, unidade_id, data_inicio, observacao, quebrado_em, created_at")
+      .eq("unidade_id", id)
+      .order("data_inicio", { ascending: false })
+      .returns<AcordoPagamento[]>(),
   ]);
 
-  if (cobrancasError || creditosError || cotacaoBcvError) {
+  if (cobrancasError || creditosError || cotacaoBcvError || acordosError) {
     return (
       <p className="text-sm text-destructive">
         {t("errorLoadingData", {
-          message: cobrancasError?.message ?? creditosError?.message ?? cotacaoBcvError?.message ?? "",
+          message:
+            cobrancasError?.message ??
+            creditosError?.message ??
+            cotacaoBcvError?.message ??
+            acordosError?.message ??
+            "",
         })}
       </p>
     );
@@ -149,6 +162,7 @@ export default async function UnidadeDetailPage({
         unidade={unidade}
         cobrancas={cobrancas}
         creditos={creditos}
+        acordos={acordos ?? []}
         cotacoes={cotacoes ?? []}
       />
     </div>

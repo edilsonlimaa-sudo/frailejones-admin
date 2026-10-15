@@ -258,6 +258,11 @@ function LinhaCobranca({
             <span className="truncate text-sm font-normal text-muted-foreground">{item.rotulo.subtitulo}</span>
           )}
           {item.rotulo.extraordinaria && <Badge variant="outline">{tTipo("extraordinaria")}</Badge>}
+          {cobranca.acordo && (
+            <Badge variant="outline">
+              {t(cobranca.acordo.quebrado_em ? "agreement.broken" : "agreement.active")}
+            </Badge>
+          )}
         </p>
         <p
           className={cn(

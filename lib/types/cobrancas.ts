@@ -1,4 +1,5 @@
 import type { RegrasEncargos } from "@/lib/encargos";
+import type { AcordoDaCobranca } from "@/lib/types/acordos";
 import type { PagamentoDaCobranca } from "@/lib/types/pagamentos";
 
 export type CobrancaTipo = "ordinaria" | "extraordinaria";
@@ -19,4 +20,6 @@ export type CobrancaDaUnidade = RegrasEncargos & {
   pagamentos: PagamentoDaCobranca[];
   data_vencimento: string;
   status: CobrancaStatus;
+  // acordo de pagamento que congela os juros desta cobrança, se ela entrou em um
+  acordo: AcordoDaCobranca | null;
 };

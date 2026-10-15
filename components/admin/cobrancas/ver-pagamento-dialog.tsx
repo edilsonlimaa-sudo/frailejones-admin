@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 const round2 = (valor: number) => Math.round(valor * 100) / 100;
 
 type CobrancaDoPagamento = RegrasEncargos &
-  Pick<CobrancaDaUnidade, "descricao" | "valor_usd" | "valor_credito_abatido_usd" | "data_vencimento">;
+  Pick<CobrancaDaUnidade, "descricao" | "valor_usd" | "valor_credito_abatido_usd" | "data_vencimento" | "acordo">;
 
 // reconstrói, pra um pagamento, o que a cobrança devia no momento e o que o pagamento registrou.
 // Cota pendente é exata (valor - saldo a favor aplicado na emissão - principal dos pagamentos
