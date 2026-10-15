@@ -115,7 +115,8 @@ export function CamposEncargos({ value, onChange, valorExemplo, vencimentoExempl
 
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="mb-2 text-sm font-medium">{t("methodLabel")}</legend>
+      {/* o título do passo do wizard já diz o que é; a legenda fica só pra leitores de tela */}
+      <legend className="sr-only">{t("methodLabel")}</legend>
 
       <div role="radiogroup" aria-label={t("methodLabel")} className="grid grid-cols-2 gap-2">
         {METODOS.map((metodo) => (

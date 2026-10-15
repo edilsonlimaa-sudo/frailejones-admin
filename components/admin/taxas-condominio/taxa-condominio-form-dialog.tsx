@@ -80,13 +80,21 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
   const [ativo, setAtivo] = useState(taxa?.ativo ?? true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // wizard: passo 1 define a taxa, passo 2 a multa e os juros por atraso (os campos de encargos
+  // com a prévia poluíam o cadastro quando ficavam juntos)
+  const [step, setStep] = useState<1 | 2>(1);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const dia = Number(diaVencimento);
-    if (!Number.isInteger(dia) || dia < 1 || dia > 31) {
-      setError(t("invalidDueDay"));
+    if (step === 1) {
+      if (!Number.isInteger(dia) || dia < 1 || dia > 31) {
+        setError(t("invalidDueDay"));
+        return;
+      }
+      setError(null);
+      setStep(2);
       return;
     }
 
@@ -128,68 +136,88 @@ function TaxaCondominioFormFields({ taxa, onSaved, onClose }: TaxaCondominioForm
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{isEditing ? t("editTitle") : t("createTitle")}</DialogTitle>
-        <DialogDescription>{t("description")}</DialogDescription>
+        <DialogTitle>
+          {isEditing ? t("editTitle") : t("createTitle")}
+          {" — "}
+          {step === 1 ? t("step1Title") : t("step2Title")}
+        </DialogTitle>
+        <DialogDescription>{step === 1 ? t("step1Description") : t("step2Description")}</DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="titulo">{t("titleLabel")}</Label>
-          <Input
-            id="titulo"
-            placeholder={t("titlePlaceholder")}
-            required
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
+        {step === 1 ? (
+          <>
+            <div className="grid gap-2">
+              <Label htmlFor="titulo">{t("titleLabel")}</Label>
+              <Input
+                id="titulo"
+                placeholder={t("titlePlaceholder")}
+                required
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="valor_usd">{t("valueLabel")}</Label>
+                <Input
+                  id="valor_usd"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={valorUsd}
+                  onChange={(e) => setValorUsd(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dia_vencimento">{t("dueDayLabel")}</Label>
+                <Input
+                  id="dia_vencimento"
+                  type="number"
+                  min="1"
+                  max="31"
+                  required
+                  value={diaVencimento}
+                  onChange={(e) => setDiaVencimento(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-2xl border border-input bg-input/30 px-3 py-2.5">
+              <div className="flex flex-col">
+                <Label htmlFor="ativo">{tCommon("active")}</Label>
+                <span className="text-xs text-muted-foreground">{t("activeHint")}</span>
+              </div>
+              <Switch id="ativo" checked={ativo} onCheckedChange={setAtivo} />
+            </div>
+          </>
+        ) : (
+          <CamposEncargos
+            value={regras}
+            onChange={setRegras}
+            valorExemplo={Number(valorUsd) > 0 ? Number(valorUsd) : 100}
+            vencimentoExemplo={vencimentoNoMesAtual(Number(diaVencimento))}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="valor_usd">{t("valueLabel")}</Label>
-            <Input
-              id="valor_usd"
-              type="number"
-              min="0"
-              step="0.01"
-              required
-              value={valorUsd}
-              onChange={(e) => setValorUsd(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="dia_vencimento">{t("dueDayLabel")}</Label>
-            <Input
-              id="dia_vencimento"
-              type="number"
-              min="1"
-              max="31"
-              required
-              value={diaVencimento}
-              onChange={(e) => setDiaVencimento(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <CamposEncargos
-          value={regras}
-          onChange={setRegras}
-          valorExemplo={Number(valorUsd) > 0 ? Number(valorUsd) : 100}
-          vencimentoExemplo={vencimentoNoMesAtual(Number(diaVencimento))}
-        />
-
-        <div className="flex items-center justify-between rounded-2xl border border-input bg-input/30 px-3 py-2.5">
-          <div className="flex flex-col">
-            <Label htmlFor="ativo">{tCommon("active")}</Label>
-            <span className="text-xs text-muted-foreground">{t("activeHint")}</span>
-          </div>
-          <Switch id="ativo" checked={ativo} onCheckedChange={setAtivo} />
-        </div>
+        )}
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <DialogFooter>
+          {step === 2 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setError(null);
+                setStep(1);
+              }}
+            >
+              {tCommon("back")}
+            </Button>
+          )}
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? tCommon("saving") : tCommon("save")}
+            {step === 1 ? t("next") : isSubmitting ? tCommon("saving") : tCommon("save")}
           </Button>
         </DialogFooter>
       </form>

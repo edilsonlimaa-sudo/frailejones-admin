@@ -83,8 +83,9 @@ function RateioExtraordinarioFormFields({
   const [selecionados, setSelecionados] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // wizard: passo 1 define o rateio, passo 2 vincula as unidades (não escala mostrar as 2 coisas juntas com centenas de unidades)
-  const [step, setStep] = useState<1 | 2>(1);
+  // wizard: passo 1 define o rateio, passo 2 a multa e os juros por atraso, passo 3 vincula as
+  // unidades (não escala mostrar tudo junto com centenas de unidades)
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const unidadeIds = [...selecionados];
   // rateio: valor por unidade é sempre derivado do valor total / quantidade de unidades selecionadas
@@ -101,6 +102,11 @@ function RateioExtraordinarioFormFields({
       }
       setError(null);
       setStep(2);
+      return;
+    }
+
+    if (step === 2) {
+      setStep(3);
       return;
     }
 
@@ -148,10 +154,10 @@ function RateioExtraordinarioFormFields({
         <DialogTitle>
           {t("createTitle")}
           {" — "}
-          {step === 1 ? t("step1Title") : t("step2Title")}
+          {t(`step${step}Title`)}
         </DialogTitle>
         <DialogDescription>
-          {step === 1 ? t("step1Description") : t("step2Description")}
+          {t(`step${step}Description`)}
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
@@ -204,14 +210,14 @@ function RateioExtraordinarioFormFields({
                   />
                 </div>
               </div>
-
-              <CamposEncargos
-                value={regras}
-                onChange={setRegras}
-                valorExemplo={100}
-                vencimentoExemplo={dataVencimento || hojeCaracas()}
-              />
             </>
+          ) : step === 2 ? (
+            <CamposEncargos
+              value={regras}
+              onChange={setRegras}
+              valorExemplo={100}
+              vencimentoExemplo={dataVencimento || hojeCaracas()}
+            />
           ) : (
             <SeletorUnidades
               unidades={unidades}
@@ -226,7 +232,7 @@ function RateioExtraordinarioFormFields({
 
           {/* último momento de revisão: depois de salvar as cobranças já existem e o rateio não
               pode mais ser editado */}
-          {step === 2 && unidadeIds.length > 0 && (
+          {step === 3 && unidadeIds.length > 0 && (
             <div
               role="note"
               className="flex items-start gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm"
@@ -243,7 +249,7 @@ function RateioExtraordinarioFormFields({
 
         <DialogFooter className="sm:items-center">
           {/* resumo vivo do que vai ser emitido, ao lado da ação que emite */}
-          {step === 2 && (
+          {step === 3 && (
             <p className="order-last text-sm text-muted-foreground sm:order-first sm:mr-auto">
               {unidadeIds.length > 0 ? (
                 <>
@@ -258,20 +264,20 @@ function RateioExtraordinarioFormFields({
               )}
             </p>
           )}
-          {step === 2 && (
+          {step > 1 && (
             <Button
               type="button"
               variant="outline"
               onClick={() => {
                 setError(null);
-                setStep(1);
+                setStep(step === 3 ? 2 : 1);
               }}
             >
               {tCommon("back")}
             </Button>
           )}
-          <Button type="submit" disabled={isSubmitting || (step === 2 && unidadeIds.length === 0)}>
-            {step === 1 ? t("next") : isSubmitting ? tCommon("saving") : t("emitCharges")}
+          <Button type="submit" disabled={isSubmitting || (step === 3 && unidadeIds.length === 0)}>
+            {step < 3 ? t("next") : isSubmitting ? tCommon("saving") : t("emitCharges")}
           </Button>
         </DialogFooter>
       </form>
