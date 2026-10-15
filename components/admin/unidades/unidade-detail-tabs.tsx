@@ -127,7 +127,12 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
       </TabsContent>
 
       <TabsContent value="acordos">
-        <AcordosPagamento unidadeId={unidade.id} acordos={acordos} cobrancas={cobrancas} podeEditar={true} />
+        <AcordosPagamento
+          unidadeId={unidade.id}
+          acordos={acordos}
+          cobrancas={cobrancas}
+          cotacoes={cotacoes}
+          podeEditar={true} />
       </TabsContent>
     </TabsNaUrl>
   );

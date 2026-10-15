@@ -8,11 +8,11 @@ import { ChevronRightIcon, HandshakeIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
-import { dataCaixaCaracas } from "@/lib/arrecadacao";
-import { faltaHoje, pagoNoAcordo, resumirAcordo } from "@/lib/acordos";
+import { faltaHoje, resumirAcordo } from "@/lib/acordos";
+import { FILTRO_COBRANCAS_PADRAO, organizarCobrancas } from "@/lib/lista-cobrancas";
 import { hojeCaracas } from "@/lib/fuso";
 import { INTL_LOCALE } from "@/lib/intl-locale";
-import { formatUsd } from "@/lib/moeda";
+import { formatUsd, type CotacaoHistorico } from "@/lib/moeda";
 import type { AcordoPagamento } from "@/lib/types/acordos";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
 
 const somarDias = (dataIso: string, dias: number) => {
   const data = new Date(`${dataIso}T00:00:00Z`);
@@ -61,6 +62,7 @@ type AcordosPagamentoProps = {
   unidadeId: string;
   acordos: AcordoPagamento[];
   cobrancas: CobrancaDaUnidade[];
+  cotacoes: (CotacaoHistorico & { id: string })[];
   // só o admin registra e quebra acordos; o portal só mostra
   podeEditar: boolean;
 };
@@ -68,7 +70,7 @@ type AcordosPagamentoProps = {
 // aba de acordos de pagamento da unidade (congelam os juros das cobranças em atraso): no admin é
 // uma lista, e cada acordo abre a página dele (/acordos/[id]), onde dá pra quebrar; o portal não
 // tem essa página, então mostra o detalhe de cada acordo direto na aba
-export function AcordosPagamento({ unidadeId, acordos, cobrancas, podeEditar }: AcordosPagamentoProps) {
+export function AcordosPagamento({ unidadeId, acordos, cobrancas, cotacoes, podeEditar }: AcordosPagamentoProps) {
   const t = useTranslations("acordos");
   const hojeIso = hojeCaracas();
   const [registrando, setRegistrando] = useState(false);
@@ -112,6 +114,7 @@ export function AcordosPagamento({ unidadeId, acordos, cobrancas, podeEditar }: 
               <DetalheAcordo
                 acordo={acordo}
                 cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
+                cotacoes={cotacoes}
                 podeEditar={false}
               />
             </section>
@@ -203,16 +206,18 @@ const VARIANTE_SITUACAO = {
 export function DetalheAcordo({
   acordo,
   cobrancas,
+  cotacoes,
   podeEditar,
 }: {
   acordo: AcordoPagamento;
   // só as cobranças deste acordo
   cobrancas: CobrancaDaUnidade[];
-  // admin: mostra o botão de quebrar o acordo vigente
+  cotacoes: (CotacaoHistorico & { id: string })[];
+  // admin: quebrar o acordo vigente e liquidar as cobranças dele
   podeEditar: boolean;
 }) {
   const t = useTranslations("acordos");
-  const { formatDate, formatMes } = useFormatos();
+  const { formatDate } = useFormatos();
   const hojeIso = hojeCaracas();
   const [quebrando, setQuebrando] = useState(false);
   const { situacao, devidoNoInicio, pago, falta, jurosEvitados: evitados, progresso } = resumirAcordo(
@@ -276,43 +281,14 @@ export function DetalheAcordo({
 
       <div className="flex flex-col gap-2">
         <h4 className="text-sm font-medium">{t("detail.chargesTitle", { count: cobrancas.length })}</h4>
-        <ul className="flex flex-col divide-y rounded-lg border">
-          {cobrancas.map((c) => {
-            const pagaEm =
-              c.status !== "pendente" && c.data_ultimo_pagamento ? dataCaixaCaracas(c.data_ultimo_pagamento) : null;
-            const pagoAqui = pagoNoAcordo(c, acordo);
-            const faltaAqui = faltaHoje(c, hojeIso);
-            return (
-              <li key={c.id} className="flex flex-col gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {c.titulo_origem}
-                    <span className="font-normal text-muted-foreground"> · {formatMes(c.competencia)}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("detail.dueOn", { date: formatDate(c.data_vencimento) })}
-                    {" · "}
-                    {c.status === "pendente"
-                      ? t("detail.pendingStatus")
-                      : pagaEm
-                        ? t("detail.paidOn", { date: formatDate(pagaEm) })
-                        : t("detail.settled")}
-                  </p>
-                </div>
-                <div className="flex gap-6 text-sm tabular-nums sm:justify-end">
-                  <div className="sm:w-32 sm:text-right">
-                    <p className="text-xs text-muted-foreground">{t("detail.paidHere")}</p>
-                    <p>{formatUsd(pagoAqui)}</p>
-                  </div>
-                  <div className="sm:w-32 sm:text-right">
-                    <p className="text-xs text-muted-foreground">{t("detail.remainingHere")}</p>
-                    <p className={cn("font-medium", faltaAqui > 0 && "text-destructive")}>{formatUsd(faltaAqui)}</p>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        {/* a mesma lista da aba Cobros, com liquidar no admin */}
+        <ListaCobrancas
+          organizadas={organizarCobrancas(cobrancas, new Date())}
+          filtroInicial={FILTRO_COBRANCAS_PADRAO}
+          podeLiquidar={podeEditar}
+          cotacaoAtual={cotacoes[0] ?? null}
+          cotacoes={cotacoes}
+        />
       </div>
 
       {podeEditar && (

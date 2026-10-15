@@ -1162,13 +1162,7 @@
       "interestAvoided": "Juros congelados",
       "interestAvoidedHint": "o que já teria acumulado sem o acordo",
       "progress": "{pct}% da dívida do acordo já foi paga",
-      "chargesTitle": "{count, plural, one {# cobrança no acordo} other {# cobranças no acordo}}",
-      "dueOn": "Venceu em {date}",
-      "pendingStatus": "Pendente",
-      "paidOn": "Paga em {date}",
-      "settled": "Quitada",
-      "paidHere": "Pago no acordo",
-      "remainingHere": "Falta hoje"
+      "chargesTitle": "{count, plural, one {# cobrança no acordo} other {# cobranças no acordo}}"
     }
   },
   "acordosPage": {

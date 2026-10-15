@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
 import { createClient } from "@/lib/supabase/server";
 import {
   montarCobrancaDetalhada,
@@ -24,7 +25,11 @@ export default async function AcordoDetailPage({ params }: { params: Promise<{ i
   const t = await getTranslations("common");
   const tAcordo = await getTranslations("acordoDetail");
 
-  const [{ data: acordo, error: acordoError }, { data: cobrancasRaw, error: cobrancasError }] = await Promise.all([
+  const [
+    { data: acordo, error: acordoError },
+    { data: cobrancasRaw, error: cobrancasError },
+    { data: cotacoes, error: cotacoesError },
+  ] = await Promise.all([
     supabase
       .from("acordos_pagamento")
       .select(
@@ -38,12 +43,21 @@ export default async function AcordoDetailPage({ params }: { params: Promise<{ i
       .eq("acordo_pagamento_id", id)
       .order("data_vencimento", { ascending: false })
       .returns<CobrancaDetalhadaRow[]>(),
+    // a lista liquida em bolívares: precisa da cotação vigente e do histórico
+    garantirCotacaoBcvAtualizada().then(() =>
+      supabase
+        .from("cotacao_bcv")
+        .select("id, data_cotacao, tasa_ves")
+        .order("data_cotacao", { ascending: false })
+        .limit(366)
+        .returns<{ id: string; data_cotacao: string; tasa_ves: number }[]>(),
+    ),
   ]);
 
-  if (acordoError || cobrancasError) {
+  if (acordoError || cobrancasError || cotacoesError) {
     return (
       <p className="text-sm text-destructive">
-        {t("errorLoadingData", { message: acordoError?.message ?? cobrancasError?.message ?? "" })}
+        {t("errorLoadingData", { message: acordoError?.message ?? cobrancasError?.message ?? cotacoesError?.message ?? "" })}
       </p>
     );
   }
@@ -85,7 +99,12 @@ export default async function AcordoDetailPage({ params }: { params: Promise<{ i
 
       <Card>
         <CardContent>
-          <DetalheAcordo acordo={dadosAcordo} cobrancas={(cobrancasRaw ?? []).map(montarCobrancaDetalhada)} podeEditar />
+          <DetalheAcordo
+            acordo={dadosAcordo}
+            cobrancas={(cobrancasRaw ?? []).map(montarCobrancaDetalhada)}
+            cotacoes={cotacoes ?? []}
+            podeEditar
+          />
         </CardContent>
       </Card>
     </div>

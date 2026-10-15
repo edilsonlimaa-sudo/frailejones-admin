@@ -127,7 +127,12 @@ export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobranca
       </TabsContent>
 
       <TabsContent value="acordos">
-        <AcordosPagamento unidadeId={unidade.id} acordos={acordos} cobrancas={cobrancas} podeEditar={false} />
+        <AcordosPagamento
+          unidadeId={unidade.id}
+          acordos={acordos}
+          cobrancas={cobrancas}
+          cotacoes={cotacoes}
+          podeEditar={false} />
       </TabsContent>
     </TabsNaUrl>
   );
