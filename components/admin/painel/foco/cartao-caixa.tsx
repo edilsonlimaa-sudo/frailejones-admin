@@ -97,7 +97,7 @@ async function BlocoMoeda({
               {/* o canal abre Liquidações já filtrada nele, pra conferir com o extrato */}
               <Link
                 href={`/liquidacoes?mes=${mes}&moneda=${moeda}&forma=${canal.forma}`}
-                className="-mx-1 flex flex-col gap-1 rounded-md px-1 py-0.5 transition-colors hover:bg-background/70"
+                className="-mx-1 flex flex-col gap-1 rounded-md px-1 py-0.5 transition-colors hover:bg-card/70 dark:hover:bg-background/70"
               >
                 <div className="flex items-baseline justify-between gap-2 text-[11px]">
                   <span className="min-w-0 truncate text-muted-foreground">{tForma(canal.forma)}</span>
@@ -105,7 +105,7 @@ async function BlocoMoeda({
                     {entradas.total > 0 ? Math.round((canal.valor / entradas.total) * 100) : 0}%
                   </span>
                 </div>
-                <div className="h-1 overflow-hidden rounded-full bg-background">
+                <div className="h-1 overflow-hidden rounded-full bg-card dark:bg-background">
                   <div
                     className="h-full rounded-full bg-primary"
                     style={{ width: `${entradas.total > 0 ? (canal.valor / entradas.total) * 100 : 0}%` }}

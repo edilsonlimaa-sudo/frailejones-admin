@@ -304,7 +304,7 @@ function LiquidarCobrancaForm({
                     className={cn(
                       "flex h-12 flex-col items-center justify-center rounded-xl text-sm transition-colors disabled:opacity-50",
                       ativa
-                        ? "bg-background font-medium shadow-sm ring-1 ring-border"
+                        ? "bg-card font-medium shadow-sm ring-1 ring-border dark:bg-background"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >

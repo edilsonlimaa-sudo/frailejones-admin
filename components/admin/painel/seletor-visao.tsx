@@ -48,7 +48,7 @@ export function SeletorVisao({ visao }: { visao: VisaoPainel }) {
             className={cn(
               "inline-flex h-full items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
               ativa
-                ? "bg-background text-foreground shadow-sm dark:bg-input/40"
+                ? "bg-card text-foreground shadow-sm dark:bg-input/40"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
