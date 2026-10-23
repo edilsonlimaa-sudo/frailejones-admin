@@ -18,7 +18,7 @@ export function BarraResumo({ titulo, resumo, acao, children }: BarraResumoProps
     <BarraFixa>
       <h1 className="sr-only">{titulo}</h1>
       <div className="flex items-center justify-between gap-3 py-3">
-        <p className="min-w-0 truncate text-sm text-muted-foreground">{resumo}</p>
+        <p className="min-w-0 text-sm leading-snug text-muted-foreground">{resumo}</p>
         {acao}
       </div>
       {children}

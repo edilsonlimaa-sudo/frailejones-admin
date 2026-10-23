@@ -1064,22 +1064,20 @@
       "cumprido": "Cumpridos ({count})",
       "quebrado": "Quebrados ({count})"
     },
-    "summary": {
-      "active": "Acordos vigentes",
-      "paid": "Pago nos vigentes",
-      "remaining": "Falta pagar nos vigentes",
-      "frozen": "Juros congelados hoje"
-    },
     "row": {
       "since": "Desde {date}",
       "charges": "{count, plural, one {# cobrança} other {# cobranças}}",
       "brokenOn": "quebrado em {date}",
-      "paid": "{value} pago · {pct}%",
-      "remaining": "falta pagar",
       "nothingLeft": "Quitado"
     },
-    "barSummary": "{active, plural, one {# acordo vigente} other {# acordos vigentes}} · {value} a receber",
-    "searchPlaceholder": "Buscar por unidade ou proprietário"
+    "barSummary": "{active, plural, one {# acordo vigente} other {# acordos vigentes}} · {value} a receber · {frozen} de juros congelados",
+    "searchPlaceholder": "Buscar por unidade ou proprietário",
+    "card": {
+      "paidLabel": "pago",
+      "paidOf": "Pago {paid} de {total}",
+      "remaining": "Faltam {value}",
+      "frozen": "{value} de juros congelados"
+    }
   },
   "acordoDetail": {
     "title": "Acordo de pagamento · {unit}",
