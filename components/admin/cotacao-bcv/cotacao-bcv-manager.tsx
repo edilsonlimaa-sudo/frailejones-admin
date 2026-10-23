@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Landmark } from "lucide-react";
+import { Landmark, RefreshCw } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 
@@ -96,26 +96,9 @@ export function CotacaoBcvManager({ anoMes, hoje, cotacoes, anterior, vigentes, 
 
   return (
     <div className="flex flex-col gap-4">
-      {/* "header duplo": o mês é o título (setas e grade de meses, como em Pagos); presos junto, a
-          taxa vigente e o botão de atualizar */}
-      <CabecalhoMes titulo={t("title")} ano={anoMes.ano} mes={anoMes.mes} hoje={hoje} basePath="/cotacao-bcv">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pb-3">
-          <p className="min-w-0 text-sm text-muted-foreground">
-            {atual ? (
-              <>
-                <span className="font-semibold text-foreground tabular-nums">{formatBs(atual.tasa_ves)}</span>
-                {" · "}
-                {t("barCurrent", { date: formatDate(atual.data_cotacao) })}
-              </>
-            ) : (
-              t("noRatesShort")
-            )}
-          </p>
-          <Button size="sm" onClick={handleAtualizar} disabled={isUpdating}>
-            {isUpdating ? t("updating") : t("updateNow")}
-          </Button>
-        </div>
-      </CabecalhoMes>
+      {/* o mês é o título da barra (setas e grade de meses, como em Pagos); a taxa vigente e o botão de
+          atualizar moram no card de destaque, que é sobre hoje */}
+      <CabecalhoMes titulo={t("title")} ano={anoMes.ano} mes={anoMes.mes} hoje={hoje} basePath="/cotacao-bcv" />
 
       {/* a cotação que vale hoje, em destaque, independente do mês exibido: selo (âmbar se a última
           consulta falhou), a taxa grande, desde quando vale e a fonte, e a variação sobre a anterior */}
@@ -148,22 +131,33 @@ export function CotacaoBcvManager({ anoMes, hoje, cotacoes, anterior, vigentes, 
                 </span>
               )}
             </div>
-            {consulta && (
-              <p className={cn("border-t pt-3 text-xs", consulta.erro ? "text-destructive" : "text-muted-foreground")}>
-                {consulta.erro
-                  ? t("lastCheckError", {
-                      date: dateTimeFormatter.format(new Date(consulta.consultado_em)),
-                      error: consulta.erro,
-                    })
-                  : t("lastCheck", { date: dateTimeFormatter.format(new Date(consulta.consultado_em)) })}
+            {/* rodapé: a última ida à fonte e o botão de ir de novo, lado a lado */}
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t pt-3">
+              <p className={cn("min-w-0 text-xs", consulta?.erro ? "text-destructive" : "text-muted-foreground")}>
+                {consulta
+                  ? consulta.erro
+                    ? t("lastCheckError", {
+                        date: dateTimeFormatter.format(new Date(consulta.consultado_em)),
+                        error: consulta.erro,
+                      })
+                    : t("lastCheck", { date: dateTimeFormatter.format(new Date(consulta.consultado_em)) })
+                  : null}
               </p>
-            )}
+              <Button variant="outline" size="sm" onClick={handleAtualizar} disabled={isUpdating}>
+                <RefreshCw className={cn("size-3.5", isUpdating && "animate-spin")} />
+                {isUpdating ? t("updating") : t("updateNow")}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-10 text-center">
           <Landmark className="size-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{t("noRates")}</p>
+          <Button variant="outline" size="sm" onClick={handleAtualizar} disabled={isUpdating}>
+            <RefreshCw className={cn("size-3.5", isUpdating && "animate-spin")} />
+            {isUpdating ? t("updating") : t("updateNow")}
+          </Button>
         </div>
       )}
 

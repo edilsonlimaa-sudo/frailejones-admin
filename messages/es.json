@@ -659,7 +659,7 @@
   },
   "cotacaoBcvPage": {
     "title": "Cotización BCV",
-    "updateNow": "Actualizar cotización ahora",
+    "updateNow": "Actualizar ahora",
     "updating": "Actualizando...",
     "errorFetchApi": "No fue posible actualizar la cotización.",
     "errorInvalidRate": "La API del BCV no devolvió una tasa válida.",
@@ -668,15 +668,14 @@
     "date": "Fecha",
     "rate": "Tasa (Bs. por $)",
     "source": "Fuente",
-    "noRates": "Ninguna cotización registrada todavía. Haga clic en «Actualizar cotización ahora».",
-    "noRatesShort": "Ninguna cotización registrada todavía.",
+    "noRates": "Ninguna cotización registrada todavía. Haga clic en «Actualizar ahora».",
     "updatedAt": "Actualizada el",
     "lastCheck": "Última verificación de la fuente: {date}",
     "lastCheckError": "Última verificación de la fuente: {date}, sin éxito ({error})",
-    "barCurrent": "vigente desde el {date}",
     "currentRate": "Tasa vigente",
     "monthCount": "{count, plural, one {# cotización} other {# cotizaciones}}",
-    "emptyMonth": "Ninguna cotización registrada en {month}."
+    "emptyMonth": "Ninguna cotización registrada en {month}.",
+    "barCurrent": "vigente desde el {date}"
   },
   "auth": {
     "login": {
