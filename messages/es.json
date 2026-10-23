@@ -525,12 +525,6 @@
       "perUnit": "{value} por unidad"
     },
     "lockedActionsReason": "No se puede editar ni eliminar: los cobros de este prorrateo ya fueron emitidos a las unidades.",
-    "summary": {
-      "count": "{count, plural, one {# prorrateo} other {# prorrateos}}",
-      "collected": "Recaudado",
-      "toCollect": "Por cobrar (con multa e intereses)",
-      "pendingCharges": "Cobros pendientes"
-    },
     "row": {
       "registeredOn": "Registrado el {date}",
       "dueOn": "vence el {date}",
@@ -541,7 +535,12 @@
       "porVencer": "En plazo · {count, plural, one {# pendiente} other {# pendientes}}",
       "enCobro": "{count, plural, one {# pendiente} other {# pendientes}} · {value}"
     },
-    "barSummary": "{count, plural, one {# prorrateo} other {# prorrateos}} · {value} por cobrar"
+    "barSummary": "{count, plural, one {# prorrateo} other {# prorrateos}} · {percent}% recaudado · {value} por cobrar",
+    "card": {
+      "total": "en total",
+      "collected": "recaudado",
+      "perUnit": "{value} por unidad"
+    }
   },
   "rateioExtraordinarioDetail": {
     "registeredOn": "Registrado el {date}",
@@ -676,7 +675,8 @@
     "lastCheckError": "Última verificación de la fuente: {date}, sin éxito ({error})",
     "barCurrent": "vigente desde el {date}",
     "currentRate": "Tasa vigente",
-    "monthCount": "{count, plural, one {# cotización} other {# cotizaciones}}"
+    "monthCount": "{count, plural, one {# cotización} other {# cotizaciones}}",
+    "emptyMonth": "Ninguna cotización registrada en {month}."
   },
   "auth": {
     "login": {

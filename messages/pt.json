@@ -525,12 +525,6 @@
       "perUnit": "{value} por unidade"
     },
     "lockedActionsReason": "Não é possível editar nem excluir: as cobranças deste rateio já foram emitidas para as unidades.",
-    "summary": {
-      "count": "{count, plural, one {# rateio} other {# rateios}}",
-      "collected": "Arrecadado",
-      "toCollect": "A receber (com multa e juros)",
-      "pendingCharges": "Cobranças pendentes"
-    },
     "row": {
       "registeredOn": "Cadastrado em {date}",
       "dueOn": "vence em {date}",
@@ -541,7 +535,12 @@
       "porVencer": "No prazo · {count, plural, one {# pendente} other {# pendentes}}",
       "enCobro": "{count, plural, one {# pendente} other {# pendentes}} · {value}"
     },
-    "barSummary": "{count, plural, one {# rateio} other {# rateios}} · {value} a receber"
+    "barSummary": "{count, plural, one {# rateio} other {# rateios}} · {percent}% arrecadado · {value} a receber",
+    "card": {
+      "total": "no total",
+      "collected": "arrecadado",
+      "perUnit": "{value} por unidade"
+    }
   },
   "rateioExtraordinarioDetail": {
     "registeredOn": "Cadastrado em {date}",
@@ -676,7 +675,8 @@
     "lastCheckError": "Última verificação da fonte: {date}, sem sucesso ({error})",
     "barCurrent": "vigente desde {date}",
     "currentRate": "Taxa vigente",
-    "monthCount": "{count, plural, one {# cotação} other {# cotações}}"
+    "monthCount": "{count, plural, one {# cotação} other {# cotações}}",
+    "emptyMonth": "Nenhuma cotação cadastrada em {month}."
   },
   "auth": {
     "login": {
