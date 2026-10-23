@@ -196,24 +196,6 @@
         "emptyAction": "Ir a cuotas",
         "rounding": "{diff} de redondeo de prorrateos"
       },
-      "attention": {
-        "title": "Requiere atención",
-        "allClear": "Todo en orden",
-        "allClearDescription": "Tasa al día, cuotas emitidas y ningún cobro vencido.",
-        "staleRate": "Tasa BCV desactualizada",
-        "staleRateDescription": "La más reciente es del {date}. Los pagos en bolívares usarían una tasa vencida.",
-        "missingRate": "Sin tasa BCV",
-        "missingRateDescription": "Los pagos en bolívares no están disponibles hasta registrar una.",
-        "rateAction": "Actualizar",
-        "feesNotIssued": "{count, plural, one {# cuota sin emitir} other {# cuotas sin emitir}} en {month}",
-        "feesAction": "Emitir",
-        "overdue": "{count, plural, one {# cobro vencido} other {# cobros vencidos}}",
-        "overdueDescription": "{value} con multa e intereses, en {units, plural, one {# unidad} other {# unidades}}",
-        "overdueAction": "Ver",
-        "dueSoon": "{count, plural, one {# cobro vence} other {# cobros vencen}} en hasta {days} días",
-        "dueSoonDescription": "{value} por cobrar en plazo",
-        "dueSoonAction": "Ver"
-      },
       "cash": {
         "title": "Ingresos del mes",
         "subtitle": "Dinero recibido, en la moneda en que entró",

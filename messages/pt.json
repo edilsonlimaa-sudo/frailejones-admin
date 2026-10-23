@@ -196,24 +196,6 @@
         "emptyAction": "Ir para taxas",
         "rounding": "{diff} de arredondamento de rateios"
       },
-      "attention": {
-        "title": "Precisa de atenção",
-        "allClear": "Tudo em ordem",
-        "allClearDescription": "Cotação em dia, taxas emitidas e nenhuma cobrança vencida.",
-        "staleRate": "Cotação BCV desatualizada",
-        "staleRateDescription": "A mais recente é de {date}. Pagamentos em bolívares usariam uma taxa vencida.",
-        "missingRate": "Sem cotação BCV",
-        "missingRateDescription": "Pagamentos em bolívares ficam indisponíveis até cadastrar uma.",
-        "rateAction": "Atualizar",
-        "feesNotIssued": "{count, plural, one {# taxa sem emissão} other {# taxas sem emissão}} em {month}",
-        "feesAction": "Emitir",
-        "overdue": "{count, plural, one {# cobrança vencida} other {# cobranças vencidas}}",
-        "overdueDescription": "{value} com multa e juros, em {units, plural, one {# unidade} other {# unidades}}",
-        "overdueAction": "Ver",
-        "dueSoon": "{count, plural, one {# cobrança vence} other {# cobranças vencem}} em até {days} dias",
-        "dueSoonDescription": "{value} a receber no prazo",
-        "dueSoonAction": "Ver"
-      },
       "cash": {
         "title": "Entradas do mês",
         "subtitle": "Dinheiro recebido, na moeda em que entrou",

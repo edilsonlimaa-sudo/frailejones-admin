@@ -8,7 +8,6 @@ import {
   EvolucaoArrecadacaoChart,
   type PontoEvolucao,
 } from "@/components/admin/painel/evolucao-arrecadacao-chart";
-import { CartaoAtencao, type ItemAtencao } from "@/components/admin/painel/foco/cartao-atencao";
 import { CartaoCaixa } from "@/components/admin/painel/foco/cartao-caixa";
 import { CartaoDivida } from "@/components/admin/painel/foco/cartao-divida";
 import { CartaoPendencias, type PendenciaDoMes } from "@/components/admin/painel/foco/cartao-pendencias";
@@ -21,7 +20,6 @@ type PainelFocoProps = {
   mes: string;
   mesLabel: string;
   tasaVes: number | null;
-  itensAtencao: ItemAtencao[];
   recaudacao: RecaudacaoDoMes;
   cobrancasEmitidas: number;
   pendentes: { quantidade: number; valor: number };
@@ -38,13 +36,13 @@ type PainelFocoProps = {
 const SECOES = ["pulso", "divida", "caixa", "pendencias", "tendencia"] as const;
 
 // Visão "Foco" do Dashboard, organizada pelas perguntas do administrador, em ordem de urgência:
-//   1. o que exige ação agora?      → Precisa de atenção
-//   2. como vai a cobrança do mês?  → Pulso (% arrecadado do emitido)
+//   1. como vai a cobrança do mês?  → Pulso (% arrecadado do emitido)
+//   2. quanto dinheiro entrou?       → Entradas (por moeda)
 //   3. quem deve, e há quanto tempo? → Dívida até hoje (aging + maiores devedores)
-//   4. quanto dinheiro entrou?       → Entradas (por moeda)
-//   5. o que falta do mês / tendência
-// No desktop vira um grid de 3 colunas (pulso largo + atenção ao lado); no celular, uma coluna na
-// mesma ordem com atalhos fixos pras seções, já que a página fica longa
+//   4. o que falta do mês / tendência
+// No desktop vira um grid de 3 colunas (pulso largo + entradas ao lado, dívida larga + pendências
+// ao lado, tendência na largura toda); no celular, uma coluna na mesma ordem com atalhos fixos pras
+// seções, já que a página fica longa
 export async function PainelFoco(props: PainelFocoProps) {
   const t = await getTranslations("dashboard");
   const tFoco = await getTranslations("dashboard.focus");
@@ -72,12 +70,7 @@ export async function PainelFoco(props: PainelFocoProps) {
       </nav>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* no celular a atenção vem antes do pulso: é o que pede ação */}
-        <section aria-label={tFoco("attention.title")} className="lg:order-2">
-          <CartaoAtencao itens={props.itensAtencao} />
-        </section>
-
-        <section id="pulso" className="scroll-mt-28 lg:order-1 lg:col-span-2">
+        <section id="pulso" className="scroll-mt-28 lg:col-span-2">
           <CartaoPulso
             mesLabel={props.mesLabel}
             recaudacao={props.recaudacao}
@@ -89,19 +82,19 @@ export async function PainelFoco(props: PainelFocoProps) {
           />
         </section>
 
-        <section id="divida" className="scroll-mt-28 lg:order-4 lg:col-span-2">
-          <CartaoDivida divida={props.divida} tasaVes={props.tasaVes} />
-        </section>
-
-        <section id="caixa" className="scroll-mt-28 lg:order-3">
+        <section id="caixa" className="scroll-mt-28">
           <CartaoCaixa entradas={props.entradas} mes={props.mes} />
         </section>
 
-        <section id="pendencias" className="scroll-mt-28 lg:order-6">
+        <section id="divida" className="scroll-mt-28 lg:col-span-2">
+          <CartaoDivida divida={props.divida} tasaVes={props.tasaVes} />
+        </section>
+
+        <section id="pendencias" className="scroll-mt-28">
           <CartaoPendencias pendencias={props.pendencias} mesLabel={props.mesLabel} tasaVes={props.tasaVes} />
         </section>
 
-        <section id="tendencia" className="scroll-mt-28 lg:order-5 lg:col-span-2">
+        <section id="tendencia" className="scroll-mt-28 lg:col-span-3">
           <Card size="sm" className="h-full">
             <CardHeader>
               <CardTitle>{tFoco("trend.title")}</CardTitle>
