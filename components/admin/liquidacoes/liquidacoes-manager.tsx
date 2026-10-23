@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AvatarIniciais } from "@/components/admin/avatar-iniciais";
+import { TOP_ABAIXO_DA_BARRA, VIDRO } from "@/components/admin/barra-fixa";
 import { classesDoChip } from "@/components/admin/chip";
 import { CabecalhoMes } from "@/components/admin/painel/cabecalho-mes";
 
@@ -234,8 +235,12 @@ export function LiquidacoesManager({
         <div className="flex flex-col gap-6">
           {dias.map((grupo) => (
             <section key={grupo.dia} aria-label={formatDia(grupo.dia)} className="flex flex-col gap-3">
-              {/* cabeçalho do dia: subtotal por moeda pra conferir com o extrato */}
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-1 text-sm">
+              {/* cabeçalho do dia, com o subtotal por moeda pra conferir com o extrato: gruda logo abaixo
+                  da barra do mês enquanto os pagamentos do dia rolam, e o dia seguinte o empurra */}
+              <div
+                style={{ top: TOP_ABAIXO_DA_BARRA }}
+                className={cn("sticky z-[5] -mx-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-5 py-2 text-sm", VIDRO)}
+              >
                 <span className="font-semibold">
                   {formatDia(grupo.dia)}
                   <span className="font-normal text-muted-foreground">
