@@ -383,7 +383,6 @@
   },
   "taxasCondominio": {
     "title": "Taxas de Condomínio",
-    "description": "Cobranças recorrentes emitidas todo mês para as unidades vinculadas.",
     "newFee": "Nova taxa",
     "noFees": "Nenhuma taxa de condomínio cadastrada.",
     "viewDetails": "Ver detalhes",
@@ -492,7 +491,6 @@
   },
   "rateiosExtraordinarios": {
     "title": "Rateios Extraordinários",
-    "description": "Despesas de emergências rateadas entre as unidades. Ao cadastrar um rateio as cobranças são emitidas na hora e ele não pode mais ser editado nem excluído.",
     "newRateio": "Novo rateio",
     "noRateios": "Nenhum rateio extraordinário cadastrado.",
     "viewProgress": "Ver progresso",
@@ -562,7 +560,6 @@
   },
   "liquidacoes": {
     "title": "Pagamentos",
-    "subtitle": "Entradas de {month}, pela data do pagamento",
     "summaryLabel": "Resumo do caixa do mês",
     "currency": {
       "USD": "dólares",
@@ -677,7 +674,6 @@
   },
   "cotacaoBcvPage": {
     "title": "Cotação BCV",
-    "description": "Taxa oficial do dólar em bolívares, usada para converter os pagamentos recebidos em bolívares. O app busca a taxa nova sozinho sempre que a vigente fica atrasada; use o botão para forçar uma atualização.",
     "updateNow": "Atualizar cotação agora",
     "updating": "Atualizando...",
     "errorFetchApi": "Não foi possível atualizar a cotação.",
@@ -1072,7 +1068,6 @@
   },
   "acordosPage": {
     "title": "Acordos de pagamento",
-    "description": "Unidades que combinaram pagar a dívida aos poucos, com os juros das cobranças em atraso congelados. Para registrar um acordo, abra a unidade.",
     "empty": "Nenhum acordo de pagamento registrado. Para registrar um, abra a unidade e vá na aba Acordos.",
     "emptyFilter": "Nenhum acordo nesta situação.",
     "filterLabel": "Filtrar por situação",

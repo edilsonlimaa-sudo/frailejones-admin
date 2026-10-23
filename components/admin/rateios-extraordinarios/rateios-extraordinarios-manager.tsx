@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
+import { HardHat, MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 
 import { dataCaixaCaracas } from "@/lib/arrecadacao";
@@ -14,14 +14,7 @@ import type { DespesaExtraordinaria } from "@/lib/types/despesas-extraordinarias
 import type { Unidade } from "@/lib/types/unidades";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BarraListagem } from "@/components/admin/barra-listagem";
 import { RateioExtraordinarioFormDialog } from "@/components/admin/rateios-extraordinarios/rateio-extraordinario-form-dialog";
 
 type DespesaComResumo = DespesaExtraordinaria & { resumo: ResumoProgresso };
@@ -94,25 +88,24 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
   const percentualRecaudado = totais.esperado > 0 ? (totais.recaudado / totais.esperado) * 100 : 0;
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("title")}</CardTitle>
-          <CardDescription>{t("description")}</CardDescription>
-          <CardAction>
-            <Button onClick={() => setFormOpen(true)}>
-              <PlusIcon />
-              {t("newRateio")}
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+      <BarraListagem
+        icone={HardHat}
+        titulo={t("title")}
+        acao={
+          <Button onClick={() => setFormOpen(true)}>
+            <PlusIcon />
+            {t("newRateio")}
+          </Button>
+        }
+      />
+
           {despesasList.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noRateios")}</p>
           ) : (
             <>
               {/* visão do ano: quanto as emergências custaram e quanto falta receber */}
-              <dl className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/30 p-3 sm:grid-cols-4">
+              <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-card p-4 ring-1 ring-foreground/10 sm:grid-cols-4">
                 <div>
                   <dt className="text-xs text-muted-foreground">{t("summary.count", { count: despesasList.length })}</dt>
                   <dd className="font-medium tabular-nums">{formatUsd(totais.gasto)}</dd>
@@ -138,21 +131,28 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
                 </div>
               </dl>
 
-              <ul className="divide-y rounded-lg border">
+              {/* um card por prorrateo: título e datas em cima, progresso no meio, total embaixo */}
+              <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {despesasList.map((despesa) => {
                   const r = despesa.resumo;
                   const href = `/rateios-extraordinarios/${despesa.id}`;
                   const progresso = r.esperado > 0 ? Math.min(100, (r.recaudado / r.esperado) * 100) : 0;
                   const participantes = despesa.unidade_ids.length;
                   return (
-                    // a linha toda abre o detalhe; o menu para a propagação do clique
-                    <li
-                      key={despesa.id}
+                    <li key={despesa.id}>
+                    {/* o card todo abre o detalhe; o menu para a propagação do clique */}
+                    <Card
+                      size="sm"
                       onClick={() => router.push(href)}
-                      className="relative flex cursor-pointer flex-col gap-3 px-3 py-3 pr-12 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-6"
+                      className="relative h-full cursor-pointer transition-[box-shadow,--tw-ring-color] hover:shadow-md hover:ring-primary/40"
                     >
-                      <div className="min-w-0 flex-1">
-                        <Link href={href} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
+                    <CardContent className="flex h-full flex-col gap-4">
+                      <div className="min-w-0 pr-8">
+                        <Link
+                          href={href}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-lg leading-tight font-semibold tracking-tight hover:underline"
+                        >
                           {despesa.titulo}
                         </Link>
                         <p className="text-xs text-muted-foreground">
@@ -166,7 +166,7 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
                         </p>
                       </div>
 
-                      <div className="flex flex-col gap-1.5 sm:w-56">
+                      <div className="flex flex-col gap-1.5">
                         <div className="h-2 overflow-hidden rounded-full bg-muted">
                           <div
                             className={cn("h-full rounded-full", r.situacao === "concluido" ? "bg-primary" : "bg-primary/70")}
@@ -178,8 +178,8 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
                         </p>
                       </div>
 
-                      <div className="flex items-baseline justify-between gap-3 sm:w-48 sm:flex-col sm:items-end sm:gap-0.5">
-                        <p className="font-medium tabular-nums">{formatUsd(despesa.valor_total_usd)}</p>
+                      <div className="mt-auto flex items-baseline justify-between gap-3">
+                        <p className="text-lg leading-tight font-semibold tabular-nums">{formatUsd(despesa.valor_total_usd)}</p>
                         <p
                           className={cn(
                             "flex items-center gap-1.5 text-xs",
@@ -192,8 +192,9 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
                             : t(`row.${r.situacao}`, { count: r.pendentes, value: formatUsd(r.porCobrar) })}
                         </p>
                       </div>
+                    </CardContent>
 
-                      <div className="absolute top-2 right-2 sm:top-1/2 sm:-translate-y-1/2" onClick={(e) => e.stopPropagation()}>
+                      <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger
                             render={<Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />}
@@ -218,14 +219,13 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
+                    </Card>
                     </li>
                   );
                 })}
               </ul>
             </>
           )}
-        </CardContent>
-      </Card>
 
       <RateioExtraordinarioFormDialog
         open={formOpen}
@@ -233,6 +233,6 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
         unidades={unidades}
         onSaved={handleSaved}
       />
-    </>
+    </div>
   );
 }

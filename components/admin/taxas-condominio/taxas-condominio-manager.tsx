@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontalIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
+import { MoreHorizontalIcon, PlusIcon, Receipt, TriangleAlertIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -14,14 +14,7 @@ import type { ResumoProgresso } from "@/lib/progresso-cobranca";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { BarraListagem } from "@/components/admin/barra-listagem";
 import { TaxaCondominioFormDialog } from "@/components/admin/taxas-condominio/taxa-condominio-form-dialog";
 import { ResumoRegrasEncargos } from "@/components/admin/encargos/resumo-regras-encargos";
 
@@ -135,24 +129,23 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
   const semEmissao = taxasList.filter((taxa) => semEmissaoIds.includes(taxa.id));
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("title")}</CardTitle>
-          <CardDescription>{t("description")}</CardDescription>
-          <CardAction>
-            <Button onClick={openCreateDialog}>
-              <PlusIcon />
-              {t("newFee")}
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+      <BarraListagem
+        icone={Receipt}
+        titulo={t("title")}
+        acao={
+          <Button onClick={openCreateDialog}>
+            <PlusIcon />
+            {t("newFee")}
+          </Button>
+        }
+      />
+
           {/* a pergunta operacional do mês: falta emitir alguma cuota? */}
           {semEmissao.length > 0 && (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm"
+              className="flex items-start gap-2 rounded-xl border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm"
             >
               <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <p>
@@ -172,7 +165,8 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
           {taxasList.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noFees")}</p>
           ) : (
-            <ul className="divide-y rounded-lg border">
+            // um card por cuota: regras em cima, situação do mês no meio, valores embaixo
+            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               {taxasList.map((taxa) => {
                 const s = situacoes[taxa.id] ?? SEM_SITUACAO;
                 const href = `/taxas-condominio/${taxa.id}`;
@@ -180,15 +174,21 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
                 const ref = s.referencia;
                 const progresso = ref && ref.resumo.esperado > 0 ? Math.min(100, (ref.resumo.recaudado / ref.resumo.esperado) * 100) : 0;
                 return (
-                  // a linha toda abre o detalhe; botões internos param a propagação do clique
-                  <li
-                    key={taxa.id}
+                  <li key={taxa.id}>
+                  {/* o card todo abre o detalhe; botões internos param a propagação do clique */}
+                  <Card
+                    size="sm"
                     onClick={() => router.push(href)}
-                    className="relative flex cursor-pointer flex-col gap-3 px-3 py-3 pr-12 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-6"
+                    className="relative h-full cursor-pointer transition-[box-shadow,--tw-ring-color] hover:shadow-md hover:ring-primary/40"
                   >
-                    <div className="min-w-0 flex-1">
+                  <CardContent className="flex h-full flex-col gap-4">
+                    <div className="min-w-0 pr-8">
                       <p className="flex flex-wrap items-center gap-2">
-                        <Link href={href} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
+                        <Link
+                          href={href}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-lg leading-tight font-semibold tracking-tight hover:underline"
+                        >
                           {taxa.titulo}
                         </Link>
                         {!taxa.ativo && <Badge variant="outline">{t("inactive")}</Badge>}
@@ -204,7 +204,7 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
                     </div>
 
                     {/* status do mês: emitir é a ação recorrente desta tela */}
-                    <div className="flex flex-col gap-1.5 sm:w-64">
+                    <div className="flex flex-col gap-1.5">
                       {pendenteDeEmissao ? (
                         <div className="flex items-center gap-2">
                           <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -240,17 +240,17 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
                       )}
                     </div>
 
-                    <div className="flex items-baseline justify-between gap-3 sm:w-40 sm:flex-col sm:items-end sm:gap-0.5">
-                      <p className="font-medium tabular-nums">{t("perUnit", { value: formatUsd(taxa.valor_usd) })}</p>
+                    <div className="mt-auto flex items-baseline justify-between gap-3">
+                      <p className="text-lg leading-tight font-semibold tabular-nums">
+                        {t("perUnit", { value: formatUsd(taxa.valor_usd) })}
+                      </p>
                       <p className="text-xs text-muted-foreground tabular-nums">
                         {t("perMonth", { value: formatUsd(taxa.valor_usd * s.unidadesVinculadas) })}
                       </p>
                     </div>
+                  </CardContent>
 
-                    <div
-                      className="absolute top-2 right-2 sm:top-1/2 sm:-translate-y-1/2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           render={<Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />}
@@ -282,13 +282,12 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
+                  </Card>
                   </li>
                 );
               })}
             </ul>
           )}
-        </CardContent>
-      </Card>
 
       <TaxaCondominioFormDialog
         open={formOpen}
@@ -316,6 +315,6 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }

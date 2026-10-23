@@ -3,9 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
 import { inicioDoMesCaracas } from "@/lib/arrecadacao";
-import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
+import { formatMes, mesAdjacente, mesAtual, parseMes } from "@/lib/mes";
 import { resolverFiltrosLiquidacoes } from "@/lib/listagem-liquidacoes";
-import { NavegadorMes } from "@/components/admin/navegador-mes";
 import { LiquidacoesManager } from "@/components/admin/liquidacoes/liquidacoes-manager";
 import type { Liquidacao } from "@/lib/types/pagamentos";
 
@@ -76,7 +75,7 @@ export default async function LiquidacoesPage({
       mes={mes}
       mesCaixa={formatMes(ano, mes)}
       filtrosIniciais={resolverFiltrosLiquidacoes(filtrosParam)}
-      navegador={<NavegadorMes ano={ano} mes={mes} basePath="/liquidacoes" />}
+      hoje={mesAtual()}
     />
   );
 }

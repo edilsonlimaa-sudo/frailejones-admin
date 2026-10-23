@@ -45,7 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BarraFixa } from "@/components/admin/barra-fixa";
+import { BarraListagem } from "@/components/admin/barra-listagem";
 import { classesDoChip } from "@/components/admin/chip";
 import { UnidadeFormDialog } from "@/components/admin/unidades/unidade-form-dialog";
 
@@ -204,19 +204,16 @@ export function UnidadesManager({
   return (
     <div className="flex flex-col gap-4">
       {/* "header duplo": título, busca e filtros ficam presos abaixo do header enquanto a lista rola */}
-      <BarraFixa>
-        <div className="flex items-center justify-between gap-3 py-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Building2 className="size-4.5" />
-            </span>
-            <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-          </div>
+      <BarraListagem
+        icone={Building2}
+        titulo={t("title")}
+        acao={
           <Button onClick={openCreateDialog}>
             <PlusIcon />
             {t("newUnit")}
           </Button>
-        </div>
+        }
+      >
 
         <div className="flex items-center gap-2 pb-3">
           <Input
@@ -271,7 +268,7 @@ export function UnidadesManager({
             </span>
           </p>
         </div>
-      </BarraFixa>
+      </BarraListagem>
 
       {proprietarioFiltrado && (
         <div className="flex flex-wrap items-center gap-2 text-sm">

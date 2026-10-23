@@ -26,14 +26,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { CabecalhoMes } from "@/components/admin/painel/cabecalho-mes";
 
 type LiquidacoesManagerProps = AnoMes & {
   liquidacoes: Liquidacao[];
   // mês de caixa listado, "YYYY-MM"
   mesCaixa: string;
   filtrosIniciais: FiltrosLiquidacoes;
-  // navegação de mês (componente de servidor)
-  navegador: React.ReactNode;
+  // mês corrente em Caracas, pro cabeçalho saber se está nele
+  hoje: AnoMes;
 };
 
 const MOEDAS: MoedaTipo[] = ["USD", "VES"];
@@ -55,7 +56,7 @@ export function LiquidacoesManager({
   mes,
   mesCaixa,
   filtrosIniciais,
-  navegador,
+  hoje,
 }: LiquidacoesManagerProps) {
   const t = useTranslations("liquidacoes");
   const tForma = useTranslations("liquidacoes.paymentMethod");
@@ -182,14 +183,9 @@ export function LiquidacoesManager({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-        <div>
-          <h1 className="text-lg font-medium">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("subtitle", { month: mesLabel })}</p>
-        </div>
-        {navegador}
-      </div>
+    <div className="flex flex-col gap-4">
+      {/* o mês de caixa é o título, como no Dashboard: barra fixa com setas e grade de meses */}
+      <CabecalhoMes titulo={t("title")} ano={ano} mes={mes} hoje={hoje} basePath="/liquidacoes" />
 
       {/* resumo do caixa: o mesmo recorte do cartão de entradas do Painel, e cada linha filtra a lista */}
       <section aria-label={t("summaryLabel")} className="grid grid-cols-1 gap-3 md:grid-cols-3">

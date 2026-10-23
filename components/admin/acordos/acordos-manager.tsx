@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Handshake } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import type { ResumoAcordo, SituacaoAcordo } from "@/lib/acordos";
@@ -11,8 +12,9 @@ import { formatUsd } from "@/lib/moeda";
 import type { AcordoPagamento } from "@/lib/types/acordos";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { BarraListagem } from "@/components/admin/barra-listagem";
+import { classesDoChip } from "@/components/admin/chip";
 
 export type AcordoListado = AcordoPagamento & {
   unidade: { id: string; identificacao: string; proprietario: { nome: string } | null } | null;
@@ -48,18 +50,34 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
   const somaVigentes = (valor: (r: ResumoAcordo) => number) => vigentes.reduce((acc, a) => acc + valor(a.resumo), 0);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>{t("description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+      <BarraListagem icone={Handshake} titulo={t("title")}>
+        {/* filtro por situação, com a contagem de cada uma, preso junto com o título */}
+        <div
+          role="group"
+          aria-label={t("filterLabel")}
+          className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {FILTROS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              aria-pressed={filtro === f}
+              onClick={() => setFiltro(f)}
+              className={classesDoChip(filtro === f)}
+            >
+              {t(`filter.${f}`, { count: contagem(f) })}
+            </button>
+          ))}
+        </div>
+      </BarraListagem>
+
         {acordos.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("empty")}</p>
         ) : (
           <>
             {/* o que os acordos vigentes representam hoje */}
-            <dl className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/30 p-3 sm:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-card p-4 ring-1 ring-foreground/10 sm:grid-cols-4">
               <div>
                 <dt className="text-xs text-muted-foreground">{t("summary.active")}</dt>
                 <dd className="font-medium tabular-nums">{vigentes.length}</dd>
@@ -82,42 +100,31 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
               </div>
             </dl>
 
-            <div role="group" aria-label={t("filterLabel")} className="flex flex-wrap gap-2">
-              {FILTROS.map((f) => (
-                <Button
-                  key={f}
-                  size="sm"
-                  variant={filtro === f ? "secondary" : "ghost"}
-                  aria-pressed={filtro === f}
-                  onClick={() => setFiltro(f)}
-                >
-                  {t(`filter.${f}`, { count: contagem(f) })}
-                </Button>
-              ))}
-            </div>
-
             {listados.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("emptyFilter")}</p>
             ) : (
-              <ul className="divide-y rounded-lg border">
+              // um card por acordo: unidade e dono em cima, progresso no meio, o que falta embaixo
+              <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {listados.map((acordo) => {
                   const r = acordo.resumo;
                   const href = `/acordos/${acordo.id}`;
                   return (
-                    // a linha toda abre a página do acordo
-                    <li
-                      key={acordo.id}
+                    <li key={acordo.id}>
+                    {/* o card todo abre a página do acordo */}
+                    <Card
+                      size="sm"
                       onClick={() => router.push(href)}
-                      className="flex cursor-pointer flex-col gap-3 px-3 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-6"
+                      className="h-full cursor-pointer transition-[box-shadow,--tw-ring-color] hover:shadow-md hover:ring-primary/40"
                     >
-                      <div className="min-w-0 flex-1">
+                    <CardContent className="flex h-full flex-col gap-4">
+                      <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-2">
                           {/* a unidade leva pra aba de acordos dela; o resto da linha, pro acordo */}
                           {acordo.unidade ? (
                             <Link
                               href={`/unidades/${acordo.unidade.id}?aba=acordos`}
                               onClick={(e) => e.stopPropagation()}
-                              className="font-medium hover:underline"
+                              className="text-lg leading-tight font-semibold tracking-tight hover:underline"
                             >
                               {acordo.unidade.identificacao}
                             </Link>
@@ -142,7 +149,7 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
                         )}
                       </div>
 
-                      <div className="flex flex-col gap-1.5 sm:w-56">
+                      <div className="flex flex-col gap-1.5">
                         <div className="h-2 overflow-hidden rounded-full bg-muted">
                           <div className="h-full rounded-full bg-primary" style={{ width: `${r.progresso}%` }} />
                         </div>
@@ -151,12 +158,14 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
                         </p>
                       </div>
 
-                      <div className="flex items-baseline justify-between gap-3 sm:w-44 sm:flex-col sm:items-end sm:gap-0.5">
-                        <p className={cn("font-medium tabular-nums", r.falta > 0 && "text-destructive")}>
+                      <div className="mt-auto flex items-baseline justify-between gap-3">
+                        <p className={cn("text-lg leading-tight font-semibold tabular-nums", r.falta > 0 && "text-destructive")}>
                           {r.falta > 0 ? formatUsd(r.falta) : t("row.nothingLeft")}
                         </p>
                         {r.falta > 0 && <p className="text-xs text-muted-foreground">{t("row.remaining")}</p>}
                       </div>
+                    </CardContent>
+                    </Card>
                     </li>
                   );
                 })}
@@ -164,7 +173,6 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
             )}
           </>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

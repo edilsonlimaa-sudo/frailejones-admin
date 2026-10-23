@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Landmark } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 
@@ -12,14 +13,8 @@ import { INTL_LOCALE } from "@/lib/intl-locale";
 import { FUSO_CARACAS } from "@/lib/fuso";
 import { formatBs, formatTasa } from "@/lib/moeda";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarraListagem } from "@/components/admin/barra-listagem";
 import {
   Table,
   TableBody,
@@ -81,17 +76,18 @@ export function CotacaoBcvManager({ cotacoes, consulta }: CotacaoBcvManagerProps
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("title")}</CardTitle>
-          <CardDescription>{t("description")}</CardDescription>
-          <CardAction>
-            <Button onClick={handleAtualizar} disabled={isUpdating}>
-              {isUpdating ? t("updating") : t("updateNow")}
-            </Button>
-          </CardAction>
-        </CardHeader>
+    <div className="flex flex-col gap-4">
+      <BarraListagem
+        icone={Landmark}
+        titulo={t("title")}
+        acao={
+          <Button onClick={handleAtualizar} disabled={isUpdating}>
+            {isUpdating ? t("updating") : t("updateNow")}
+          </Button>
+        }
+      />
+
+      <Card size="sm">
         <CardContent>
           {atual ? (
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
