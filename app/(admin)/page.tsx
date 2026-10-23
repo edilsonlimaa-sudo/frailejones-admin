@@ -18,8 +18,7 @@ import {
 } from "@/lib/encargos";
 import { diferencaArredondamento } from "@/lib/rateios";
 import { hojeCaracas } from "@/lib/fuso";
-import { formatMes, hrefDoMes, mesAdjacente, parseMes } from "@/lib/mes";
-import { DeslizarMes } from "@/components/admin/painel/deslizar-mes";
+import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
 import type { PontoEvolucao } from "@/components/admin/painel/evolucao-arrecadacao-chart";
 import { PainelFoco } from "@/components/admin/painel/foco/painel-foco";
 import { resumirDivida, type CobrancaPendenteTotal } from "@/lib/painel/divida";
@@ -235,37 +234,32 @@ export default async function DashboardPage({
       : null;
 
   return (
-    <DeslizarMes
-      anteriorHref={hrefDoMes("/", mesAdjacente(ano, mes, -1))}
-      seguinteHref={hrefDoMes("/", mesAdjacente(ano, mes, 1))}
-    >
-      <PainelFoco
-        anoMes={{ ano, mes }}
-        mes={mesSelecionado}
-        mesLabel={mesLabel}
-        tasaVes={cotacaoBcv?.tasa_ves ?? null}
-        recaudacao={recaudacao}
-        cobrancasEmitidas={ativas.length}
-        pendentes={{ quantidade: pendentes.length, valor: valorEmAberto }}
-        emAtraso={{ quantidade: emAtraso.length, valor: valorEmAtrasoComEncargos }}
-        diferencaRedondeo={diferencaRedondeo}
-        emDiaAnterior={emDiaAnterior}
-        entradas={resumoEntradas}
-        divida={divida}
-        pendencias={linhasPendentes.map(({ cobranca: c, encargos }) => ({
-          id: c.id,
-          unidadeId: c.unidade?.id ?? null,
-          unidade: c.unidade?.identificacao ?? null,
-          origem: c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao,
-          vencimento: c.data_vencimento,
-          fimCarencia:
-            c.dias_graca > 0 && c.data_vencimento < hojeIso ? somarDias(c.data_vencimento, c.dias_graca) : null,
-          diasAtraso: encargos.diasAtraso,
-          total: encargos.valorTotalComEncargos,
-        }))}
-        evolucao={evolucao}
-        mesesEvolucao={MESES_EVOLUCAO}
-      />
-    </DeslizarMes>
+    <PainelFoco
+      anoMes={{ ano, mes }}
+      mes={mesSelecionado}
+      mesLabel={mesLabel}
+      tasaVes={cotacaoBcv?.tasa_ves ?? null}
+      recaudacao={recaudacao}
+      cobrancasEmitidas={ativas.length}
+      pendentes={{ quantidade: pendentes.length, valor: valorEmAberto }}
+      emAtraso={{ quantidade: emAtraso.length, valor: valorEmAtrasoComEncargos }}
+      diferencaRedondeo={diferencaRedondeo}
+      emDiaAnterior={emDiaAnterior}
+      entradas={resumoEntradas}
+      divida={divida}
+      pendencias={linhasPendentes.map(({ cobranca: c, encargos }) => ({
+        id: c.id,
+        unidadeId: c.unidade?.id ?? null,
+        unidade: c.unidade?.identificacao ?? null,
+        origem: c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao,
+        vencimento: c.data_vencimento,
+        fimCarencia:
+          c.dias_graca > 0 && c.data_vencimento < hojeIso ? somarDias(c.data_vencimento, c.dias_graca) : null,
+        diasAtraso: encargos.diasAtraso,
+        total: encargos.valorTotalComEncargos,
+      }))}
+      evolucao={evolucao}
+      mesesEvolucao={MESES_EVOLUCAO}
+    />
   );
 }

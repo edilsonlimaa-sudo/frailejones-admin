@@ -2,7 +2,7 @@ import { InfoIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import type { ResumoEntradas } from "@/lib/arrecadacao";
-import { mesAtual, type AnoMes } from "@/lib/mes";
+import { hrefDoMes, mesAdjacente, mesAtual, type AnoMes } from "@/lib/mes";
 import type { ResumoDivida } from "@/lib/painel/divida";
 import type { RecaudacaoDoMes } from "@/lib/painel/recaudacao";
 import {
@@ -10,6 +10,7 @@ import {
   type PontoEvolucao,
 } from "@/components/admin/painel/evolucao-arrecadacao-chart";
 import { CabecalhoMes } from "@/components/admin/painel/cabecalho-mes";
+import { DeslizarMes } from "@/components/admin/painel/deslizar-mes";
 import { AtalhosSecoes } from "@/components/admin/painel/foco/atalhos-secoes";
 import { CartaoCaixa } from "@/components/admin/painel/foco/cartao-caixa";
 import { CartaoDivida } from "@/components/admin/painel/foco/cartao-divida";
@@ -70,53 +71,59 @@ export async function PainelFoco(props: PainelFocoProps) {
         />
       </CabecalhoMes>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <section id="pulso" className={`${SECAO} lg:col-span-2`}>
-          <CartaoPulso
-            mesLabel={props.mesLabel}
-            recaudacao={props.recaudacao}
-            cobrancasEmitidas={props.cobrancasEmitidas}
-            pendentes={props.pendentes}
-            emAtraso={props.emAtraso}
-            diferencaRedondeo={props.diferencaRedondeo}
-            emDiaAnterior={props.emDiaAnterior}
-          />
-        </section>
+      {/* só o conteúdo desliza na troca de mês: a barra do mês fica parada no topo */}
+      <DeslizarMes
+        anteriorHref={hrefDoMes("/", mesAdjacente(props.anoMes.ano, props.anoMes.mes, -1))}
+        seguinteHref={hrefDoMes("/", mesAdjacente(props.anoMes.ano, props.anoMes.mes, 1))}
+      >
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <section id="pulso" className={`${SECAO} lg:col-span-2`}>
+            <CartaoPulso
+              mesLabel={props.mesLabel}
+              recaudacao={props.recaudacao}
+              cobrancasEmitidas={props.cobrancasEmitidas}
+              pendentes={props.pendentes}
+              emAtraso={props.emAtraso}
+              diferencaRedondeo={props.diferencaRedondeo}
+              emDiaAnterior={props.emDiaAnterior}
+            />
+          </section>
 
-        <section id="caixa" className={SECAO}>
-          <CartaoCaixa entradas={props.entradas} mes={props.mes} />
-        </section>
+          <section id="caixa" className={SECAO}>
+            <CartaoCaixa entradas={props.entradas} mes={props.mes} />
+          </section>
 
-        <section id="divida" className={`${SECAO} lg:col-span-2`}>
-          <CartaoDivida divida={props.divida} tasaVes={props.tasaVes} />
-        </section>
+          <section id="divida" className={`${SECAO} lg:col-span-2`}>
+            <CartaoDivida divida={props.divida} tasaVes={props.tasaVes} />
+          </section>
 
-        <section id="pendencias" className={SECAO}>
-          <CartaoPendencias pendencias={props.pendencias} mesLabel={props.mesLabel} tasaVes={props.tasaVes} />
-        </section>
+          <section id="pendencias" className={SECAO}>
+            <CartaoPendencias pendencias={props.pendencias} mesLabel={props.mesLabel} tasaVes={props.tasaVes} />
+          </section>
 
-        <section id="tendencia" className={`${SECAO} lg:col-span-3`}>
-          <Card size="sm" className="h-full">
-            <CardHeader>
-              <CardTitle>{tFoco("trend.title")}</CardTitle>
-              <CardDescription>{tFoco("trend.subtitle", { count: props.mesesEvolucao })}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <EvolucaoArrecadacaoChart
-                dados={props.evolucao}
-                labels={{ emitido: t("chartIssued"), quitado: t("chartSettled"), emDia: t("chartOnTime") }}
-              />
-              <details className="group rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                <summary className="flex cursor-pointer list-none items-center gap-1.5 font-medium hover:text-foreground [&::-webkit-details-marker]:hidden">
-                  <InfoIcon className="size-3.5" />
-                  {tFoco("trend.howToRead")}
-                </summary>
-                <p className="mt-2 leading-relaxed">{t("evolutionNote")}</p>
-              </details>
-            </CardContent>
-          </Card>
-        </section>
-      </div>
+          <section id="tendencia" className={`${SECAO} lg:col-span-3`}>
+            <Card size="sm" className="h-full">
+              <CardHeader>
+                <CardTitle>{tFoco("trend.title")}</CardTitle>
+                <CardDescription>{tFoco("trend.subtitle", { count: props.mesesEvolucao })}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <EvolucaoArrecadacaoChart
+                  dados={props.evolucao}
+                  labels={{ emitido: t("chartIssued"), quitado: t("chartSettled"), emDia: t("chartOnTime") }}
+                />
+                <details className="group rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  <summary className="flex cursor-pointer list-none items-center gap-1.5 font-medium hover:text-foreground [&::-webkit-details-marker]:hidden">
+                    <InfoIcon className="size-3.5" />
+                    {tFoco("trend.howToRead")}
+                  </summary>
+                  <p className="mt-2 leading-relaxed">{t("evolutionNote")}</p>
+                </details>
+              </CardContent>
+            </Card>
+          </section>
+        </div>
+      </DeslizarMes>
     </div>
   );
 }
