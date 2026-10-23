@@ -68,17 +68,7 @@ export type ResumoDashboard = {
   entradas: { moeda: MoedaTipo; forma: FormaPagamentoTipo; quantidade: number; valor: number }[];
   quitacao: Omit<QuitacaoDoMes, "total">;
   // um ponto por mês da janela do gráfico ("YYYY-MM"), em ordem
-  evolucao: {
-    mes: string;
-    emitido: number;
-    // principal abatido pelos pagamentos feitos no mês (caixa), de cobranças de qualquer competência
-    quitado: number;
-    baseEmDia: number;
-    emDia: number;
-    // cobranças da competência e quanto do principal delas já foi saldado (crédito + pagamentos)
-    cobrancas: number;
-    saldado: number;
-  }[];
+  evolucao: { mes: string; emitido: number; quitado: number; baseEmDia: number; emDia: number }[];
 };
 
 function entradasDaMoeda(entradas: ResumoDashboard["entradas"], moeda: MoedaTipo): EntradasNaMoeda {

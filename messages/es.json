@@ -29,9 +29,7 @@
       "current": "Mes actual",
       "choose": "Elegir mes y año",
       "previousYear": "Año anterior",
-      "nextYear": "Año siguiente",
-      "noCharges": "Sin cobros",
-      "settledPercent": "{percent}% saldado"
+      "nextYear": "Año siguiente"
     }
   },
   "nav": {
