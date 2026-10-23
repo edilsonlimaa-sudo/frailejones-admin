@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type PortalUnidadeViewProps = {
-  // aba aberta ao carregar, vinda de ?aba= (recarregar a página não volta pra visão geral)
+  // aba aberta ao carregar, vinda de ?aba= (recarregar a página não volta pra primeira)
   abaInicial: AbaUnidade;
   // filtro da lista de cobranças, vindo de ?filtro=
   filtroInicial: FiltroCobrancas;
@@ -50,19 +50,23 @@ export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobranca
       abaPadrao={ABA_UNIDADE_PADRAO}
     >
       <TabsList>
-        <TabsTrigger value="geral">{t("tabs.general")}</TabsTrigger>
         <TabsTrigger value="cobrancas">{t("tabs.charges")}</TabsTrigger>
+        <TabsTrigger value="estado">{t("tabs.account")}</TabsTrigger>
+        <TabsTrigger value="geral">{t("tabs.general")}</TabsTrigger>
         <TabsTrigger value="creditos">{t("tabs.creditStatement")}</TabsTrigger>
         {/* o morador só vê a aba quando tem acordo */}
         {acordos.length > 0 && <TabsTrigger value="acordos">{t("tabs.agreements")}</TabsTrigger>}
       </TabsList>
 
-      <TabsContent value="geral" className="flex flex-col gap-6">
+      <TabsContent value="estado">
         <EstadoDeCuenta
           cobrancas={cobrancas}
           saldoFavor={saldoFavor}
           tasaVes={cotacaoAtual?.tasa_ves ?? null}
         />
+      </TabsContent>
+
+      <TabsContent value="geral">
         <Card>
           <CardHeader>
             <CardTitle>{t("general.title")}</CardTitle>

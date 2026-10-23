@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeftIcon, House } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
@@ -14,11 +16,15 @@ import { TabsNaUrl } from "@/components/tabs-na-url";
 import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
 import { organizarCobrancas, type FiltroCobrancas } from "@/lib/lista-cobrancas";
 import { ABA_UNIDADE_PADRAO, type AbaUnidade } from "@/lib/abas-unidade";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AbaChip, ListaAbasChips } from "@/components/admin/abas-chips";
+import { AvatarIniciais } from "@/components/admin/avatar-iniciais";
+import { BarraFixa } from "@/components/admin/barra-fixa";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { TabsContent } from "@/components/ui/tabs";
 
 type UnidadeDetailTabsProps = {
-  // aba aberta ao carregar, vinda de ?aba= (recarregar a página não volta pra visão geral)
+  // aba aberta ao carregar, vinda de ?aba= (recarregar a página não volta pra primeira)
   abaInicial: AbaUnidade;
   // filtro da lista de cobranças, vindo de ?filtro=
   filtroInicial: FiltroCobrancas;
@@ -29,8 +35,13 @@ type UnidadeDetailTabsProps = {
   cotacoes: (CotacaoHistorico & { id: string })[];
 };
 
+// Ficha da unidade. A barra fixa (vidro) leva a volta, a identificação com o dono e as abas como
+// chips, então orientação e navegação ficam sempre à vista enquanto o conteúdo rola. As cobranças
+// são a aba principal; o estado de conta tem a sua; "datos" guarda o cadastro.
 export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobrancas, creditos, acordos, cotacoes }: UnidadeDetailTabsProps) {
   const t = useTranslations("unidadeDetail");
+  const tCommon = useTranslations("common");
+  const tUnidades = useTranslations("unidades");
   const locale = useLocale();
   const dateTimeFormatter = new Intl.DateTimeFormat(INTL_LOCALE[locale as keyof typeof INTL_LOCALE], {
     dateStyle: "short",
@@ -42,27 +53,67 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
   const saldoFavor = saldoDosCreditos(creditos);
 
   return (
-    <TabsNaUrl parametro="aba" abaInicial={abaInicial} abaPadrao={ABA_UNIDADE_PADRAO}>
-      <TabsList>
-        <TabsTrigger value="geral">{t("tabs.general")}</TabsTrigger>
-        <TabsTrigger value="cobrancas">{t("tabs.charges")}</TabsTrigger>
-        <TabsTrigger value="creditos">{t("tabs.creditStatement")}</TabsTrigger>
-        <TabsTrigger value="acordos">
-          {t("tabs.agreements")}
-          {acordos.length > 0 && <span className="text-xs text-muted-foreground">{acordos.length}</span>}
-        </TabsTrigger>
-      </TabsList>
+    <TabsNaUrl parametro="aba" abaInicial={abaInicial} abaPadrao={ABA_UNIDADE_PADRAO} className="gap-4">
+      <BarraFixa>
+        <div className="flex items-center gap-2 py-3">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="-ml-2 shrink-0"
+            aria-label={tCommon("back")}
+            nativeButton={false}
+            render={<Link href="/unidades" />}
+          >
+            <ArrowLeftIcon />
+          </Button>
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <House className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl leading-tight font-bold tracking-tight">{unidade.identificacao}</h1>
+            {unidade.proprietario ? (
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                <AvatarIniciais nome={unidade.proprietario.nome} className="size-5 text-[9px]" />
+                <span className="truncate text-sm text-muted-foreground">{unidade.proprietario.nome}</span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{tUnidades("noOwnerAssigned")}</p>
+            )}
+          </div>
+        </div>
 
-      <TabsContent value="geral" className="flex flex-col gap-6">
-        <EstadoDeCuenta
-          cobrancas={cobrancas}
-          saldoFavor={saldoFavor}
-          tasaVes={cotacaoAtual?.tasa_ves ?? null}
-        />
+        <ListaAbasChips aria-label={t("tabs.label")}>
+          <AbaChip value="cobrancas">{t("tabs.charges")}</AbaChip>
+          <AbaChip value="estado">{t("tabs.account")}</AbaChip>
+          <AbaChip value="geral">{t("tabs.general")}</AbaChip>
+          <AbaChip value="creditos">{t("tabs.creditStatement")}</AbaChip>
+          <AbaChip value="acordos">
+            {t("tabs.agreements")}
+            {acordos.length > 0 && <span className="tabular-nums opacity-80">{acordos.length}</span>}
+          </AbaChip>
+        </ListaAbasChips>
+      </BarraFixa>
+
+      <TabsContent value="cobrancas">
         <Card>
-          <CardHeader>
-            <CardTitle>{t("general.title")}</CardTitle>
-          </CardHeader>
+          <CardContent>
+            <ListaCobrancas
+              organizadas={organizarCobrancas(cobrancas, new Date())}
+              filtroInicial={filtroInicial}
+              podeLiquidar={true}
+              cotacaoAtual={cotacaoAtual}
+              cotacoes={cotacoes}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="estado">
+        <EstadoDeCuenta cobrancas={cobrancas} saldoFavor={saldoFavor} tasaVes={cotacaoAtual?.tasa_ves ?? null} />
+      </TabsContent>
+
+      <TabsContent value="geral">
+        <Card>
           <CardContent>
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <div>
@@ -75,15 +126,11 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t("general.document")}</dt>
-                <dd className="font-medium">
-                  {unidade.proprietario?.documento_identidad ?? "—"}
-                </dd>
+                <dd className="font-medium">{unidade.proprietario?.documento_identidad ?? "—"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t("general.phone")}</dt>
-                <dd className="font-medium">
-                  {unidade.proprietario?.telefone_whatsapp ?? "—"}
-                </dd>
+                <dd className="font-medium">{unidade.proprietario?.telefone_whatsapp ?? "—"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">{t("general.email")}</dt>
@@ -98,28 +145,8 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
         </Card>
       </TabsContent>
 
-      <TabsContent value="cobrancas">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("tabs.charges")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ListaCobrancas
-              organizadas={organizarCobrancas(cobrancas, new Date())}
-              filtroInicial={filtroInicial}
-              podeLiquidar={true}
-              cotacaoAtual={cotacaoAtual}
-              cotacoes={cotacoes}
-            />
-          </CardContent>
-        </Card>
-      </TabsContent>
-
       <TabsContent value="creditos">
         <Card>
-          <CardHeader>
-            <CardTitle>{t("tabs.creditStatement")}</CardTitle>
-          </CardHeader>
           <CardContent>
             <ExtratoCreditos creditos={creditos} />
           </CardContent>
@@ -132,7 +159,8 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
           acordos={acordos}
           cobrancas={cobrancas}
           cotacoes={cotacoes}
-          podeEditar={true} />
+          podeEditar={true}
+        />
       </TabsContent>
     </TabsNaUrl>
   );

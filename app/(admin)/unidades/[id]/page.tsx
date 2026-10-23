@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
@@ -14,7 +12,6 @@ import {
   SELECT_COBRANCA_DETALHADA,
   type CobrancaDetalhadaRow,
 } from "@/lib/cobrancas-detalhadas";
-import { Button } from "@/components/ui/button";
 import { UnidadeDetailTabs } from "@/components/admin/unidades/unidade-detail-tabs";
 import { resolverAbaUnidade } from "@/lib/abas-unidade";
 import { resolverFiltroCobrancas } from "@/lib/lista-cobrancas";
@@ -44,7 +41,6 @@ export default async function UnidadeDetailPage({
   const filtro = resolverFiltroCobrancas(filtroParam);
   const supabase = await createClient();
   const t = await getTranslations("common");
-  const tUnidades = await getTranslations("unidades");
 
   const { data: unidade, error: unidadeError } = await supabase
     .from("unidades")
@@ -136,35 +132,16 @@ export default async function UnidadeDetailPage({
 
   const cobrancas: CobrancaDaUnidade[] = (cobrancasRaw ?? []).map(montarCobrancaDetalhada);
 
+  // a barra fixa com a volta, a identificação e as abas fica dentro de UnidadeDetailTabs
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("back")}
-          nativeButton={false}
-          render={<Link href="/unidades" />}
-        >
-          <ArrowLeftIcon />
-        </Button>
-        <div>
-          <h1 className="text-lg font-medium">{unidade.identificacao}</h1>
-          <p className="text-sm text-muted-foreground">
-            {unidade.proprietario?.nome ?? tUnidades("noOwnerAssigned")}
-          </p>
-        </div>
-      </div>
-
-      <UnidadeDetailTabs
-        abaInicial={aba}
-        filtroInicial={filtro}
-        unidade={unidade}
-        cobrancas={cobrancas}
-        creditos={creditos}
-        acordos={acordos ?? []}
-        cotacoes={cotacoes ?? []}
-      />
-    </div>
+    <UnidadeDetailTabs
+      abaInicial={aba}
+      filtroInicial={filtro}
+      unidade={unidade}
+      cobrancas={cobrancas}
+      creditos={creditos}
+      acordos={acordos ?? []}
+      cotacoes={cotacoes ?? []}
+    />
   );
 }

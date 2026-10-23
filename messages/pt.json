@@ -242,10 +242,12 @@
   },
   "unidadeDetail": {
     "tabs": {
-      "general": "Visão geral",
+      "general": "Dados",
       "charges": "Cobranças",
       "creditStatement": "Extrato de crédito",
-      "agreements": "Acordos"
+      "agreements": "Acordos",
+      "label": "Seções da unidade",
+      "account": "Estado de conta"
     },
     "general": {
       "title": "Dados cadastrais",

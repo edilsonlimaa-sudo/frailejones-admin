@@ -242,10 +242,12 @@
   },
   "unidadeDetail": {
     "tabs": {
-      "general": "Visión general",
+      "general": "Datos",
       "charges": "Cobros",
       "creditStatement": "Estado de crédito",
-      "agreements": "Acuerdos"
+      "agreements": "Acuerdos",
+      "label": "Secciones de la unidad",
+      "account": "Estado de cuenta"
     },
     "general": {
       "title": "Datos de registro",
