@@ -5,6 +5,7 @@ import { ChevronLeftIcon, ChevronRightIcon, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { hrefDoMes, mesAdjacente, type AnoMes } from "@/lib/mes";
+import { BarraFixa } from "@/components/admin/barra-fixa";
 import { SeletorMes } from "@/components/admin/painel/seletor-mes";
 import { Button } from "@/components/ui/button";
 
@@ -29,7 +30,7 @@ export function CabecalhoMes({ titulo, ano, mes, hoje, basePath, children }: Cab
   const ehMesAtual = ano === hoje.ano && mes === hoje.mes;
 
   return (
-    <div className="sticky top-14 z-10 -mx-4 -mt-4 border-b bg-background/85 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
+    <BarraFixa>
       <h1 className="sr-only">{titulo}</h1>
       <div className="flex items-center justify-between gap-2 py-2">
         <SeletorMes ano={ano} mes={mes} hoje={hoje} basePath={basePath} />
@@ -73,6 +74,6 @@ export function CabecalhoMes({ titulo, ano, mes, hoje, basePath, children }: Cab
         </div>
       </div>
       {children}
-    </div>
+    </BarraFixa>
   );
 }

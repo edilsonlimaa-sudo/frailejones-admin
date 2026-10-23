@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDownIcon, MoreHorizontalIcon, PlusIcon, XIcon } from "lucide-react";
+import { ArrowDownIcon, Building2, MoreHorizontalIcon, PlusIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -23,14 +23,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { BarraFixa } from "@/components/admin/barra-fixa";
 import { UnidadeFormDialog } from "@/components/admin/unidades/unidade-form-dialog";
 
 type UnidadesManagerProps = {
@@ -224,51 +218,73 @@ export function UnidadesManager({
   );
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("title")}</CardTitle>
-          <CardDescription>{t("description")}</CardDescription>
-          <CardAction>
-            <Button onClick={openCreateDialog}>
-              <PlusIcon />
-              {t("newUnit")}
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {/* resumo que também filtra: clicar numa situação mostra só as unidades nela */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div role="group" aria-label={t("summary.label")} className="flex flex-wrap gap-2">
-              {(["todas", "alDia", "porVencer", "enAtraso"] as const).map((f) => (
-                <Button
-                  key={f}
-                  size="sm"
-                  variant={filtro === f ? "secondary" : "ghost"}
-                  aria-pressed={filtro === f}
-                  onClick={() => trocarFiltro(f)}
-                >
-                  {f !== "todas" && <span className={cn("size-2 rounded-full", corDaSituacao[f])} />}
-                  {t(`summary.${f}`, { count: f === "todas" ? contagem.total : contagem[f] })}
-                </Button>
-              ))}
+    <div className="flex flex-col gap-4">
+      {/* "header duplo": título, busca e filtros ficam presos abaixo do header enquanto a lista rola.
+          No celular o header do app já diz "Unidades", então a linha do título fica só pra leitores
+          de tela e o botão de nova unidade vira um ícone ao lado da busca */}
+      <BarraFixa>
+        <h1 className="sr-only md:hidden">{t("title")}</h1>
+        <div className="hidden items-center justify-between gap-3 py-2 md:flex">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Building2 className="size-4.5" />
+            </span>
+            <div className="leading-tight">
+              <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+              <p className="text-xs text-muted-foreground">{t("description")}</p>
             </div>
-            <p className="text-sm">
-              <span className="text-muted-foreground">{t("summary.totalDebt")} </span>
-              <span className={cn("font-medium tabular-nums", contagem.divida > 0 && "text-destructive")}>
-                {formatUsd(contagem.divida)}
-              </span>
-            </p>
           </div>
+          <Button onClick={openCreateDialog}>
+            <PlusIcon />
+            {t("newUnit")}
+          </Button>
+        </div>
 
+        <div className="flex items-center gap-2 py-2 md:pt-0">
           <Input
             type="search"
             placeholder={t("searchPlaceholder")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             aria-label={t("searchPlaceholder")}
+            className="bg-card"
           />
+          <Button size="icon" variant="outline" aria-label={t("newUnit")} onClick={openCreateDialog} className="md:hidden">
+            <PlusIcon />
+          </Button>
+        </div>
 
+        {/* resumo que também filtra: tocar numa situação mostra só as unidades nela. Na mesma fila,
+            que rola de lado no celular, a dívida total das unidades listadas */}
+        <div
+          role="group"
+          aria-label={t("summary.label")}
+          className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {(["todas", "alDia", "porVencer", "enAtraso"] as const).map((f) => (
+            <Button
+              key={f}
+              size="sm"
+              variant={filtro === f ? "secondary" : "ghost"}
+              aria-pressed={filtro === f}
+              onClick={() => trocarFiltro(f)}
+              className="h-7 shrink-0 rounded-full text-xs"
+            >
+              {f !== "todas" && <span className={cn("size-2 rounded-full", corDaSituacao[f])} />}
+              {t(`summary.${f}`, { count: f === "todas" ? contagem.total : contagem[f] })}
+            </Button>
+          ))}
+          <p className="ml-auto shrink-0 pl-2 text-xs whitespace-nowrap">
+            <span className="text-muted-foreground">{t("summary.totalDebt")} </span>
+            <span className={cn("font-medium tabular-nums", contagem.divida > 0 && "text-destructive")}>
+              {formatUsd(contagem.divida)}
+            </span>
+          </p>
+        </div>
+      </BarraFixa>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4">
           {proprietarioFiltrado && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-muted-foreground">{t("ownerFilter")}</span>
@@ -440,6 +456,6 @@ export function UnidadesManager({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
