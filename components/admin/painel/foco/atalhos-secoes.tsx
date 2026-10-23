@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 
-import { cn } from "@/lib/utils";
+import { classesDoChip } from "@/components/admin/chip";
 
 type AtalhosSecoesProps = {
   label: string;
@@ -87,12 +87,7 @@ export function AtalhosSecoes({ label, secoes }: AtalhosSecoesProps) {
                 data-secao={secao.id}
                 aria-current={ativo ? "location" : undefined}
                 onClick={(e) => irPara(e, secao.id)}
-                className={cn(
-                  "inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium transition-colors",
-                  ativo
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "bg-card text-muted-foreground hover:text-foreground active:bg-muted",
-                )}
+                className={classesDoChip(ativo)}
               >
                 {secao.label}
               </a>

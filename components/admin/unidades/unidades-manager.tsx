@@ -46,6 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BarraFixa } from "@/components/admin/barra-fixa";
+import { classesDoChip } from "@/components/admin/chip";
 import { UnidadeFormDialog } from "@/components/admin/unidades/unidade-form-dialog";
 
 type UnidadesManagerProps = {
@@ -209,10 +210,7 @@ export function UnidadesManager({
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Building2 className="size-4.5" />
             </span>
-            <div className="leading-tight">
-              <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-              <p className="text-xs text-muted-foreground">{t("description")}</p>
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           </div>
           <Button onClick={openCreateDialog}>
             <PlusIcon />
@@ -252,17 +250,19 @@ export function UnidadesManager({
           className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {(["todas", "alDia", "porVencer", "enAtraso"] as const).map((f) => (
-            <Button
+            <button
               key={f}
-              size="sm"
-              variant={filtro === f ? "secondary" : "ghost"}
+              type="button"
               aria-pressed={filtro === f}
               onClick={() => trocarFiltro(f)}
-              className="h-7 shrink-0 rounded-full text-xs"
+              className={classesDoChip(filtro === f)}
             >
-              {f !== "todas" && <span className={cn("size-2 rounded-full", corDaSituacao[f])} />}
+              {/* no chip ativo (verde) a bolinha ganha um contorno claro pra não sumir */}
+              {f !== "todas" && (
+                <span className={cn("size-2 rounded-full", corDaSituacao[f], filtro === f && "ring-1 ring-primary-foreground/70")} />
+              )}
               {t(`summary.${f}`, { count: f === "todas" ? contagem.total : contagem[f] })}
-            </Button>
+            </button>
           ))}
           <p className="ml-auto shrink-0 pl-2 text-xs whitespace-nowrap">
             <span className="text-muted-foreground">{t("summary.totalDebt")} </span>

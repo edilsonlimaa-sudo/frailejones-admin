@@ -176,7 +176,6 @@
   },
   "unidades": {
     "title": "Unidades",
-    "description": "Cadastro das unidades do condomínio.",
     "newUnit": "Nova unidade",
     "noUnits": "Nenhuma unidade cadastrada.",
     "searchPlaceholder": "Buscar por identificação ou proprietário...",
