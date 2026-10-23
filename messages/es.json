@@ -418,7 +418,8 @@
     "neverIssued": "Todavía no se emitió ningún mes.",
     "perUnit": "{value} por unidad",
     "perMonth": "{value} por mes",
-    "deleteLockedReason": "No se puede eliminar: la cuota ya tiene cobros emitidos. Para dejar de cobrarla, edítela y desactívela."
+    "deleteLockedReason": "No se puede eliminar: la cuota ya tiene cobros emitidos. Para dejar de cobrarla, edítela y desactívela.",
+    "barSummary": "{count, plural, one {# cuota} other {# cuotas}} · {active, plural, one {# activa} other {# activas}}"
   },
   "taxaCondominioDetail": {
     "headerSubtitle": "{value} · vencimiento todo el día {day}",
@@ -534,7 +535,8 @@
       "done": "Concluido",
       "porVencer": "En plazo · {count, plural, one {# pendiente} other {# pendientes}}",
       "enCobro": "{count, plural, one {# pendiente} other {# pendientes}} · {value}"
-    }
+    },
+    "barSummary": "{count, plural, one {# prorrateo} other {# prorrateos}} · {value} por cobrar"
   },
   "rateioExtraordinarioDetail": {
     "registeredOn": "Registrado el {date}",
@@ -688,7 +690,8 @@
     "noRatesShort": "Ninguna cotización registrada todavía.",
     "updatedAt": "Actualizada el",
     "lastCheck": "Última verificación de la fuente: {date}",
-    "lastCheckError": "Última verificación de la fuente: {date}, sin éxito ({error})"
+    "lastCheckError": "Última verificación de la fuente: {date}, sin éxito ({error})",
+    "barCurrent": "vigente desde el {date}"
   },
   "auth": {
     "login": {
@@ -1090,7 +1093,8 @@
       "paid": "{value} pagado · {pct}%",
       "remaining": "falta pagar",
       "nothingLeft": "Saldado"
-    }
+    },
+    "barSummary": "{active, plural, one {# acuerdo vigente} other {# acuerdos vigentes}} · {value} por cobrar"
   },
   "acordoDetail": {
     "title": "Acuerdo de pago · {unit}",

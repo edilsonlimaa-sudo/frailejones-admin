@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontalIcon, PlusIcon, Receipt, TriangleAlertIcon } from "lucide-react";
+import { MoreHorizontalIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BarraListagem } from "@/components/admin/barra-listagem";
+import { BarraResumo } from "@/components/admin/barra-resumo";
 import { TaxaCondominioFormDialog } from "@/components/admin/taxas-condominio/taxa-condominio-form-dialog";
 import { ResumoRegrasEncargos } from "@/components/admin/encargos/resumo-regras-encargos";
 
@@ -130,9 +130,9 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
 
   return (
     <div className="flex flex-col gap-4">
-      <BarraListagem
-        icone={Receipt}
+      <BarraResumo
         titulo={t("title")}
+        resumo={t("barSummary", { count: taxasList.length, active: taxasList.filter((taxa) => taxa.ativo).length })}
         acao={
           <Button onClick={openCreateDialog}>
             <PlusIcon />

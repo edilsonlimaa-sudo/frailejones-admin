@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { HardHat, MoreHorizontalIcon, PlusIcon } from "lucide-react";
+import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 
 import { dataCaixaCaracas } from "@/lib/arrecadacao";
@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BarraListagem } from "@/components/admin/barra-listagem";
+import { BarraResumo } from "@/components/admin/barra-resumo";
 import { RateioExtraordinarioFormDialog } from "@/components/admin/rateios-extraordinarios/rateio-extraordinario-form-dialog";
 
 type DespesaComResumo = DespesaExtraordinaria & { resumo: ResumoProgresso };
@@ -89,9 +89,9 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
 
   return (
     <div className="flex flex-col gap-4">
-      <BarraListagem
-        icone={HardHat}
+      <BarraResumo
         titulo={t("title")}
+        resumo={t("barSummary", { count: despesasList.length, value: formatUsd(totais.porCobrar) })}
         acao={
           <Button onClick={() => setFormOpen(true)}>
             <PlusIcon />

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Handshake } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import type { ResumoAcordo, SituacaoAcordo } from "@/lib/acordos";
@@ -13,7 +12,7 @@ import type { AcordoPagamento } from "@/lib/types/acordos";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { BarraListagem } from "@/components/admin/barra-listagem";
+import { BarraResumo } from "@/components/admin/barra-resumo";
 import { classesDoChip } from "@/components/admin/chip";
 
 export type AcordoListado = AcordoPagamento & {
@@ -51,8 +50,11 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <BarraListagem icone={Handshake} titulo={t("title")}>
-        {/* filtro por situação, com a contagem de cada uma, preso junto com o título */}
+      <BarraResumo
+        titulo={t("title")}
+        resumo={t("barSummary", { active: vigentes.length, value: formatUsd(somaVigentes((r) => r.falta)) })}
+      >
+        {/* filtro por situação, com a contagem de cada uma, preso junto com o resumo */}
         <div
           role="group"
           aria-label={t("filterLabel")}
@@ -70,7 +72,7 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
             </button>
           ))}
         </div>
-      </BarraListagem>
+      </BarraResumo>
 
         {acordos.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("empty")}</p>

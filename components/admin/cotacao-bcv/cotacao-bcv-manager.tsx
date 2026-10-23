@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Landmark } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 
@@ -14,7 +13,7 @@ import { FUSO_CARACAS } from "@/lib/fuso";
 import { formatBs, formatTasa } from "@/lib/moeda";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarraListagem } from "@/components/admin/barra-listagem";
+import { BarraResumo } from "@/components/admin/barra-resumo";
 import {
   Table,
   TableBody,
@@ -77,9 +76,19 @@ export function CotacaoBcvManager({ cotacoes, consulta }: CotacaoBcvManagerProps
 
   return (
     <div className="flex flex-col gap-4">
-      <BarraListagem
-        icone={Landmark}
+      <BarraResumo
         titulo={t("title")}
+        resumo={
+          atual ? (
+            <>
+              <span className="font-semibold text-foreground tabular-nums">{formatBs(atual.tasa_ves)}</span>
+              {" · "}
+              {t("barCurrent", { date: formatDate(atual.data_cotacao) })}
+            </>
+          ) : (
+            t("noRatesShort")
+          )
+        }
         acao={
           <Button onClick={handleAtualizar} disabled={isUpdating}>
             {isUpdating ? t("updating") : t("updateNow")}
