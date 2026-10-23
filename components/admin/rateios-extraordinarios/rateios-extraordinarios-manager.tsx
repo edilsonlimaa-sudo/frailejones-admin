@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
+import { HardHat, MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 
 import { dataCaixaCaracas } from "@/lib/arrecadacao";
@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BarraResumo } from "@/components/admin/barra-resumo";
+import { AnelProgresso } from "@/components/admin/painel/foco/anel-progresso";
 import { RateioExtraordinarioFormDialog } from "@/components/admin/rateios-extraordinarios/rateio-extraordinario-form-dialog";
 
 type DespesaComResumo = DespesaExtraordinaria & { resumo: ResumoProgresso };
@@ -34,10 +35,11 @@ type RateiosExtraordinariosManagerProps = {
   unidades: Unidade[];
 };
 
-const corDaSituacao: Record<SituacaoProgresso, string> = {
-  concluido: "bg-primary",
-  porVencer: "bg-muted-foreground/50",
-  enCobro: "bg-destructive",
+// selo do card, na cor da situação da cobrança: tudo pago (verde), no prazo (azul), vencido (vermelho)
+const tomDaSituacao: Record<SituacaoProgresso, string> = {
+  concluido: "bg-primary/10 text-primary",
+  porVencer: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
+  enCobro: "bg-destructive/10 text-destructive",
 };
 
 // rateio recém-cadastrado nesta tela, antes do refresh trazer o resumo do servidor: tudo a receber
@@ -91,7 +93,11 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
     <div className="flex flex-col gap-4">
       <BarraResumo
         titulo={t("title")}
-        resumo={t("barSummary", { count: despesasList.length, value: formatUsd(totais.porCobrar) })}
+        resumo={t("barSummary", {
+          count: despesasList.length,
+          percent: Math.round(percentualRecaudado),
+          value: formatUsd(totais.porCobrar),
+        })}
         acao={
           <Button onClick={() => setFormOpen(true)}>
             <PlusIcon />
@@ -104,33 +110,6 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
             <p className="text-sm text-muted-foreground">{t("noRateios")}</p>
           ) : (
             <>
-              {/* visão do ano: quanto as emergências custaram e quanto falta receber */}
-              <dl className="grid grid-cols-2 gap-4 rounded-2xl bg-card p-4 ring-1 ring-foreground/10 sm:grid-cols-4">
-                <div>
-                  <dt className="text-xs text-muted-foreground">{t("summary.count", { count: despesasList.length })}</dt>
-                  <dd className="font-medium tabular-nums">{formatUsd(totais.gasto)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">{t("summary.collected")}</dt>
-                  <dd className="font-medium tabular-nums">
-                    {formatUsd(totais.recaudado)}
-                    <span className="ml-1 text-xs font-normal text-muted-foreground">
-                      ({percentualRecaudado.toFixed(0)}%)
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">{t("summary.toCollect")}</dt>
-                  <dd className={cn("font-medium tabular-nums", totais.porCobrar > 0 && "text-destructive")}>
-                    {formatUsd(totais.porCobrar)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">{t("summary.pendingCharges")}</dt>
-                  <dd className="font-medium tabular-nums">{totais.pendentes}</dd>
-                </div>
-              </dl>
-
               {/* um card por prorrateo: título e datas em cima, progresso no meio, total embaixo */}
               <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {despesasList.map((despesa) => {
@@ -147,50 +126,68 @@ export function RateiosExtraordinariosManager({ despesas, unidades }: RateiosExt
                       className="relative h-full cursor-pointer transition-[box-shadow,--tw-ring-color] hover:shadow-md hover:ring-primary/40"
                     >
                     <CardContent className="flex h-full flex-col gap-4">
-                      <div className="min-w-0 pr-8">
-                        <Link
-                          href={href}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-lg leading-tight font-semibold tracking-tight hover:underline"
+                      {/* cabeçalho: selo na cor da situação da cobrança, título e o essencial (total e
+                          vencimento); o menu ⋯ fica no canto (absolute), por isso o espaço à direita */}
+                      <div className="flex items-start gap-3 pr-8">
+                        <span
+                          className={cn(
+                            "flex size-11 shrink-0 items-center justify-center rounded-xl",
+                            tomDaSituacao[r.situacao],
+                          )}
                         >
-                          {despesa.titulo}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">
+                          <HardHat className="size-5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            href={href}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xl leading-tight font-bold tracking-tight hover:underline"
+                          >
+                            {despesa.titulo}
+                          </Link>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            <span className="font-semibold text-foreground tabular-nums">{formatUsd(despesa.valor_total_usd)}</span>{" "}
+                            {t("card.total")}
+                            {" · "}
+                            {t("row.dueOn", { date: formatDate(despesa.data_vencimento) })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* a cobrança: anel com o % arrecadado, contagem de pagos e o que falta */}
+                      <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
+                        <AnelProgresso percentual={progresso} rotulo={t("card.collected")} tamanho={56} espessura={6} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">{t("row.paidCount", { paid: r.pagas, total: r.cobrancas })}</p>
+                          <p
+                            className={cn(
+                              "text-xs",
+                              r.situacao === "enCobro"
+                                ? "text-destructive"
+                                : r.situacao === "concluido"
+                                  ? "text-primary"
+                                  : "text-muted-foreground",
+                            )}
+                          >
+                            {r.situacao === "concluido"
+                              ? t("row.done")
+                              : t(`row.${r.situacao}`, { count: r.pendentes, value: formatUsd(r.porCobrar) })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* rodapé: quando entrou e quem participa; à direita, quanto coube a cada unidade */}
+                      <div className="mt-auto flex items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground">
+                        <span className="min-w-0 truncate">
                           {t("row.registeredOn", { date: formatDate(dataCaixaCaracas(despesa.created_at)) })}
-                          {" · "}
-                          {t("row.dueOn", { date: formatDate(despesa.data_vencimento) })}
                           {" · "}
                           {participantes === unidades.length
                             ? t("row.allUnits", { count: participantes })
                             : t("row.someUnits", { count: participantes })}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col gap-1.5">
-                        <div className="h-2 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={cn("h-full rounded-full", r.situacao === "concluido" ? "bg-primary" : "bg-primary/70")}
-                            style={{ width: `${progresso}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {t("row.paidCount", { paid: r.pagas, total: r.cobrancas })}
-                        </p>
-                      </div>
-
-                      <div className="mt-auto flex items-baseline justify-between gap-3">
-                        <p className="text-lg leading-tight font-semibold tabular-nums">{formatUsd(despesa.valor_total_usd)}</p>
-                        <p
-                          className={cn(
-                            "flex items-center gap-1.5 text-xs",
-                            r.situacao === "enCobro" ? "text-destructive" : "text-muted-foreground",
-                          )}
-                        >
-                          <span className={cn("size-2 shrink-0 rounded-full", corDaSituacao[r.situacao])} />
-                          {r.situacao === "concluido"
-                            ? t("row.done")
-                            : t(`row.${r.situacao}`, { count: r.pendentes, value: formatUsd(r.porCobrar) })}
-                        </p>
+                        </span>
+                        <span className="shrink-0 font-medium text-foreground tabular-nums">
+                          {t("card.perUnit", { value: formatUsd(despesa.valor_por_unidade_usd) })}
+                        </span>
                       </div>
                     </CardContent>
 
