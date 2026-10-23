@@ -567,22 +567,11 @@
   },
   "liquidacoes": {
     "title": "Pagos",
-    "summaryLabel": "Resumen de caja del mes",
     "currency": {
       "USD": "dólares",
       "VES": "bolívares"
     },
-    "cash": {
-      "received": {
-        "USD": "Recibido en dólares",
-        "VES": "Recibido en bolívares"
-      },
-      "payments": "{count, plural, =0 {Ningún pago} one {# pago} other {# pagos}}",
-      "noEntries": "Ningún pago en esta moneda."
-    },
     "settled": {
-      "title": "Abonado a cobros",
-      "hint": "En dólares, por lo que cada pago abonó a la deuda",
       "rows": {
         "doMes": "Cobros del mes",
         "atrasado": "Cobros atrasados",
@@ -590,7 +579,6 @@
         "encargos": "Multa e intereses"
       }
     },
-    "listTitle": "Pagos recibidos",
     "results": {
       "all": "{count, plural, one {# pago} other {# pagos}}",
       "filtered": "{count} de {total} pagos"
@@ -598,17 +586,8 @@
     "searchPlaceholder": "Buscar por unidad, referencia o cobro",
     "filters": {
       "label": "Filtrando:",
-      "currency": "En {currency}",
-      "channel": "{method} en {currency}",
       "remove": "Quitar filtro {name}",
       "clear": "Limpiar filtros"
-    },
-    "columns": {
-      "time": "Hora",
-      "unit": "Unidad",
-      "charge": "Cobro",
-      "method": "Método / referencia",
-      "amount": "Recibido"
     },
     "row": {
       "settled": "abonó {value}",

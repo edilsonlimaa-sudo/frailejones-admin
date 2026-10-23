@@ -42,7 +42,7 @@ export default async function LiquidacoesPage({
     supabase
       .from("pagamentos")
       .select(
-        "id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, forma_pagamento, referencia_bancaria, observacao, unidade:unidades(id, identificacao), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, cobranca:cobrancas(id, descricao, tipo, competencia)), creditos_movimentacoes(valor)",
+        "id, data_pagamento, moeda, valor_recebido, valor_equivalente_usd, forma_pagamento, referencia_bancaria, observacao, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, cobranca:cobrancas(id, descricao, tipo, competencia)), creditos_movimentacoes(valor)",
         { count: "exact" },
       )
       .gte("data_pagamento", inicioDoMesCaracas(ano, mes))

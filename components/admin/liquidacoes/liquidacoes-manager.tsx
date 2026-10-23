@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRightIcon, InboxIcon, SearchIcon, XIcon } from "lucide-react";
+import { Banknote, DollarSign, InboxIcon, XIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import type { MoedaTipo } from "@/lib/types/creditos";
@@ -24,8 +24,10 @@ import { formatMoeda, formatUsd } from "@/lib/moeda";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { AvatarIniciais } from "@/components/admin/avatar-iniciais";
+import { classesDoChip } from "@/components/admin/chip";
 import { CabecalhoMes } from "@/components/admin/painel/cabecalho-mes";
 
 type LiquidacoesManagerProps = AnoMes & {
@@ -47,8 +49,13 @@ const corDoAbono: Record<FiltroAbono, string> = {
   encargos: "bg-chart-3",
 };
 
-// colunas da lista (desktop): hora | unidade | cobrança | forma e referência | valor
-const COLUNAS = "sm:grid sm:grid-cols-[3.25rem_5.5rem_minmax(0,1fr)_minmax(0,10rem)_minmax(0,11rem)] sm:items-center sm:gap-4";
+// selo do card, na cor da moeda: dólar em verde, bolívar em azul
+const tomDaMoeda: Record<MoedaTipo, string> = {
+  USD: "bg-primary/10 text-primary",
+  VES: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
+};
+
+const capitalizar = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1);
 
 export function LiquidacoesManager({
   liquidacoes,
@@ -109,41 +116,6 @@ export function LiquidacoesManager({
     setBusca("");
   };
 
-  // resumo do mês inteiro (não muda com os filtros): os mesmos números do cartão do Painel
-  const resumo = useMemo(() => {
-    const porMoeda = Object.fromEntries(
-      MOEDAS.map((moeda) => {
-        const daMoeda = liquidacoes.filter((l) => l.moeda === moeda);
-        const canais = new Map<FormaPagamentoTipo, { quantidade: number; valor: number }>();
-        for (const l of daMoeda) {
-          const canal = canais.get(l.forma_pagamento) ?? { quantidade: 0, valor: 0 };
-          canal.quantidade += 1;
-          canal.valor += l.valor_recebido;
-          canais.set(l.forma_pagamento, canal);
-        }
-        return [
-          moeda,
-          {
-            quantidade: daMoeda.length,
-            total: daMoeda.reduce((acc, l) => acc + l.valor_recebido, 0),
-            canais: [...canais.entries()]
-              .map(([forma, c]) => ({ forma, ...c }))
-              .sort((a, b) => b.valor - a.valor),
-          },
-        ];
-      }),
-    ) as Record<MoedaTipo, { quantidade: number; total: number; canais: { forma: FormaPagamentoTipo; quantidade: number; valor: number }[] }>;
-
-    const abono: Record<FiltroAbono, number> = { doMes: 0, atrasado: 0, adiantado: 0, encargos: 0 };
-    for (const l of liquidacoes) {
-      abono.encargos += l.encargos_pagos_usd;
-      const tipo = abonoDaLiquidacao(l, mesCaixa);
-      if (tipo) abono[tipo] += l.principal_abatido_usd;
-    }
-    const totalAbatido = abono.doMes + abono.atrasado + abono.adiantado + abono.encargos;
-    return { porMoeda, abono, totalAbatido };
-  }, [liquidacoes, mesCaixa]);
-
   const termo = busca.trim().toLowerCase();
   const visiveis = liquidacoes.filter(
     (l) =>
@@ -158,278 +130,180 @@ export function LiquidacoesManager({
   const temFiltro = Boolean(filtros.moeda || filtros.forma || filtros.abono || termo);
 
   const nomeMoeda = (moeda: MoedaTipo) => t(`currency.${moeda}`);
-  const chipsFiltro: { chave: string; rotulo: string; remover: () => void }[] = [];
-  if (filtros.moeda) {
-    chipsFiltro.push({
-      chave: "canal",
-      rotulo: filtros.forma
-        ? t("filters.channel", { method: tForma(filtros.forma), currency: nomeMoeda(filtros.moeda) })
-        : t("filters.currency", { currency: nomeMoeda(filtros.moeda) }),
-      remover: () => aplicarFiltros({ ...filtros, moeda: null, forma: null }),
-    });
-  } else if (filtros.forma) {
-    chipsFiltro.push({
-      chave: "canal",
-      rotulo: tForma(filtros.forma),
-      remover: () => aplicarFiltros({ ...filtros, forma: null }),
-    });
-  }
-  if (filtros.abono) {
-    chipsFiltro.push({
-      chave: "abono",
-      rotulo: t(`settled.rows.${filtros.abono}`),
-      remover: () => aplicarFiltros({ ...filtros, abono: null }),
-    });
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      {/* o mês de caixa é o título, como no Dashboard: barra fixa com setas e grade de meses */}
-      <CabecalhoMes titulo={t("title")} ano={ano} mes={mes} hoje={hoje} basePath="/liquidacoes" />
-
-      {/* resumo do caixa: o mesmo recorte do cartão de entradas do Painel, e cada linha filtra a lista */}
-      <section aria-label={t("summaryLabel")} className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        {MOEDAS.map((moeda) => {
-          const r = resumo.porMoeda[moeda];
-          const moedaAtiva = filtros.moeda === moeda && !filtros.forma;
-          return (
-            <Card key={moeda} size="sm">
-              <CardHeader>
-                <CardDescription>{t(`cash.received.${moeda}`)}</CardDescription>
-                <CardTitle className="text-2xl tracking-tight tabular-nums">{formatMoeda(r.total, moeda)}</CardTitle>
-                <button
-                  type="button"
-                  disabled={r.quantidade === 0}
-                  aria-pressed={moedaAtiva}
-                  onClick={() => alternarCanal(moeda, null)}
-                  className={cn(
-                    "w-fit text-left text-xs text-muted-foreground underline-offset-2 enabled:hover:text-foreground enabled:hover:underline",
-                    moedaAtiva && "font-medium text-foreground underline",
-                  )}
-                >
-                  {t("cash.payments", { count: r.quantidade })}
-                </button>
-              </CardHeader>
-              <CardContent>
-                {r.canais.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{t("cash.noEntries")}</p>
-                ) : (
-                  <ul className="-mx-2 flex flex-col">
-                    {r.canais.map((canal) => {
-                      const ativo = filtros.moeda === moeda && filtros.forma === canal.forma;
-                      return (
-                        <li key={canal.forma}>
-                          <button
-                            type="button"
-                            aria-pressed={ativo}
-                            onClick={() => alternarCanal(moeda, canal.forma)}
-                            className={cn(
-                              "flex w-full flex-col gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60",
-                              ativo && "bg-muted ring-1 ring-ring/40",
-                            )}
-                          >
-                            <span className="flex w-full items-baseline justify-between gap-2 text-sm">
-                              <span className="min-w-0 truncate">
-                                {tForma(canal.forma)}
-                                <span className="text-xs text-muted-foreground"> · {canal.quantidade}</span>
-                              </span>
-                              <span className="shrink-0 font-medium tabular-nums">{formatMoeda(canal.valor, moeda)}</span>
-                            </span>
-                            <span className="h-1 w-full overflow-hidden rounded-full bg-muted">
-                              <span
-                                className="block h-full rounded-full bg-primary"
-                                style={{ width: `${r.total > 0 ? (canal.valor / r.total) * 100 : 0}%` }}
-                              />
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>{t("settled.title")}</CardDescription>
-            <CardTitle className="text-2xl tracking-tight tabular-nums">{formatUsd(resumo.totalAbatido)}</CardTitle>
-            <p className="text-xs text-muted-foreground">{t("settled.hint")}</p>
-          </CardHeader>
-          <CardContent>
-            <ul className="-mx-2 flex flex-col">
-              {FILTROS_ABONO.map((abono) => {
-                const valor = resumo.abono[abono];
-                const ativo = filtros.abono === abono;
-                return (
-                  <li key={abono}>
-                    <button
-                      type="button"
-                      aria-pressed={ativo}
-                      disabled={valor === 0 && !ativo}
-                      onClick={() => alternarAbono(abono)}
-                      className={cn(
-                        "flex w-full items-baseline justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors enabled:hover:bg-muted/60 disabled:text-muted-foreground",
-                        ativo && "bg-muted ring-1 ring-ring/40",
-                      )}
-                    >
-                      <span className="flex min-w-0 items-center gap-2 truncate">
-                        <span aria-hidden className={cn("size-2 shrink-0 rounded-full", corDoAbono[abono])} />
-                        {t(`settled.rows.${abono}`)}
-                      </span>
-                      <span className="shrink-0 font-medium tabular-nums">{formatUsd(valor)}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-        </Card>
-      </section>
-
-      <Card>
-        <CardHeader className="gap-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <CardTitle>{t("listTitle")}</CardTitle>
-            {liquidacoes.length > 0 && (
-              <p className="text-sm text-muted-foreground tabular-nums">
-                {temFiltro
-                  ? t("results.filtered", { count: visiveis.length, total: liquidacoes.length })
-                  : t("results.all", { count: visiveis.length })}
-                {MOEDAS.filter((m) => totaisVisiveis[m] > 0).map((m) => (
-                  <span key={m}>
-                    {" · "}
-                    <span className="font-medium text-foreground">{formatMoeda(totaisVisiveis[m], m)}</span>
-                  </span>
-                ))}
-              </p>
-            )}
-          </div>
-
-          {liquidacoes.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <div className="relative">
-                <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  className="pl-9"
-                  placeholder={t("searchPlaceholder")}
-                  aria-label={t("searchPlaceholder")}
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                />
-              </div>
-              {chipsFiltro.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">{t("filters.label")}</span>
-                  {chipsFiltro.map((chip) => (
-                    <Badge key={chip.chave} variant="secondary" className="h-6 gap-1 pr-1">
-                      {chip.rotulo}
-                      <button
-                        type="button"
-                        onClick={chip.remover}
-                        aria-label={t("filters.remove", { name: chip.rotulo })}
-                        className="rounded-full p-0.5 hover:bg-background/60"
-                      >
-                        <XIcon />
-                      </button>
-                    </Badge>
-                  ))}
-                  <Button size="xs" variant="ghost" onClick={limparFiltros}>
-                    {t("filters.clear")}
-                  </Button>
-                </div>
-              )}
-            </div>
+      {/* "header duplo": o mês de caixa é o título (setas e grade de meses, como no Dashboard); presos
+          junto, a busca e os chips de filtro. O resumo do caixa que ficava aqui já existe no card de
+          Ingresos do Dashboard, então esta tela fica só com a lista */}
+      <CabecalhoMes titulo={t("title")} ano={ano} mes={mes} hoje={hoje} basePath="/liquidacoes">
+        <div className="pb-3">
+          <Input
+            type="search"
+            placeholder={t("searchPlaceholder")}
+            aria-label={t("searchPlaceholder")}
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="h-10 bg-card"
+          />
+        </div>
+        <div
+          role="group"
+          aria-label={t("filters.label")}
+          className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {MOEDAS.map((moeda) => {
+            const ativo = filtros.moeda === moeda && !filtros.forma;
+            return (
+              <button
+                key={moeda}
+                type="button"
+                aria-pressed={ativo}
+                onClick={() => alternarCanal(moeda, null)}
+                className={classesDoChip(ativo)}
+              >
+                {capitalizar(nomeMoeda(moeda))}
+              </button>
+            );
+          })}
+          {/* forma de pagamento só chega pela URL (ex.: vindo do Dashboard): mostra o chip pra poder tirar */}
+          {filtros.forma && (
+            <button
+              type="button"
+              onClick={() => aplicarFiltros({ ...filtros, forma: null })}
+              aria-label={t("filters.remove", { name: tForma(filtros.forma) })}
+              className={classesDoChip(true)}
+            >
+              {tForma(filtros.forma)}
+              <XIcon className="size-3" />
+            </button>
           )}
-        </CardHeader>
+          <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border" />
+          {FILTROS_ABONO.map((abono) => {
+            const ativo = filtros.abono === abono;
+            return (
+              <button
+                key={abono}
+                type="button"
+                aria-pressed={ativo}
+                onClick={() => alternarAbono(abono)}
+                className={classesDoChip(ativo)}
+              >
+                <span
+                  aria-hidden
+                  className={cn("size-2 rounded-full", corDoAbono[abono], ativo && "ring-1 ring-primary-foreground/70")}
+                />
+                {t(`settled.rows.${abono}`)}
+              </button>
+            );
+          })}
+          {liquidacoes.length > 0 && (
+            <p className="ml-auto shrink-0 pl-2 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+              {temFiltro
+                ? t("results.filtered", { count: visiveis.length, total: liquidacoes.length })
+                : t("results.all", { count: visiveis.length })}
+              {MOEDAS.filter((m) => totaisVisiveis[m] > 0).map((m) => (
+                <span key={m}>
+                  {" · "}
+                  <span className="font-medium text-foreground">{formatMoeda(totaisVisiveis[m], m)}</span>
+                </span>
+              ))}
+            </p>
+          )}
+        </div>
+      </CabecalhoMes>
 
-        <CardContent>
-          {liquidacoes.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center">
-              <InboxIcon className="size-8 text-muted-foreground" />
-              <div>
-                <p className="font-medium">{t("empty.title", { month: mesLabel })}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{t("empty.hint")}</p>
+      {liquidacoes.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-10 text-center">
+          <InboxIcon className="size-8 text-muted-foreground" />
+          <div>
+            <p className="font-medium">{t("empty.title", { month: mesLabel })}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("empty.hint")}</p>
+          </div>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/unidades" />}>
+            {t("empty.action")}
+          </Button>
+        </div>
+      ) : visiveis.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-10 text-center">
+          <p className="text-sm text-muted-foreground">{t("noFilterResults")}</p>
+          <Button variant="outline" size="sm" onClick={limparFiltros}>
+            {t("filters.clear")}
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {dias.map((grupo) => (
+            <section key={grupo.dia} aria-label={formatDia(grupo.dia)} className="flex flex-col gap-3">
+              {/* cabeçalho do dia: subtotal por moeda pra conferir com o extrato */}
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-1 text-sm">
+                <span className="font-semibold">
+                  {formatDia(grupo.dia)}
+                  <span className="font-normal text-muted-foreground">
+                    {" · "}
+                    {t("results.all", { count: grupo.liquidacoes.length })}
+                  </span>
+                </span>
+                <span className="font-medium text-muted-foreground tabular-nums">
+                  {MOEDAS.filter((m) => grupo.totais[m] > 0)
+                    .map((m) => formatMoeda(grupo.totais[m], m))
+                    .join(" · ")}
+                </span>
               </div>
-              <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/unidades" />}>
-                {t("empty.action")}
-              </Button>
-            </div>
-          ) : visiveis.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center">
-              <p className="text-sm text-muted-foreground">{t("noFilterResults")}</p>
-              <Button variant="outline" size="sm" onClick={limparFiltros}>
-                {t("filters.clear")}
-              </Button>
-            </div>
-          ) : (
-            <div className="rounded-lg border">
-              <div className={cn("hidden border-b px-3 py-2 text-xs font-medium text-muted-foreground", COLUNAS)}>
-                <span>{t("columns.time")}</span>
-                <span>{t("columns.unit")}</span>
-                <span>{t("columns.charge")}</span>
-                <span>{t("columns.method")}</span>
-                <span className="justify-self-end">{t("columns.amount")}</span>
-              </div>
 
-              {dias.map((grupo) => (
-                <section key={grupo.dia} aria-label={formatDia(grupo.dia)}>
-                  {/* cabeçalho do dia: subtotal por moeda pra conferir com o extrato */}
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b bg-muted/50 px-3 py-1.5 text-xs">
-                    <span className="font-medium">
-                      {formatDia(grupo.dia)}
-                      <span className="font-normal text-muted-foreground">
-                        {" · "}
-                        {t("results.all", { count: grupo.liquidacoes.length })}
-                      </span>
-                    </span>
-                    <span className="font-medium tabular-nums">
-                      {MOEDAS.filter((m) => grupo.totais[m] > 0)
-                        .map((m) => formatMoeda(grupo.totais[m], m))
-                        .join(" · ")}
-                    </span>
-                  </div>
-
-                  <ul className="divide-y border-b last:border-b-0">
-                    {grupo.liquidacoes.map((l) => {
-                      const abono = abonoDaLiquidacao(l, mesCaixa);
-                      const abatido = l.principal_abatido_usd + l.encargos_pagos_usd;
-                      // em dólar, sem sobra, o recebido é o próprio abatido: a linha extra só repetiria o valor
-                      const mostrarAbatido = l.cobranca !== null && (l.moeda === "VES" || l.credito_gerado > 0);
-                      const hora = formatos.hora.format(new Date(l.data_pagamento));
-                      return (
-                        // a linha toda leva ao detalhe; o link da unidade para a propagação do clique
-                        <li
-                          key={l.id}
-                          onClick={() => router.push(`/liquidacoes/${l.id}`)}
-                          className={cn(
-                            "group relative flex cursor-pointer flex-col gap-1.5 px-3 py-3 transition-colors hover:bg-muted/50",
-                            COLUNAS,
-                          )}
-                        >
-                          {/* celular: unidade + valor na primeira linha */}
-                          <div className="flex items-baseline justify-between gap-3 sm:contents">
-                            <span className="hidden text-xs text-muted-foreground tabular-nums sm:block">{hora}</span>
-                            {l.unidade ? (
-                              <Link
-                                href={`/unidades/${l.unidade.id}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="font-medium whitespace-nowrap underline-offset-2 hover:underline"
-                              >
-                                {l.unidade.identificacao}
-                              </Link>
-                            ) : (
-                              <span className="font-medium">—</span>
-                            )}
-                            <ValorDaLinha
-                              className="sm:order-last"
-                              valor={formatMoeda(l.valor_recebido, l.moeda)}
-                              abatido={mostrarAbatido ? t("row.settled", { value: formatUsd(abatido) }) : null}
-                              credito={l.credito_gerado > 0 ? t("row.credit", { value: formatUsd(l.credito_gerado) }) : null}
-                            />
+              {/* um card por pagamento: moeda no selo, unidade e dono em cima, cobrança no meio, forma e hora embaixo */}
+              <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {grupo.liquidacoes.map((l) => {
+                  const abono = abonoDaLiquidacao(l, mesCaixa);
+                  const abatido = l.principal_abatido_usd + l.encargos_pagos_usd;
+                  // em dólar, sem sobra, o recebido é o próprio abatido: a linha extra só repetiria o valor
+                  const mostrarAbatido = l.cobranca !== null && (l.moeda === "VES" || l.credito_gerado > 0);
+                  const hora = formatos.hora.format(new Date(l.data_pagamento));
+                  return (
+                    <li key={l.id}>
+                      {/* o card todo leva ao detalhe; o link da unidade para a propagação do clique */}
+                      <Card
+                        size="sm"
+                        onClick={() => router.push(`/liquidacoes/${l.id}`)}
+                        className="h-full cursor-pointer transition-[box-shadow,--tw-ring-color] hover:shadow-md hover:ring-primary/40"
+                      >
+                        <CardContent className="flex h-full flex-col gap-3">
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={cn(
+                                "flex size-11 shrink-0 items-center justify-center rounded-xl",
+                                tomDaMoeda[l.moeda],
+                              )}
+                            >
+                              {l.moeda === "USD" ? <DollarSign className="size-5" /> : <Banknote className="size-5" />}
+                            </span>
+                            <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                {l.unidade ? (
+                                  <Link
+                                    href={`/unidades/${l.unidade.id}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="block text-xl leading-tight font-bold tracking-tight hover:underline"
+                                  >
+                                    {l.unidade.identificacao}
+                                  </Link>
+                                ) : (
+                                  <span className="block text-xl leading-tight font-bold">—</span>
+                                )}
+                                {l.unidade?.proprietario && (
+                                  <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                                    <AvatarIniciais nome={l.unidade.proprietario.nome} className="size-5 text-[9px]" />
+                                    <span className="truncate text-xs text-muted-foreground">
+                                      {l.unidade.proprietario.nome}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <ValorDaLinha
+                                valor={formatMoeda(l.valor_recebido, l.moeda)}
+                                abatido={mostrarAbatido ? t("row.settled", { value: formatUsd(abatido) }) : null}
+                                credito={l.credito_gerado > 0 ? t("row.credit", { value: formatUsd(l.credito_gerado) }) : null}
+                              />
+                            </div>
                           </div>
 
                           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -451,31 +325,28 @@ export function LiquidacoesManager({
                             )}
                           </div>
 
-                          <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground sm:flex-col sm:items-start sm:gap-0 sm:text-sm">
-                            <span className="text-foreground/80 sm:text-foreground">{tForma(l.forma_pagamento)}</span>
-                            {l.referencia_bancaria && (
-                              <span className="min-w-0 truncate font-mono text-xs">
-                                <span className="sm:hidden">· </span>
-                                {t("row.reference", { value: l.referencia_bancaria })}
-                              </span>
-                            )}
-                            <span className="ml-auto tabular-nums sm:hidden">{hora}</span>
+                          <div className="mt-auto flex items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground">
+                            <span className="min-w-0 truncate">
+                              {tForma(l.forma_pagamento)}
+                              {l.referencia_bancaria && (
+                                <>
+                                  {" · "}
+                                  <span className="font-mono">{t("row.reference", { value: l.referencia_bancaria })}</span>
+                                </>
+                              )}
+                            </span>
+                            <span className="shrink-0 tabular-nums">{hora}</span>
                           </div>
-
-                          <ChevronRightIcon
-                            aria-hidden
-                            className="absolute top-1/2 right-1 hidden size-4 -translate-y-1/2 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 lg:block"
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        </CardContent>
+                      </Card>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -492,7 +363,7 @@ function ValorDaLinha({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-end text-right sm:justify-self-end sm:pr-4", className)}>
+    <div className={cn("flex shrink-0 flex-col items-end text-right", className)}>
       <span className="font-semibold whitespace-nowrap tabular-nums">{valor}</span>
       {abatido && <span className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">{abatido}</span>}
       {credito && <span className="text-xs whitespace-nowrap text-primary tabular-nums">{credito}</span>}

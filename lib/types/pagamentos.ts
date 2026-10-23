@@ -13,7 +13,7 @@ export type Liquidacao = {
   forma_pagamento: FormaPagamentoTipo;
   referencia_bancaria: string | null;
   observacao: string | null;
-  unidade: { id: string; identificacao: string } | null;
+  unidade: { id: string; identificacao: string; proprietario: { nome: string } | null } | null;
   cobranca: { id: string; descricao: string; tipo: CobrancaTipo; competencia: string } | null;
   // o que o pagamento abateu da cobrança, em dólares (0 quando não liquidou cobrança)
   principal_abatido_usd: number;
