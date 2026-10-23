@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpDownIcon, Building2, MoreHorizontalIcon, PlusIcon, XIcon } from "lucide-react";
+import { ArrowUpDownIcon, Building2, House, MoreHorizontalIcon, PlusIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -45,6 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AvatarIniciais } from "@/components/admin/avatar-iniciais";
 import { BarraListagem } from "@/components/admin/barra-listagem";
 import { classesDoChip } from "@/components/admin/chip";
 import { UnidadeFormDialog } from "@/components/admin/unidades/unidade-form-dialog";
@@ -74,6 +75,13 @@ const corDaSituacao: Record<SituacaoConta, string> = {
   alDia: "bg-primary",
   porVencer: "bg-muted-foreground/50",
   enAtraso: "bg-destructive",
+};
+
+// selo da "casa" no card, na cor da situação
+const tomDaCasa: Record<SituacaoConta, string> = {
+  alDia: "bg-primary/10 text-primary",
+  porVencer: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  enAtraso: "bg-destructive/10 text-destructive",
 };
 
 // colunas da grade (desktop): unidade | proprietário | situação | dívida | ações
@@ -301,17 +309,34 @@ export function UnidadesManager({
                   className="relative h-full cursor-pointer transition-[box-shadow,--tw-ring-color] hover:shadow-md hover:ring-primary/40"
                 >
                   <CardContent className="flex h-full flex-col gap-4">
-                    {/* o menu ⋯ fica no canto (absolute): reserva espaço à direita */}
-                    <div className="min-w-0 pr-8">
-                      <Link
-                        href={`/unidades/${unidade.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-lg leading-tight font-semibold tracking-tight hover:underline"
+                    {/* a casa: selo com o ícone na cor da situação, a identificação grande e, abaixo, o dono
+                        com o avatar de iniciais. O menu ⋯ fica no canto (absolute): reserva espaço à direita */}
+                    <div className="flex items-start gap-3 pr-8">
+                      <span
+                        className={cn(
+                          "flex size-11 shrink-0 items-center justify-center rounded-xl",
+                          tomDaCasa[s.situacao],
+                        )}
                       >
-                        {unidade.identificacao}
-                      </Link>
-                      <div className="mt-0.5 flex min-w-0 items-center gap-2">
-                        <span className="truncate text-sm text-muted-foreground">{unidade.proprietario?.nome ?? "—"}</span>
+                        <House className="size-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/unidades/${unidade.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="block text-xl leading-tight font-bold tracking-tight hover:underline"
+                        >
+                          {unidade.identificacao}
+                        </Link>
+                        <div className="mt-1.5 flex min-w-0 items-center gap-2">
+                          {unidade.proprietario ? (
+                            <>
+                              <AvatarIniciais nome={unidade.proprietario.nome} />
+                              <span className="truncate text-sm">{unidade.proprietario.nome}</span>
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
                         {outrasDoDono > 1 && (
                           <Button
                             size="xs"
@@ -326,10 +351,11 @@ export function UnidadesManager({
                             {t("ownerUnits", { count: outrasDoDono })}
                           </Button>
                         )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="mt-auto flex items-end justify-between gap-3">
+                    <div className="mt-auto flex items-end justify-between gap-3 border-t pt-3">
                       <div className="min-w-0">
                         <p className="flex items-center gap-1.5 text-sm">
                           <span className={cn("size-2 shrink-0 rounded-full", corDaSituacao[s.situacao])} />
