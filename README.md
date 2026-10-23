@@ -82,12 +82,24 @@ na mesma tabela do CLI, então `supabase db push` volta a funcionar fora da VPN.
 ### Cotação BCV automática
 
 A Edge Function `atualizar-cotacao-bcv` busca a taxa oficial (DolarApi, com o site do BCV como
-reserva) e grava em `cotacao_bcv` (só quando a taxa muda). Não há cron: toda tela que usa a cotação
-passa por `garantirCotacaoBcvAtualizada()` (`lib/cotacao-bcv.ts`), que chama a função na hora quando
-a vigente está atrasada em relação ao último dia útil. Cada consulta fica em `cotacao_bcv_consulta`,
-e o app não consulta de novo antes de 10 minutos (em feriado o BCV não publica). Abas que ficam
-abertas são cobertas pelo `VigiaCotacaoBcv`, que confere ao voltar pra aba e a cada 5 minutos. O botão
-"Atualizar cotação agora" usa a mesma função.
+reserva) e grava em `cotacao_bcv` (só quando a taxa muda). Ela é chamada por dois caminhos:
+
+- **Ao abrir o app:** toda tela que usa a cotação passa por `garantirCotacaoBcvAtualizada()`
+  (`lib/cotacao-bcv.ts`), que chama a função na hora quando a vigente está atrasada em relação ao
+  último dia útil. Cada consulta fica em `cotacao_bcv_consulta`, e o app não consulta de novo antes
+  de 10 minutos (em feriado o BCV não publica). Abas que ficam abertas são cobertas pelo
+  `VigiaCotacaoBcv`, que confere ao voltar pra aba e a cada 5 minutos. O botão "Atualizar cotação
+  agora" usa a mesma função.
+- **Todo dia útil, pelo Inngest:** `lib/inngest/functions/atualizar-cotacao-bcv.ts` roda às 9h e às
+  18h de Caracas, pra taxa de cada dia ficar gravada mesmo que ninguém abra o app. Como o BCV
+  publica à tarde a taxa do próximo dia útil, a passada das 18h já pega a de amanhã; se a fonte ainda
+  não publicou o esperado, a função dorme 1h e tenta de novo (até 3 consultas). As funções são
+  servidas em `/api/inngest`, fora da checagem de sessão do `proxy.ts`.
+
+Inngest em desenvolvimento: `INNGEST_DEV=1` no `.env.local` e, com o `npm run dev` de pé,
+`npm run inngest:dev` abre o Dev Server em http://localhost:8288, onde dá pra disparar a função à
+mão. Em produção, a integração Inngest ↔ Vercel define `INNGEST_SIGNING_KEY` e `INNGEST_EVENT_KEY` e
+sincroniza o app a cada deploy.
 
 Os avisos de cotação atrasada (chip do header e painel) não usam calendário de feriados: se a fonte
 foi consultada hoje com sucesso, tudo o que ela publicou já está gravado e a cotação vigente é a

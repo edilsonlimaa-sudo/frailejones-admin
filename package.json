@@ -18,7 +18,8 @@
     "db:remoto:demo": "node --env-file-if-exists=.env.supabase.local scripts/db-remoto.mjs seed:demo",
     "db:remoto:zerar-com-demo": "npm run db:remoto:zerar && npm run db:remoto:demo",
     "db:remoto:sql": "node --env-file-if-exists=.env.supabase.local scripts/db-remoto.mjs sql",
-    "fn:deploy": "supabase functions deploy atualizar-cotacao-bcv --use-api"
+    "fn:deploy": "supabase functions deploy atualizar-cotacao-bcv --use-api",
+    "inngest:dev": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -26,6 +27,7 @@
     "@supabase/supabase-js": "^2.117.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
+    "inngest": "^4.26.0",
     "lucide-react": "^1.47.0",
     "next": "16.3.6",
     "next-intl": "^4.14.7",

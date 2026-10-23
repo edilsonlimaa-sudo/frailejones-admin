@@ -23,3 +23,8 @@ export function hojeCaracas(agora: Date = new Date()): string {
 export function instanteNoDiaCaracas(dataIso: string, agora: Date = new Date()): string {
   return `${dataIso}T${formatoHora.format(agora)}-04:00`;
 }
+
+// hora cheia (0-23) do instante informado em Caracas
+export function horaCaracas(agora: Date = new Date()): number {
+  return Number(formatoHora.format(agora).slice(0, 2));
+}
