@@ -8,6 +8,7 @@ import {
   EvolucaoArrecadacaoChart,
   type PontoEvolucao,
 } from "@/components/admin/painel/evolucao-arrecadacao-chart";
+import { AtalhosSecoes } from "@/components/admin/painel/foco/atalhos-secoes";
 import { CartaoCaixa } from "@/components/admin/painel/foco/cartao-caixa";
 import { CartaoDivida } from "@/components/admin/painel/foco/cartao-divida";
 import { CartaoPendencias, type PendenciaDoMes } from "@/components/admin/painel/foco/cartao-pendencias";
@@ -33,7 +34,8 @@ type PainelFocoProps = {
   mesesEvolucao: number;
 };
 
-const SECOES = ["pulso", "divida", "caixa", "pendencias", "tendencia"] as const;
+// na ordem em que aparecem no celular (os atalhos seguem a rolagem)
+const SECOES = ["pulso", "caixa", "divida", "pendencias", "tendencia"] as const;
 
 // Visão "Foco" do Dashboard, organizada pelas perguntas do administrador, em ordem de urgência:
 //   1. como vai a cobrança do mês?  → Pulso (% arrecadado do emitido)
@@ -51,23 +53,10 @@ export async function PainelFoco(props: PainelFocoProps) {
     <div className="flex flex-col gap-4">
       {props.cabecalho}
 
-      <nav
-        aria-label={tFoco("jump.label")}
-        className="sticky top-14 z-10 -mx-4 -mt-1 border-b bg-background/85 px-4 py-2 backdrop-blur-md lg:hidden"
-      >
-        <ul className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {SECOES.map((secao) => (
-            <li key={secao} className="shrink-0">
-              <a
-                href={`#${secao}`}
-                className="inline-flex h-7 items-center rounded-full border bg-card px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground active:bg-muted"
-              >
-                {tFoco(`jump.${secao}`)}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <AtalhosSecoes
+        label={tFoco("jump.label")}
+        secoes={SECOES.map((secao) => ({ id: secao, label: tFoco(`jump.${secao}`) }))}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <section id="pulso" className="scroll-mt-28 lg:col-span-2">

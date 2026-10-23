@@ -22,8 +22,9 @@ import {
 import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
 import { taxasSemEmissaoNoMes } from "@/lib/taxas";
 import { hojeCaracas } from "@/lib/fuso";
-import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
-import { NavegadorMes } from "@/components/admin/navegador-mes";
+import { formatMes, mesAdjacente, mesAtual, parseMes } from "@/lib/mes";
+import { CabecalhoMes } from "@/components/admin/painel/cabecalho-mes";
+import { DeslizarMes } from "@/components/admin/painel/deslizar-mes";
 import { EntradasDoMes } from "@/components/admin/painel/entradas-do-mes";
 import { QuitacaoDoMes } from "@/components/admin/painel/quitacao-do-mes";
 import { RecaudacaoDoMes } from "@/components/admin/painel/recaudacao-do-mes";
@@ -310,17 +311,20 @@ export default async function Home({
   const mesDeHojeLabel = mesLabelFormatter.format(new Date(`${mesDeHoje}-01T00:00:00Z`));
 
   const visao = resolverVisaoPainel((await cookies()).get(COOKIE_VISAO_PAINEL)?.value);
+  const mesAnterior = mesAdjacente(ano, mes, -1);
+  const mesSeguinte = mesAdjacente(ano, mes, 1);
+  const anteriorHref = `/?mes=${formatMes(mesAnterior.ano, mesAnterior.mes)}`;
+  const seguinteHref = `/?mes=${formatMes(mesSeguinte.ano, mesSeguinte.mes)}`;
+  const hoje = mesAtual();
   const cabecalho = (
-    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-      <div>
-        <h1 className="text-lg font-medium">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{mesLabelCapitalizado}</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <SeletorVisao visao={visao} />
-        <NavegadorMes ano={ano} mes={mes} basePath="/" />
-      </div>
-    </div>
+    <CabecalhoMes
+      titulo={t("title")}
+      mesLabel={mesLabelCapitalizado}
+      anteriorHref={anteriorHref}
+      seguinteHref={seguinteHref}
+      atualHref={ano === hoje.ano && mes === hoje.mes ? null : "/"}
+      controles={<SeletorVisao visao={visao} />}
+    />
   );
 
   if (visao === "foco") {
@@ -337,267 +341,271 @@ export default async function Home({
         : null;
 
     return (
-      <PainelFoco
-        cabecalho={cabecalho}
-        mes={mesSelecionado}
-        mesLabel={mesLabel}
-        tasaVes={cotacaoBcv?.tasa_ves ?? null}
-        recaudacao={recaudacao}
-        cobrancasEmitidas={ativas.length}
-        pendentes={{ quantidade: pendentes.length, valor: valorEmAberto }}
-        emAtraso={{ quantidade: emAtraso.length, valor: valorEmAtrasoComEncargos }}
-        diferencaRedondeo={diferencaRedondeo}
-        emDiaAnterior={emDiaAnterior}
-        entradas={resumoEntradas}
-        divida={divida}
-        pendencias={linhasPendentes.map(({ cobranca: c, encargos }) => ({
-          id: c.id,
-          unidadeId: c.unidade?.id ?? null,
-          unidade: c.unidade?.identificacao ?? null,
-          origem: c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao,
-          vencimento: c.data_vencimento,
-          fimCarencia:
-            c.dias_graca > 0 && c.data_vencimento < hojeIso ? somarDias(c.data_vencimento, c.dias_graca) : null,
-          diasAtraso: encargos.diasAtraso,
-          total: encargos.valorTotalComEncargos,
-        }))}
-        evolucao={evolucao}
-        mesesEvolucao={MESES_EVOLUCAO}
-      />
+      <DeslizarMes anteriorHref={anteriorHref} seguinteHref={seguinteHref}>
+        <PainelFoco
+          cabecalho={cabecalho}
+          mes={mesSelecionado}
+          mesLabel={mesLabel}
+          tasaVes={cotacaoBcv?.tasa_ves ?? null}
+          recaudacao={recaudacao}
+          cobrancasEmitidas={ativas.length}
+          pendentes={{ quantidade: pendentes.length, valor: valorEmAberto }}
+          emAtraso={{ quantidade: emAtraso.length, valor: valorEmAtrasoComEncargos }}
+          diferencaRedondeo={diferencaRedondeo}
+          emDiaAnterior={emDiaAnterior}
+          entradas={resumoEntradas}
+          divida={divida}
+          pendencias={linhasPendentes.map(({ cobranca: c, encargos }) => ({
+            id: c.id,
+            unidadeId: c.unidade?.id ?? null,
+            unidade: c.unidade?.identificacao ?? null,
+            origem: c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao,
+            vencimento: c.data_vencimento,
+            fimCarencia:
+              c.dias_graca > 0 && c.data_vencimento < hojeIso ? somarDias(c.data_vencimento, c.dias_graca) : null,
+            diasAtraso: encargos.diasAtraso,
+            total: encargos.valorTotalComEncargos,
+          }))}
+          evolucao={evolucao}
+          mesesEvolucao={MESES_EVOLUCAO}
+        />
+      </DeslizarMes>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {cabecalho}
-
-      {cotacaoDesatualizada && (
-        <div
-          role="alert"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/50 px-4 py-3 text-sm"
-        >
-          <div className="flex items-start gap-2">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
-            <p>
-              {cotacaoBcv
-                ? t("staleRate", { date: formatDate(cotacaoBcv.data_cotacao) })
-                : t("missingRate")}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/cotacao-bcv" />}>
-            {t("updateRate")}
-          </Button>
-        </div>
-      )}
-
-      {taxasSemEmissao.length > 0 && (
-        <div
-          role="alert"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm"
-        >
-          <div className="flex items-start gap-2">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-            <p>
-              {t("feesNotIssued", {
-                count: taxasSemEmissao.length,
-                month: mesDeHojeLabel,
-                names: taxasSemEmissao.map((taxa) => taxa.titulo).join(", "),
-              })}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link
-                href={taxasSemEmissao.length === 1 ? `/taxas-condominio/${taxasSemEmissao[0].id}` : "/taxas-condominio"}
-              />
-            }
+    <DeslizarMes anteriorHref={anteriorHref} seguinteHref={seguinteHref}>
+      <div className="flex flex-col gap-6">
+        {cabecalho}
+  
+        {cotacaoDesatualizada && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/50 px-4 py-3 text-sm"
           >
-            {t("goToFees")}
-          </Button>
-        </div>
-      )}
-
-      <DeudaTotal
-        cobrancas={pendentesTotaisRaw ?? []}
-        hojeIso={hojeIso}
-        tasaVes={cotacaoBcv?.tasa_ves ?? null}
-      />
-
-      <EntradasDoMes usd={resumoEntradas.usd} ves={resumoEntradas.ves} mes={mesSelecionado}>
-        <QuitacaoDoMes quitacao={resumoEntradas.quitacao} />
-      </EntradasDoMes>
-
-      <section className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-base font-medium">{t("billingTitle")}</h2>
-          <p className="text-sm text-muted-foreground">{t("billingDescription")}</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Card size="sm">
-            <CardHeader>
-              <CardDescription>{t("issuedThisMonth")}</CardDescription>
-              <CardTitle className="text-xl">{formatUsd(valorEmitido)}</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {t("chargesCount", { count: ativas.length })}
-                {diferencaRedondeo !== 0 &&
-                  ` · ${t("issuedRounding", { diff: formatDiferenca(diferencaRedondeo) })}`}
+            <div className="flex items-start gap-2">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+              <p>
+                {cotacaoBcv
+                  ? t("staleRate", { date: formatDate(cotacaoBcv.data_cotacao) })
+                  : t("missingRate")}
               </p>
-            </CardHeader>
-          </Card>
-          <Card size="sm">
-            <CardHeader>
-              <CardDescription>{t("settledThisMonth")}</CardDescription>
-              <CardTitle className="text-xl">{formatUsd(valorArrecadado)}</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {t("settledSplit", {
-                  payment: formatUsd(valorQuitadoComPagamento),
-                  credit: formatUsd(valorQuitadoComCredito),
+            </div>
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/cotacao-bcv" />}>
+              {t("updateRate")}
+            </Button>
+          </div>
+        )}
+  
+        {taxasSemEmissao.length > 0 && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm"
+          >
+            <div className="flex items-start gap-2">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <p>
+                {t("feesNotIssued", {
+                  count: taxasSemEmissao.length,
+                  month: mesDeHojeLabel,
+                  names: taxasSemEmissao.map((taxa) => taxa.titulo).join(", "),
                 })}
               </p>
-            </CardHeader>
-          </Card>
-          <Card size="sm">
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={
+                <Link
+                  href={taxasSemEmissao.length === 1 ? `/taxas-condominio/${taxasSemEmissao[0].id}` : "/taxas-condominio"}
+                />
+              }
+            >
+              {t("goToFees")}
+            </Button>
+          </div>
+        )}
+  
+        <DeudaTotal
+          cobrancas={pendentesTotaisRaw ?? []}
+          hojeIso={hojeIso}
+          tasaVes={cotacaoBcv?.tasa_ves ?? null}
+        />
+  
+        <EntradasDoMes usd={resumoEntradas.usd} ves={resumoEntradas.ves} mes={mesSelecionado}>
+          <QuitacaoDoMes quitacao={resumoEntradas.quitacao} />
+        </EntradasDoMes>
+  
+        <section className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-base font-medium">{t("billingTitle")}</h2>
+            <p className="text-sm text-muted-foreground">{t("billingDescription")}</p>
+          </div>
+  
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Card size="sm">
+              <CardHeader>
+                <CardDescription>{t("issuedThisMonth")}</CardDescription>
+                <CardTitle className="text-xl">{formatUsd(valorEmitido)}</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {t("chargesCount", { count: ativas.length })}
+                  {diferencaRedondeo !== 0 &&
+                    ` · ${t("issuedRounding", { diff: formatDiferenca(diferencaRedondeo) })}`}
+                </p>
+              </CardHeader>
+            </Card>
+            <Card size="sm">
+              <CardHeader>
+                <CardDescription>{t("settledThisMonth")}</CardDescription>
+                <CardTitle className="text-xl">{formatUsd(valorArrecadado)}</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {t("settledSplit", {
+                    payment: formatUsd(valorQuitadoComPagamento),
+                    credit: formatUsd(valorQuitadoComCredito),
+                  })}
+                </p>
+              </CardHeader>
+            </Card>
+            <Card size="sm">
+              <CardHeader>
+                <CardDescription>{t("pending")}</CardDescription>
+                <CardTitle className="text-xl">{pendentes.length}</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {t("openAmount", { value: formatUsd(valorEmAberto) })}
+                </p>
+              </CardHeader>
+            </Card>
+            <Card size="sm">
+              <CardHeader>
+                <CardDescription>{t("overdue")}</CardDescription>
+                <CardTitle className="text-xl text-destructive">{emAtraso.length}</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {t("withCharges", { value: formatUsd(valorEmAtrasoComEncargos) })}
+                </p>
+              </CardHeader>
+            </Card>
+          </div>
+  
+          <RecaudacaoDoMes recaudacao={recaudacao} unidadesAtivas={unidadesAtivas} />
+        </section>
+  
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
+          <Card size="sm" className="lg:col-span-3">
             <CardHeader>
-              <CardDescription>{t("pending")}</CardDescription>
-              <CardTitle className="text-xl">{pendentes.length}</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {t("openAmount", { value: formatUsd(valorEmAberto) })}
-              </p>
+              <CardTitle>{t("evolutionTitle")}</CardTitle>
+              <CardDescription>{t("evolutionDescription", { count: MESES_EVOLUCAO })}</CardDescription>
             </CardHeader>
+            <CardContent>
+              <EvolucaoArrecadacaoChart
+                dados={evolucao}
+                labels={{ emitido: t("chartIssued"), quitado: t("chartSettled"), emDia: t("chartOnTime") }}
+              />
+            </CardContent>
+            <CardFooter className="items-start gap-2 text-xs text-muted-foreground">
+              <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
+              <p>{t("evolutionNote")}</p>
+            </CardFooter>
           </Card>
-          <Card size="sm">
+  
+          <Card size="sm" className="lg:col-span-2">
             <CardHeader>
-              <CardDescription>{t("overdue")}</CardDescription>
-              <CardTitle className="text-xl text-destructive">{emAtraso.length}</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {t("withCharges", { value: formatUsd(valorEmAtrasoComEncargos) })}
-              </p>
+              <CardTitle>{t("pendingChargesTitle")}</CardTitle>
+              <CardDescription>
+                {t("pendingChargesDescription")}
+                {pendentes.length > 0 && ` · ${t("chargesCount", { count: pendentes.length })}`}
+              </CardDescription>
             </CardHeader>
+            <CardContent>
+              {pendentes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("noPendingCharges")}</p>
+              ) : (
+                // lista completa com rolagem: cortar sem aviso fazia o card mostrar menos cobranças
+                // do que o contador "Pendientes"
+                <ul className="-mr-2 flex max-h-96 flex-col gap-3 overflow-y-auto pr-2">
+                  {linhasPendentes.map(({ cobranca: c, encargos }) => (
+                    <li key={c.id} className="flex items-center justify-between gap-2 text-sm">
+                      <div className="min-w-0">
+                        <p className="truncate">
+                          <span className="font-medium">{c.unidade?.identificacao ?? t("unitRemoved")}</span>
+                          <span className="text-muted-foreground">
+                            {" · "}
+                            {c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao}
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("dueOn", { date: formatDate(c.data_vencimento) })}
+                          {/* os dias de atraso contam do fim da carência, não do vencimento */}
+                          {c.dias_graca > 0 &&
+                            ` · ${t("graceUntil", { date: formatDate(somarDias(c.data_vencimento, c.dias_graca)) })}`}
+                          {encargos.diasAtraso > 0 && (
+                            <span className="text-destructive">
+                              {" "}
+                              · {tStatus("daysOverdue", { count: encargos.diasAtraso })}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <div className="text-right">
+                          {/* saldo devedor (+ encargos se vencida), não o valor original: um abono
+                              parcial já reduziu o que falta pagar */}
+                          <span className="font-medium">{formatUsd(encargos.valorTotalComEncargos)}</span>
+                          {cotacaoBcv && (
+                            <p className="text-xs text-muted-foreground">
+                              {formatVes(encargos.valorTotalComEncargos, cotacaoBcv.tasa_ves)}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant={statusVariant[c.status]}>{tStatus(c.status)}</Badge>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
           </Card>
         </div>
-
-        <RecaudacaoDoMes recaudacao={recaudacao} unidadesAtivas={unidadesAtivas} />
-      </section>
-
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
-        <Card size="sm" className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>{t("evolutionTitle")}</CardTitle>
-            <CardDescription>{t("evolutionDescription", { count: MESES_EVOLUCAO })}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EvolucaoArrecadacaoChart
-              dados={evolucao}
-              labels={{ emitido: t("chartIssued"), quitado: t("chartSettled"), emDia: t("chartOnTime") }}
-            />
-          </CardContent>
-          <CardFooter className="items-start gap-2 text-xs text-muted-foreground">
-            <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
-            <p>{t("evolutionNote")}</p>
-          </CardFooter>
-        </Card>
-
-        <Card size="sm" className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t("pendingChargesTitle")}</CardTitle>
-            <CardDescription>
-              {t("pendingChargesDescription")}
-              {pendentes.length > 0 && ` · ${t("chargesCount", { count: pendentes.length })}`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {pendentes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noPendingCharges")}</p>
-            ) : (
-              // lista completa com rolagem: cortar sem aviso fazia o card mostrar menos cobranças
-              // do que o contador "Pendientes"
-              <ul className="-mr-2 flex max-h-96 flex-col gap-3 overflow-y-auto pr-2">
-                {linhasPendentes.map(({ cobranca: c, encargos }) => (
-                  <li key={c.id} className="flex items-center justify-between gap-2 text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate">
-                        <span className="font-medium">{c.unidade?.identificacao ?? t("unitRemoved")}</span>
-                        <span className="text-muted-foreground">
-                          {" · "}
-                          {c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao}
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("dueOn", { date: formatDate(c.data_vencimento) })}
-                        {/* os dias de atraso contam do fim da carência, não do vencimento */}
-                        {c.dias_graca > 0 &&
-                          ` · ${t("graceUntil", { date: formatDate(somarDias(c.data_vencimento, c.dias_graca)) })}`}
-                        {encargos.diasAtraso > 0 && (
-                          <span className="text-destructive">
-                            {" "}
-                            · {tStatus("daysOverdue", { count: encargos.diasAtraso })}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <div className="text-right">
-                        {/* saldo devedor (+ encargos se vencida), não o valor original: um abono
-                            parcial já reduziu o que falta pagar */}
-                        <span className="font-medium">{formatUsd(encargos.valorTotalComEncargos)}</span>
-                        {cotacaoBcv && (
-                          <p className="text-xs text-muted-foreground">
-                            {formatVes(encargos.valorTotalComEncargos, cotacaoBcv.tasa_ves)}
-                          </p>
-                        )}
-                      </div>
-                      <Badge variant={statusVariant[c.status]}>{tStatus(c.status)}</Badge>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+  
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Button
+            variant="outline"
+            className="h-auto justify-start gap-3 p-4"
+            nativeButton={false}
+            render={<Link href="/unidades" />}
+          >
+            <Building2 className="size-5 shrink-0" />
+            <div className="text-left">
+              <p className="text-sm font-medium">{t("shortcutUnidades")}</p>
+              <p className="text-xs text-muted-foreground">{t("shortcutUnidadesDescription")}</p>
+            </div>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-auto justify-start gap-3 p-4"
+            nativeButton={false}
+            render={<Link href="/taxas-condominio" />}
+          >
+            <Receipt className="size-5 shrink-0" />
+            <div className="text-left">
+              <p className="text-sm font-medium">{t("shortcutTaxas")}</p>
+              <p className="text-xs text-muted-foreground">{t("shortcutTaxasDescription")}</p>
+            </div>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-auto justify-start gap-3 p-4"
+            nativeButton={false}
+            render={<Link href="/rateios-extraordinarios" />}
+          >
+            <HardHat className="size-5 shrink-0" />
+            <div className="text-left">
+              <p className="text-sm font-medium">{t("shortcutRateios")}</p>
+              <p className="text-xs text-muted-foreground">{t("shortcutRateiosDescription")}</p>
+            </div>
+          </Button>
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Button
-          variant="outline"
-          className="h-auto justify-start gap-3 p-4"
-          nativeButton={false}
-          render={<Link href="/unidades" />}
-        >
-          <Building2 className="size-5 shrink-0" />
-          <div className="text-left">
-            <p className="text-sm font-medium">{t("shortcutUnidades")}</p>
-            <p className="text-xs text-muted-foreground">{t("shortcutUnidadesDescription")}</p>
-          </div>
-        </Button>
-        <Button
-          variant="outline"
-          className="h-auto justify-start gap-3 p-4"
-          nativeButton={false}
-          render={<Link href="/taxas-condominio" />}
-        >
-          <Receipt className="size-5 shrink-0" />
-          <div className="text-left">
-            <p className="text-sm font-medium">{t("shortcutTaxas")}</p>
-            <p className="text-xs text-muted-foreground">{t("shortcutTaxasDescription")}</p>
-          </div>
-        </Button>
-        <Button
-          variant="outline"
-          className="h-auto justify-start gap-3 p-4"
-          nativeButton={false}
-          render={<Link href="/rateios-extraordinarios" />}
-        >
-          <HardHat className="size-5 shrink-0" />
-          <div className="text-left">
-            <p className="text-sm font-medium">{t("shortcutRateios")}</p>
-            <p className="text-xs text-muted-foreground">{t("shortcutRateiosDescription")}</p>
-          </div>
-        </Button>
-      </div>
-    </div>
+    </DeslizarMes>
   );
 }
