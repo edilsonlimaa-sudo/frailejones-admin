@@ -1,4 +1,5 @@
-// anel de progresso em SVG (server-friendly): trilha em muted, arco em primary, rótulo no centro
+// anel de progresso em SVG (server-friendly): trilha em muted, arco em primary, rótulo no centro.
+// Abaixo de 96px vira a versão compacta: só o percentual, pequeno (o rótulo fica no aria-label)
 export function AnelProgresso({
   percentual,
   rotulo,
@@ -13,6 +14,7 @@ export function AnelProgresso({
   const raio = (tamanho - espessura) / 2;
   const circunferencia = 2 * Math.PI * raio;
   const limitado = Math.max(0, Math.min(100, percentual));
+  const compacto = tamanho < 96;
 
   return (
     <div className="relative shrink-0" style={{ width: tamanho, height: tamanho }}>
@@ -43,8 +45,10 @@ export function AnelProgresso({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-semibold tracking-tight tabular-nums">{Math.round(limitado)}%</span>
-        <span className="text-xs text-muted-foreground">{rotulo}</span>
+        <span className={compacto ? "text-xs font-semibold tabular-nums" : "text-3xl font-semibold tracking-tight tabular-nums"}>
+          {Math.round(limitado)}%
+        </span>
+        {!compacto && <span className="text-xs text-muted-foreground">{rotulo}</span>}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontalIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
+import { MoreHorizontalIcon, PlusIcon, Receipt, TriangleAlertIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -12,6 +12,7 @@ import { INTL_LOCALE } from "@/lib/intl-locale";
 import { formatUsd } from "@/lib/moeda";
 import type { ResumoProgresso } from "@/lib/progresso-cobranca";
 import type { TaxaCondominio } from "@/lib/types/taxas-condominio";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,8 +36,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BarraResumo } from "@/components/admin/barra-resumo";
+import { AnelProgresso } from "@/components/admin/painel/foco/anel-progresso";
 import { TaxaCondominioFormDialog } from "@/components/admin/taxas-condominio/taxa-condominio-form-dialog";
-import { ResumoRegrasEncargos } from "@/components/admin/encargos/resumo-regras-encargos";
 
 // situação operacional de cada cuota, calculada no servidor
 export type SituacaoTaxa = {
@@ -59,6 +60,16 @@ type TaxasCondominioManagerProps = {
 
 // cuota recém-cadastrada nesta tela, antes do refresh trazer a situação do servidor
 const SEM_SITUACAO: SituacaoTaxa = { unidadesVinculadas: 0, temCobrancas: false, mesAtualEmitido: false, referencia: null };
+
+// estado do mês de cada cuota, que colore o selo do card: falta emitir (âmbar), em cobrança
+// (azul), tudo pago (verde) ou nada a cobrar (cinza: inativa ou nunca emitida)
+type EstadoDoMes = "emitir" | "emCobro" | "completo" | "inativa";
+const tomDoEstado: Record<EstadoDoMes, string> = {
+  emitir: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  emCobro: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
+  completo: "bg-primary/10 text-primary",
+  inativa: "bg-muted text-muted-foreground",
+};
 
 export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoIds }: TaxasCondominioManagerProps) {
   const t = useTranslations("taxasCondominio");
@@ -173,6 +184,15 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
                 const pendenteDeEmissao = semEmissaoIds.includes(taxa.id);
                 const ref = s.referencia;
                 const progresso = ref && ref.resumo.esperado > 0 ? Math.min(100, (ref.resumo.recaudado / ref.resumo.esperado) * 100) : 0;
+                const estado: EstadoDoMes = !taxa.ativo
+                  ? "inativa"
+                  : pendenteDeEmissao
+                    ? "emitir"
+                    : ref
+                      ? progresso >= 100
+                        ? "completo"
+                        : "emCobro"
+                      : "inativa";
                 return (
                   <li key={taxa.id}>
                   {/* o card todo abre o detalhe; botões internos param a propagação do clique */}
@@ -182,71 +202,81 @@ export function TaxasCondominioManager({ taxas, situacoes, mesAtual, semEmissaoI
                     className="relative h-full cursor-pointer transition-[box-shadow,--tw-ring-color] hover:shadow-md hover:ring-primary/40"
                   >
                   <CardContent className="flex h-full flex-col gap-4">
-                    <div className="min-w-0 pr-8">
-                      <p className="flex flex-wrap items-center gap-2">
-                        <Link
-                          href={href}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-lg leading-tight font-semibold tracking-tight hover:underline"
-                        >
-                          {taxa.titulo}
-                        </Link>
-                        {!taxa.ativo && <Badge variant="outline">{t("inactive")}</Badge>}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("rulesLine", {
-                          day: taxa.dia_vencimento,
-                          units: s.unidadesVinculadas,
-                        })}
-                        {" · "}
-                        <ResumoRegrasEncargos regras={taxa} />
-                      </p>
+                    {/* cabeçalho: selo na cor do estado do mês, título e o essencial (valor e vencimento).
+                        As regras de multa e juros ficam no detalhe: aqui só o que se lê de relance */}
+                    <div className="flex items-start gap-3 pr-8">
+                      <span
+                        className={cn(
+                          "flex size-11 shrink-0 items-center justify-center rounded-xl",
+                          tomDoEstado[estado],
+                        )}
+                      >
+                        <Receipt className="size-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={href}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xl leading-tight font-bold tracking-tight hover:underline"
+                          >
+                            {taxa.titulo}
+                          </Link>
+                          {!taxa.ativo && <Badge variant="outline">{t("inactive")}</Badge>}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          <span className="font-semibold text-foreground tabular-nums">{formatUsd(taxa.valor_usd)}</span>{" "}
+                          {t("perUnitShort")}
+                          {" · "}
+                          {t("dueDay", { day: taxa.dia_vencimento })}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* status do mês: emitir é a ação recorrente desta tela */}
-                    <div className="flex flex-col gap-1.5">
+                    {/* o mês: a pergunta operacional desta tela. Anel com o % arrecadado, contagem e
+                        atraso; ou, se falta emitir, o chamado pra emitir */}
+                    <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
                       {pendenteDeEmissao ? (
-                        <div className="flex items-center gap-2">
-                          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                            <TriangleAlertIcon className="size-3.5 shrink-0" />
-                            {t("monthNotIssued", { month: formatMesLongo(mesAtual) })}
-                          </p>
+                        <>
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                            <TriangleAlertIcon className="size-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">{t("monthNotIssued", { month: formatMesLongo(mesAtual) })}</p>
+                            <p className="text-xs text-muted-foreground">{t("issueHint")}</p>
+                          </div>
                           <Button
-                            size="xs"
+                            size="sm"
                             nativeButton={false}
                             render={<Link href={href} onClick={(e) => e.stopPropagation()} />}
                           >
                             {t("issueAction")}
                           </Button>
-                        </div>
-                      ) : null}
-                      {ref && (
-                        <>
-                          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                            <div className="h-full rounded-full bg-primary" style={{ width: `${progresso}%` }} />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {t("monthProgress", {
-                              month: formatMesLongo(ref.mes),
-                              paid: ref.resumo.pagas,
-                              total: ref.resumo.cobrancas,
-                              late: ref.comAtraso,
-                            })}
-                          </p>
                         </>
-                      )}
-                      {!ref && !pendenteDeEmissao && (
-                        <p className="text-xs text-muted-foreground">{t("neverIssued")}</p>
+                      ) : ref ? (
+                        <>
+                          <AnelProgresso percentual={progresso} rotulo={t("collected")} tamanho={56} espessura={6} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-muted-foreground">{formatMesLongo(ref.mes)}</p>
+                            <p className="text-sm font-medium">
+                              {t("paidOf", { paid: ref.resumo.pagas, total: ref.resumo.cobrancas })}
+                            </p>
+                            <p className={cn("text-xs", ref.comAtraso > 0 ? "text-destructive" : "text-primary")}>
+                              {ref.comAtraso > 0 ? t("lateCount", { count: ref.comAtraso }) : t("noLate")}
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">{t("neverIssued")}</p>
                       )}
                     </div>
 
-                    <div className="mt-auto flex items-baseline justify-between gap-3">
-                      <p className="text-lg leading-tight font-semibold tabular-nums">
-                        {t("perUnit", { value: formatUsd(taxa.valor_usd) })}
-                      </p>
-                      <p className="text-xs text-muted-foreground tabular-nums">
+                    {/* rodapé: alcance e o que a cuota representa por mês */}
+                    <div className="mt-auto flex items-center justify-between gap-3 border-t pt-3 text-sm">
+                      <span className="text-muted-foreground">{t("unitsCount", { count: s.unidadesVinculadas })}</span>
+                      <span className="font-semibold tabular-nums">
                         {t("perMonth", { value: formatUsd(taxa.valor_usd * s.unidadesVinculadas) })}
-                      </p>
+                      </span>
                     </div>
                   </CardContent>
 

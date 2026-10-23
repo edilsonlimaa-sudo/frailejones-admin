@@ -410,16 +410,21 @@
       "saveError": "Error al guardar la cuota de condominio."
     },
     "inactive": "Inactiva",
-    "rulesLine": "Vence el día {day} · {units, plural, one {# unidad} other {# unidades}}",
     "notIssuedAlert": "{count, plural, one {# cuota sin emitir} other {# cuotas sin emitir}} en {month}:",
     "monthNotIssued": "{month}: sin emitir",
     "issueAction": "Emitir",
-    "monthProgress": "{month}: {paid} de {total} pagados · {late} con atraso",
     "neverIssued": "Todavía no se emitió ningún mes.",
-    "perUnit": "{value} por unidad",
     "perMonth": "{value} por mes",
     "deleteLockedReason": "No se puede eliminar: la cuota ya tiene cobros emitidos. Para dejar de cobrarla, edítela y desactívela.",
-    "barSummary": "{count, plural, one {# cuota} other {# cuotas}} · {active, plural, one {# activa} other {# activas}}"
+    "barSummary": "{count, plural, one {# cuota} other {# cuotas}} · {active, plural, one {# activa} other {# activas}}",
+    "perUnitShort": "por unidad",
+    "dueDay": "Vence el día {day}",
+    "collected": "recaudado",
+    "paidOf": "{paid} de {total} pagados",
+    "lateCount": "{count, plural, one {# cobro con atraso} other {# cobros con atraso}}",
+    "noLate": "Nadie en atraso",
+    "issueHint": "Los cobros de este mes todavía no fueron emitidos.",
+    "unitsCount": "{count, plural, one {# unidad vinculada} other {# unidades vinculadas}}"
   },
   "taxaCondominioDetail": {
     "headerSubtitle": "{value} · vencimiento todo el día {day}",

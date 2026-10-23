@@ -410,16 +410,21 @@
       "saveError": "Erro ao salvar taxa de condomínio."
     },
     "inactive": "Inativa",
-    "rulesLine": "Vence no dia {day} · {units, plural, one {# unidade} other {# unidades}}",
     "notIssuedAlert": "{count, plural, one {# taxa sem emissão} other {# taxas sem emissão}} em {month}:",
     "monthNotIssued": "{month}: sem emissão",
     "issueAction": "Emitir",
-    "monthProgress": "{month}: {paid} de {total} pagas · {late} com atraso",
     "neverIssued": "Nenhum mês emitido ainda.",
-    "perUnit": "{value} por unidade",
     "perMonth": "{value} por mês",
     "deleteLockedReason": "Não é possível excluir: a taxa já tem cobranças emitidas. Para parar de cobrá-la, edite e desative.",
-    "barSummary": "{count, plural, one {# cuota} other {# cuotas}} · {active, plural, one {# ativa} other {# ativas}}"
+    "barSummary": "{count, plural, one {# cuota} other {# cuotas}} · {active, plural, one {# ativa} other {# ativas}}",
+    "perUnitShort": "por unidade",
+    "dueDay": "Vence no dia {day}",
+    "collected": "arrecadado",
+    "paidOf": "{paid} de {total} pagas",
+    "lateCount": "{count, plural, one {# cobrança em atraso} other {# cobranças em atraso}}",
+    "noLate": "Ninguém em atraso",
+    "issueHint": "As cobranças deste mês ainda não foram emitidas.",
+    "unitsCount": "{count, plural, one {# unidade vinculada} other {# unidades vinculadas}}"
   },
   "taxaCondominioDetail": {
     "headerSubtitle": "{value} · vencimento todo dia {day}",
