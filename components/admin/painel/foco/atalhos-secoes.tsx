@@ -76,7 +76,7 @@ export function AtalhosSecoes({ label, secoes }: AtalhosSecoesProps) {
   }
 
   return (
-    <nav aria-label={label} className="-mx-4 px-4 pb-2 lg:hidden">
+    <nav aria-label={label} className="-mx-4 px-4 pb-3 lg:hidden">
       <ul ref={lista} className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {secoes.map((secao) => {
           const ativo = secao.id === ativa;

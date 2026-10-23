@@ -32,7 +32,7 @@ export function CabecalhoMes({ titulo, ano, mes, hoje, basePath, children }: Cab
   return (
     <BarraFixa>
       <h1 className="sr-only">{titulo}</h1>
-      <div className="flex items-center justify-between gap-2 py-2">
+      <div className="flex items-center justify-between gap-2 py-3">
         <SeletorMes ano={ano} mes={mes} hoje={hoje} basePath={basePath} />
 
         <div className="flex shrink-0 items-center gap-2">

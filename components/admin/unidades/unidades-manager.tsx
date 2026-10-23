@@ -202,12 +202,9 @@ export function UnidadesManager({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* "header duplo": título, busca e filtros ficam presos abaixo do header enquanto a lista rola.
-          No celular o header do app já diz "Unidades", então a linha do título fica só pra leitores
-          de tela e o botão de nova unidade vira um ícone ao lado da busca */}
+      {/* "header duplo": título, busca e filtros ficam presos abaixo do header enquanto a lista rola */}
       <BarraFixa>
-        <h1 className="sr-only md:hidden">{t("title")}</h1>
-        <div className="hidden items-center justify-between gap-3 py-2 md:flex">
+        <div className="flex items-center justify-between gap-3 py-3">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Building2 className="size-4.5" />
@@ -223,31 +220,28 @@ export function UnidadesManager({
           </Button>
         </div>
 
-        <div className="flex items-center gap-2 py-2 md:pt-0">
+        <div className="flex items-center gap-2 pb-3">
           <Input
             type="search"
             placeholder={t("searchPlaceholder")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             aria-label={t("searchPlaceholder")}
-            className="bg-card"
+            className="h-10 bg-card"
           />
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button size="icon" variant="outline" aria-label={t("sortLabel")} />}>
               <ArrowUpDownIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t("sortLabel")}</DropdownMenuLabel>
               <DropdownMenuRadioGroup value={ordem} onValueChange={(valor) => trocarOrdem(valor as OrdemUnidades)}>
+                <DropdownMenuLabel>{t("sortLabel")}</DropdownMenuLabel>
                 <DropdownMenuRadioItem value="unidad">{t("identification")}</DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="atraso">{t("columns.situation")}</DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="deuda">{t("columns.debt")}</DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button size="icon" variant="outline" aria-label={t("newUnit")} onClick={openCreateDialog} className="md:hidden">
-            <PlusIcon />
-          </Button>
         </div>
 
         {/* resumo que também filtra: tocar numa situação mostra só as unidades nela. Na mesma fila,
@@ -255,7 +249,7 @@ export function UnidadesManager({
         <div
           role="group"
           aria-label={t("summary.label")}
-          className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {(["todas", "alDia", "porVencer", "enAtraso"] as const).map((f) => (
             <Button
