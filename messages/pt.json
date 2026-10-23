@@ -670,12 +670,13 @@
     "rate": "Taxa (Bs. por $)",
     "source": "Fonte",
     "noRates": "Nenhuma cotação cadastrada ainda. Clique em «Atualizar cotação agora».",
-    "historyTitle": "Histórico",
     "noRatesShort": "Nenhuma cotação cadastrada ainda.",
     "updatedAt": "Atualizada em",
     "lastCheck": "Última verificação da fonte: {date}",
     "lastCheckError": "Última verificação da fonte: {date}, sem sucesso ({error})",
-    "barCurrent": "vigente desde {date}"
+    "barCurrent": "vigente desde {date}",
+    "currentRate": "Taxa vigente",
+    "monthCount": "{count, plural, one {# cotação} other {# cotações}}"
   },
   "auth": {
     "login": {

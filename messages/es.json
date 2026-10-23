@@ -670,12 +670,13 @@
     "rate": "Tasa (Bs. por $)",
     "source": "Fuente",
     "noRates": "Ninguna cotización registrada todavía. Haga clic en «Actualizar cotización ahora».",
-    "historyTitle": "Historial",
     "noRatesShort": "Ninguna cotización registrada todavía.",
     "updatedAt": "Actualizada el",
     "lastCheck": "Última verificación de la fuente: {date}",
     "lastCheckError": "Última verificación de la fuente: {date}, sin éxito ({error})",
-    "barCurrent": "vigente desde el {date}"
+    "barCurrent": "vigente desde el {date}",
+    "currentRate": "Tasa vigente",
+    "monthCount": "{count, plural, one {# cotización} other {# cotizaciones}}"
   },
   "auth": {
     "login": {
