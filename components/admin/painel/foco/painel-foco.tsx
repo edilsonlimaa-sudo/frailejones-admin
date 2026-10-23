@@ -2,12 +2,14 @@ import { InfoIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import type { ResumoEntradas } from "@/lib/arrecadacao";
+import { mesAtual, type AnoMes } from "@/lib/mes";
 import type { ResumoDivida } from "@/lib/painel/divida";
-import type { RecaudacaoDoMes } from "@/components/admin/painel/recaudacao-do-mes";
+import type { RecaudacaoDoMes } from "@/lib/painel/recaudacao";
 import {
   EvolucaoArrecadacaoChart,
   type PontoEvolucao,
 } from "@/components/admin/painel/evolucao-arrecadacao-chart";
+import { CabecalhoMes } from "@/components/admin/painel/cabecalho-mes";
 import { AtalhosSecoes } from "@/components/admin/painel/foco/atalhos-secoes";
 import { CartaoCaixa } from "@/components/admin/painel/foco/cartao-caixa";
 import { CartaoDivida } from "@/components/admin/painel/foco/cartao-divida";
@@ -16,8 +18,8 @@ import { CartaoPulso } from "@/components/admin/painel/foco/cartao-pulso";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type PainelFocoProps = {
-  // título, mês e controles (navegação de mês e seletor de visão), montados pela página
-  cabecalho: React.ReactNode;
+  anoMes: AnoMes;
+  // o mesmo mês como "YYYY-MM"
   mes: string;
   mesLabel: string;
   tasaVes: number | null;
@@ -37,29 +39,39 @@ type PainelFocoProps = {
 // na ordem em que aparecem no celular (os atalhos seguem a rolagem)
 const SECOES = ["pulso", "caixa", "divida", "pendencias", "tendencia"] as const;
 
-// Visão "Foco" do Dashboard, organizada pelas perguntas do administrador, em ordem de urgência:
+// Dashboard, organizado pelas perguntas do administrador, em ordem de urgência:
 //   1. como vai a cobrança do mês?  → Pulso (% arrecadado do emitido)
 //   2. quanto dinheiro entrou?       → Entradas (por moeda)
 //   3. quem deve, e há quanto tempo? → Dívida até hoje (aging + maiores devedores)
 //   4. o que falta do mês / tendência
 // No desktop vira um grid de 3 colunas (pulso largo + entradas ao lado, dívida larga + pendências
-// ao lado, tendência na largura toda); no celular, uma coluna na mesma ordem com atalhos fixos pras
-// seções, já que a página fica longa
+// ao lado, tendência na largura toda); no celular, uma coluna na mesma ordem. A barra do mês fica
+// presa no topo, e no celular leva junto os atalhos das seções, já que a página fica longa.
+// scroll-mt: altura do header do app + barra do mês (+ atalhos no celular), pros âncoras não
+// pararem escondidos atrás delas
+const SECAO = "scroll-mt-40 lg:scroll-mt-28";
+
 export async function PainelFoco(props: PainelFocoProps) {
   const t = await getTranslations("dashboard");
   const tFoco = await getTranslations("dashboard.focus");
 
   return (
     <div className="flex flex-col gap-4">
-      {props.cabecalho}
-
-      <AtalhosSecoes
-        label={tFoco("jump.label")}
-        secoes={SECOES.map((secao) => ({ id: secao, label: tFoco(`jump.${secao}`) }))}
-      />
+      <CabecalhoMes
+        titulo={t("title")}
+        ano={props.anoMes.ano}
+        mes={props.anoMes.mes}
+        hoje={mesAtual()}
+        basePath="/"
+      >
+        <AtalhosSecoes
+          label={tFoco("jump.label")}
+          secoes={SECOES.map((secao) => ({ id: secao, label: tFoco(`jump.${secao}`) }))}
+        />
+      </CabecalhoMes>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <section id="pulso" className="scroll-mt-28 lg:col-span-2">
+        <section id="pulso" className={`${SECAO} lg:col-span-2`}>
           <CartaoPulso
             mesLabel={props.mesLabel}
             recaudacao={props.recaudacao}
@@ -71,19 +83,19 @@ export async function PainelFoco(props: PainelFocoProps) {
           />
         </section>
 
-        <section id="caixa" className="scroll-mt-28">
+        <section id="caixa" className={SECAO}>
           <CartaoCaixa entradas={props.entradas} mes={props.mes} />
         </section>
 
-        <section id="divida" className="scroll-mt-28 lg:col-span-2">
+        <section id="divida" className={`${SECAO} lg:col-span-2`}>
           <CartaoDivida divida={props.divida} tasaVes={props.tasaVes} />
         </section>
 
-        <section id="pendencias" className="scroll-mt-28">
+        <section id="pendencias" className={SECAO}>
           <CartaoPendencias pendencias={props.pendencias} mesLabel={props.mesLabel} tasaVes={props.tasaVes} />
         </section>
 
-        <section id="tendencia" className="scroll-mt-28 lg:col-span-3">
+        <section id="tendencia" className={`${SECAO} lg:col-span-3`}>
           <Card size="sm" className="h-full">
             <CardHeader>
               <CardTitle>{tFoco("trend.title")}</CardTitle>

@@ -26,7 +26,10 @@
     "monthNavigation": {
       "previous": "Mes anterior",
       "next": "Mes siguiente",
-      "current": "Mes actual"
+      "current": "Mes actual",
+      "choose": "Elegir mes y año",
+      "previousYear": "Año anterior",
+      "nextYear": "Año siguiente"
     }
   },
   "nav": {
@@ -77,94 +80,15 @@
   "dashboard": {
     "title": "Dashboard",
     "loadError": "Error al cargar los datos: {message}",
-    "staleRate": "La cotización BCV más reciente es del {date}. La actualización automática pudo haber fallado; los pagos en bolívares usarían una tasa vencida.",
-    "missingRate": "No hay ninguna cotización BCV registrada. Los pagos en bolívares no estarán disponibles hasta registrar una.",
-    "updateRate": "Actualizar cotización",
-    "issuedThisMonth": "Emitido",
     "pending": "Pendientes",
     "overdue": "En atraso",
-    "collectionTitle": "Recaudación del mes",
-    "activeUnitsDescription": "{count, plural, one {# unidad activa en la emisión de cobros} other {# unidades activas en la emisión de cobros}}",
-    "collectedPercent": "{percent}% recaudado al día de hoy",
-    "pendingChargesTitle": "Cobros pendientes",
-    "pendingChargesDescription": "Vencimientos del mes seleccionado",
-    "noPendingCharges": "Ningún cobro pendiente este mes.",
     "unitRemoved": "Unidad eliminada",
     "dueOn": "Vence el {date}",
     "graceUntil": "gracia hasta el {date}",
-    "debt": {
-      "title": "Deuda total al día de hoy",
-      "description": "Todo lo pendiente de cualquier mes, sin importar el mes seleccionado, con multa e intereses calculados hoy",
-      "empty": "Ninguna deuda pendiente. Todas las unidades están al día.",
-      "total": "Total por cobrar",
-      "principal": "Cuotas y prorrateos pendientes",
-      "charges": "Multa e intereses al día de hoy",
-      "summary": "{overdue, plural, =0 {Ningún cobro vencido} one {# cobro vencido} other {# cobros vencidos}} de {pending, plural, one {# pendiente} other {# pendientes}}, en {units, plural, one {# unidad} other {# unidades}}",
-      "topTitle": "Unidades con mayor deuda",
-      "topDescription": "Total actualizado con multa e intereses"
-    },
-    "shortcutUnidades": "Unidades",
-    "shortcutUnidadesDescription": "Unidades y propietarios",
-    "shortcutTaxas": "Cuotas de Condominio",
-    "shortcutTaxasDescription": "Cobro ordinario mensual",
-    "shortcutRateios": "Prorrateos Extraordinarios",
-    "shortcutRateiosDescription": "Gastos prorrateados entre unidades",
-    "settledThisMonth": "Saldado",
-    "issuedRounding": "{diff} por redondeo de prorrateos",
-    "settledSplit": "{payment} con pago · {credit} con saldo a favor",
-    "chargesCount": "{count, plural, =0 {Ningún cobro} one {# cobro} other {# cobros}}",
-    "openAmount": "{value} por cobrar",
-    "withCharges": "{value} con multa e intereses",
-    "billingTitle": "Cobranza del mes",
-    "billingDescription": "Cobros del mes seleccionado y su situación al día de hoy",
-    "collection": {
-      "empty": "Ningún cobro emitido para este mes.",
-      "issued": "Emitido",
-      "rows": {
-        "noMes": "Saldado dentro del mes",
-        "depois": "Saldado en meses siguientes",
-        "emAberto": "Por cobrar"
-      },
-      "charges": "Multa e intereses cobrados",
-      "chargesNote": "Se suman a lo emitido, no forman parte de él",
-      "onTimePercent": "{percent}% pagado en día",
-      "onTimePending": "plazo de pago aún no vencido"
-    },
-    "evolutionTitle": "Evolución de la recaudación",
-    "evolutionDescription": "Emitido × abonado en el mes, en dólares, y % pagado en día, últimos {count} meses",
     "chartIssued": "Emitido",
     "chartOnTime": "Pagado en día",
-    "entries": {
-      "title": "Ingresos del mes",
-      "description": "Dinero recibido en el mes, en la moneda en que entró, según la fecha de pago",
-      "viewPayments": "Ver pagos",
-      "paymentsCount": "{count, plural, =0 {Ningún pago} one {# pago} other {# pagos}}",
-      "receivedUsd": "Recibido en dólares",
-      "receivedVes": "Recibido en bolívares",
-      "noEntriesUsd": "Ningún pago en dólares este mes.",
-      "noEntriesVes": "Ningún pago en bolívares este mes."
-    },
     "chartSettled": "Abonado en el mes",
     "evolutionNote": "Los cobros son en dólares, así que el gráfico mide deuda, no caja. \"Abonado en el mes\" es cuánto abonaron los pagos del mes a los cobros: un pago en bolívares cuenta por el monto que abonó, a la tasa BCV del día en que se liquidó. Lo emitido cuenta por el mes del cobro y lo abonado por la fecha de pago, así que un mes puede abonar más de lo que emitió cuando se pagan atrasos. Multa, intereses y saldo a favor no se incluyen. El dinero que entró, en cada moneda, está en \"Ingresos del mes\". \"Pagado en día\" es el % de lo emitido en el mes que se pagó hasta el vencimiento más los días de gracia; solo cuentan los cobros cuyo plazo ya terminó.",
-    "settlement": {
-      "title": "Deuda abonada en el mes",
-      "description": "Cuánto abonaron a los cobros los pagos recibidos en el mes, en dólares (pagos en bolívares a la tasa BCV del día del pago)",
-      "empty": "Ningún pago abonó cobros este mes.",
-      "total": "Total abonado",
-      "rows": {
-        "doMes": "Cobros del mes",
-        "atrasado": "Cobros de meses anteriores",
-        "adiantado": "Cobros de meses futuros",
-        "encargos": "Multa e intereses"
-      }
-    },
-    "feesNotIssued": "{count, plural, one {Falta emitir # cuota} other {Faltan emitir # cuotas}} de {month}: {names}.",
-    "goToFees": "Emitir cuotas",
-    "view": {
-      "label": "Modo de visualización",
-      "classico": "Clásico",
-      "foco": "Enfoque"
-    },
     "focus": {
       "jump": {
         "label": "Ir a la sección",

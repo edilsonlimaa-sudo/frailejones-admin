@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRightIcon, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
-import type { RecaudacaoDoMes } from "@/components/admin/painel/recaudacao-do-mes";
+import type { RecaudacaoDoMes } from "@/lib/painel/recaudacao";
 import { AnelProgresso } from "@/components/admin/painel/foco/anel-progresso";
 import { formatDiferenca } from "@/lib/rateios";
 import { formatUsd } from "@/lib/moeda";

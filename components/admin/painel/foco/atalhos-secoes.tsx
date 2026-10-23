@@ -10,13 +10,13 @@ type AtalhosSecoesProps = {
   secoes: { id: string; label: string }[];
 };
 
-// linha, em px do topo da janela, abaixo do header e da própria barra: a seção cujo topo já passou
-// por ela é a que o leitor está vendo
-const LINHA_ATIVA_PX = 120;
+// linha, em px do topo da janela, abaixo do header do app e da barra do mês (que inclui estes
+// atalhos): a seção cujo topo já passou por ela é a que o leitor está vendo
+const LINHA_ATIVA_PX = 160;
 
-// Barra de atalhos do celular que acompanha a rolagem: o chip da seção visível fica marcado, como
-// um seletor, e a barra rola sozinha pra mantê-lo à vista. Tocar num chip rola suave até a seção
-// (o deslocamento do header vem do scroll-mt da própria seção).
+// Atalhos das seções no celular, presos junto com o mês (CabecalhoMes) e acompanhando a rolagem:
+// o chip da seção visível fica marcado, como um seletor, e a fila rola sozinha pra mantê-lo à
+// vista. Tocar num chip rola suave até a seção (o deslocamento das barras vem do scroll-mt dela).
 export function AtalhosSecoes({ label, secoes }: AtalhosSecoesProps) {
   const [ativa, setAtiva] = useState<string | null>(secoes[0]?.id ?? null);
   const lista = useRef<HTMLUListElement>(null);
@@ -76,10 +76,7 @@ export function AtalhosSecoes({ label, secoes }: AtalhosSecoesProps) {
   }
 
   return (
-    <nav
-      aria-label={label}
-      className="sticky top-14 z-10 -mx-4 -mt-1 border-b bg-background/85 px-4 py-2 backdrop-blur-md lg:hidden"
-    >
+    <nav aria-label={label} className="-mx-4 px-4 pb-2 lg:hidden">
       <ul ref={lista} className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {secoes.map((secao) => {
           const ativo = secao.id === ativa;

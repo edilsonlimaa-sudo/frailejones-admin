@@ -1,9 +1,6 @@
-import Link from "next/link";
-import { cookies } from "next/headers";
-import { Building2, HardHat, InfoIcon, Receipt, TriangleAlert } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 
-import { buscarConsultaCotacaoBcv, cotacaoBcvEmDia, garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
+import { garantirCotacaoBcvAtualizada } from "@/lib/cotacao-bcv";
 import { createClient } from "@/lib/supabase/server";
 import { buscarTodas } from "@/lib/supabase/buscar-todas";
 import type { CobrancaStatus } from "@/lib/types/cobrancas";
@@ -19,42 +16,14 @@ import {
   type AcordoParaEncargos,
   type RegrasEncargos,
 } from "@/lib/encargos";
-import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
-import { taxasSemEmissaoNoMes } from "@/lib/taxas";
+import { diferencaArredondamento } from "@/lib/rateios";
 import { hojeCaracas } from "@/lib/fuso";
-import { formatMes, mesAdjacente, mesAtual, parseMes } from "@/lib/mes";
-import { CabecalhoMes } from "@/components/admin/painel/cabecalho-mes";
+import { formatMes, hrefDoMes, mesAdjacente, parseMes } from "@/lib/mes";
 import { DeslizarMes } from "@/components/admin/painel/deslizar-mes";
-import { EntradasDoMes } from "@/components/admin/painel/entradas-do-mes";
-import { QuitacaoDoMes } from "@/components/admin/painel/quitacao-do-mes";
-import { RecaudacaoDoMes } from "@/components/admin/painel/recaudacao-do-mes";
-import { DeudaTotal, type CobrancaPendenteTotal } from "@/components/admin/painel/deuda-total";
-import {
-  EvolucaoArrecadacaoChart,
-  type PontoEvolucao,
-} from "@/components/admin/painel/evolucao-arrecadacao-chart";
-import { SeletorVisao } from "@/components/admin/painel/seletor-visao";
+import type { PontoEvolucao } from "@/components/admin/painel/evolucao-arrecadacao-chart";
 import { PainelFoco } from "@/components/admin/painel/foco/painel-foco";
-import { resumirDivida } from "@/lib/painel/divida";
-import { COOKIE_VISAO_PAINEL, resolverVisaoPainel } from "@/lib/painel/visao";
-import { formatUsd, formatVes } from "@/lib/moeda";
+import { resumirDivida, type CobrancaPendenteTotal } from "@/lib/painel/divida";
 import { INTL_LOCALE } from "@/lib/intl-locale";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
-const statusVariant: Record<CobrancaStatus, "outline" | "default" | "destructive"> = {
-  pendente: "outline",
-  pago: "default",
-  cancelado: "destructive",
-};
 
 type CobrancaDoMes = RegrasEncargos & {
   id: string;
@@ -85,25 +54,26 @@ const somarDias = (dataIso: string, dias: number) => {
   return data.toISOString().slice(0, 10);
 };
 
-export default async function Home({
+export default async function DashboardPage({
   searchParams,
 }: {
   searchParams: Promise<{ mes?: string }>;
 }) {
   const { mes: mesParam } = await searchParams;
   const { ano, mes } = parseMes(mesParam);
-  // um só "hoje" (Caracas) pra encargos, Dashboard no banco, aviso de cotação e de emissão
+  // um só "hoje" (Caracas) pra encargos e pro Dashboard no banco
   const hojeIso = hojeCaracas();
 
   const t = await getTranslations("dashboard");
-  const tStatus = await getTranslations("cobrancas.status");
   const locale = await getLocale();
   const intlLocale = INTL_LOCALE[locale as keyof typeof INTL_LOCALE];
-  const dateFormatter = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC" });
-  const formatDate = (value: string) => dateFormatter.format(new Date(`${value}T00:00:00Z`));
   const mesLabelFormatter = new Intl.DateTimeFormat(intlLocale, {
     month: "long",
     year: "numeric",
+    timeZone: "UTC",
+  });
+  const mesRotuloCurtoFormatter = new Intl.DateTimeFormat(intlLocale, {
+    month: "short",
     timeZone: "UTC",
   });
 
@@ -111,102 +81,65 @@ export default async function Home({
   const { ano: anoSeguinte, mes: mesSeguinteNumero } = mesAdjacente(ano, mes, 1);
   const inicioMesSeguinte = `${anoSeguinte}-${String(mesSeguinteNumero).padStart(2, "0")}-01`;
   const mesLabel = mesLabelFormatter.format(new Date(`${inicioMes}T00:00:00Z`));
-  const mesLabelCapitalizado = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
-  const mesRotuloCurtoFormatter = new Intl.DateTimeFormat(intlLocale, {
-    month: "short",
-    timeZone: "UTC",
-  });
 
   const supabase = await createClient();
 
   const [
     { data: cobrancasRaw, error: cobrancasError },
-    { data: taxaVinculosRaw, error: taxaVinculosError },
     { data: cotacaoBcv, error: cotacaoBcvError },
     { data: resumoRaw, error: resumoError },
     { data: pendentesTotaisRaw, error: pendentesTotaisError },
-    { data: taxasRaw, error: taxasError },
-    consultaCotacaoBcv,
   ] = await Promise.all([
-      // paginadas (buscarTodas): um mês de ~300 unidades com 2 taxas e 2 rateios passa das 1000
-      // linhas que a API devolve por consulta
-      buscarTodas((de, ate) =>
-        supabase
-          .from("cobrancas")
-          .select(
-            "id, descricao, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, acordo:acordos_pagamento(id, data_inicio, quebrado_em), status, unidade:unidades(id, identificacao), taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(id, titulo, valor_total_usd, valor_por_unidade_usd), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
-            { count: "exact" },
-          )
-          .gte("competencia", inicioMes)
-          .lt("competencia", inicioMesSeguinte)
-          .order("data_vencimento", { ascending: true })
-          .order("id")
-          .range(de, ate)
-          .returns<CobrancaDoMes[]>(),
-      ),
-      buscarTodas((de, ate) =>
-        supabase
-          .from("taxa_condominio_unidades")
-          .select("unidade_id", { count: "exact" })
-          .order("id")
-          .range(de, ate)
-          .returns<{ unidade_id: string }[]>(),
-      ),
-      garantirCotacaoBcvAtualizada().then(() =>
-        supabase
-          .from("cotacao_bcv")
-          .select("data_cotacao, tasa_ves")
-          .order("data_cotacao", { ascending: false })
-          .limit(1)
-          .maybeSingle<{ data_cotacao: string; tasa_ves: number }>(),
-      ),
-      // caixa do mês e gráfico de evolução somados no banco: a janela de 6 meses passa das 1000
-      // linhas que a API devolve por consulta, e as somas sairiam cortadas sem erro
-      supabase.rpc("resumo_dashboard", {
-        p_mes: inicioMes,
-        p_meses: MESES_EVOLUCAO,
-        p_hoje: hojeIso,
-      }),
-      // tudo que está pendente hoje, de qualquer competência (card de dívida total). Paginada: com
-      // inadimplência acumulada passa fácil de 1000 cobranças, e um corte silencioso mostraria uma
-      // dívida menor que a real. Fica em linhas (não somada no banco) porque multa e juros de hoje
-      // são calculados por lib/encargos, a mesma regra das demais telas
-      buscarTodas((de, ate) =>
-        supabase
-          .from("cobrancas")
-          .select(
-            "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, acordo:acordos_pagamento(id, data_inicio, quebrado_em), status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
-            { count: "exact" },
-          )
-          .eq("status", "pendente")
-          .order("id")
-          .range(de, ate)
-          .returns<CobrancaPendenteTotal[]>(),
-      ),
-      // cuotas e meses já emitidos, pro aviso de "cuota sem emissão neste mês"
+    // paginadas (buscarTodas): um mês de ~300 unidades com 2 taxas e 2 rateios passa das 1000
+    // linhas que a API devolve por consulta
+    buscarTodas((de, ate) =>
       supabase
-        .from("taxa_condominio")
-        .select("id, titulo, ativo, taxa_condominio_unidades(count), faturamentos_competencia(competencia)")
-        .returns<
-          {
-            id: string;
-            titulo: string;
-            ativo: boolean;
-            taxa_condominio_unidades: { count: number }[];
-            faturamentos_competencia: { competencia: string }[];
-          }[]
-        >(),
-      // depois da verificação: o aviso precisa saber se a fonte confirmou hoje que não há taxa nova
-      garantirCotacaoBcvAtualizada().then(() => buscarConsultaCotacaoBcv()),
-    ]);
+        .from("cobrancas")
+        .select(
+          "id, descricao, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, acordo:acordos_pagamento(id, data_inicio, quebrado_em), status, unidade:unidades(id, identificacao), taxa:taxa_condominio(titulo), despesa:despesas_extraordinarias(id, titulo, valor_total_usd, valor_por_unidade_usd), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
+          { count: "exact" },
+        )
+        .gte("competencia", inicioMes)
+        .lt("competencia", inicioMesSeguinte)
+        .order("data_vencimento", { ascending: true })
+        .order("id")
+        .range(de, ate)
+        .returns<CobrancaDoMes[]>(),
+    ),
+    garantirCotacaoBcvAtualizada().then(() =>
+      supabase
+        .from("cotacao_bcv")
+        .select("data_cotacao, tasa_ves")
+        .order("data_cotacao", { ascending: false })
+        .limit(1)
+        .maybeSingle<{ data_cotacao: string; tasa_ves: number }>(),
+    ),
+    // caixa do mês e gráfico de evolução somados no banco: a janela de 6 meses passa das 1000
+    // linhas que a API devolve por consulta, e as somas sairiam cortadas sem erro
+    supabase.rpc("resumo_dashboard", {
+      p_mes: inicioMes,
+      p_meses: MESES_EVOLUCAO,
+      p_hoje: hojeIso,
+    }),
+    // tudo que está pendente hoje, de qualquer competência (card de dívida). Paginada: com
+    // inadimplência acumulada passa fácil de 1000 cobranças, e um corte silencioso mostraria uma
+    // dívida menor que a real. Fica em linhas (não somada no banco) porque multa e juros de hoje
+    // são calculados por lib/encargos, a mesma regra das demais telas
+    buscarTodas((de, ate) =>
+      supabase
+        .from("cobrancas")
+        .select(
+          "id, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, acordo:acordos_pagamento(id, data_inicio, quebrado_em), status, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento))",
+          { count: "exact" },
+        )
+        .eq("status", "pendente")
+        .order("id")
+        .range(de, ate)
+        .returns<CobrancaPendenteTotal[]>(),
+    ),
+  ]);
 
-  const loadError =
-    cobrancasError ??
-    taxaVinculosError ??
-    cotacaoBcvError ??
-    resumoError ??
-    pendentesTotaisError ??
-    taxasError;
+  const loadError = cobrancasError ?? cotacaoBcvError ?? resumoError ?? pendentesTotaisError;
   // a função devolve um único jsonb; sem os tipos gerados do banco, o cliente o tipa como lista
   const resumo = resumoRaw as ResumoDashboard | null;
   if (loadError || !resumo) {
@@ -227,9 +160,6 @@ export default async function Home({
     quitado: ponto.quitado,
     emDia: percentualEmDia(ponto.baseEmDia, ponto.emDia),
   }));
-
-  // conta unidades distintas vinculadas a alguma taxa (uma unidade pode estar em N taxas)
-  const unidadesAtivas = new Set((taxaVinculosRaw ?? []).map((v) => v.unidade_id)).size;
 
   const cobrancas = cobrancasRaw ?? [];
   const ativas = cobrancas.filter((c) => c.status !== "cancelado");
@@ -292,320 +222,50 @@ export default async function Home({
     percentualEmDia: evolucao.at(-1)?.emDia ?? null,
   };
 
-  // atrasada = falta a do último dia útil e a fonte não confirmou hoje que não houve publicação
-  // (feriado bancário não é atraso); aí liquidações em VES usariam uma taxa vencida
-  const cotacaoDesatualizada = !cotacaoBcvEmDia(cotacaoBcv?.data_cotacao ?? null, consultaCotacaoBcv, hojeIso);
+  const divida = resumirDivida(pendentesTotaisRaw ?? [], hojeIso);
 
-  // pelo mês de hoje, não pelo selecionado: o aviso é sobre a emissão que falta fazer agora
-  const mesDeHoje = hojeIso.slice(0, 7);
-  const taxasSemEmissao = taxasSemEmissaoNoMes(
-    (taxasRaw ?? []).map((taxa) => ({
-      id: taxa.id,
-      titulo: taxa.titulo,
-      ativo: taxa.ativo,
-      unidadesVinculadas: taxa.taxa_condominio_unidades[0]?.count ?? 0,
-      competenciasEmitidas: taxa.faturamentos_competencia.map((f) => f.competencia),
-    })),
-    mesDeHoje,
-  );
-  const mesDeHojeLabel = mesLabelFormatter.format(new Date(`${mesDeHoje}-01T00:00:00Z`));
-
-  const visao = resolverVisaoPainel((await cookies()).get(COOKIE_VISAO_PAINEL)?.value);
-  const mesAnterior = mesAdjacente(ano, mes, -1);
-  const mesSeguinte = mesAdjacente(ano, mes, 1);
-  const anteriorHref = `/?mes=${formatMes(mesAnterior.ano, mesAnterior.mes)}`;
-  const seguinteHref = `/?mes=${formatMes(mesSeguinte.ano, mesSeguinte.mes)}`;
-  const hoje = mesAtual();
-  const cabecalho = (
-    <CabecalhoMes
-      titulo={t("title")}
-      mesLabel={mesLabelCapitalizado}
-      anteriorHref={anteriorHref}
-      seguinteHref={seguinteHref}
-      atualHref={ano === hoje.ano && mes === hoje.mes ? null : "/"}
-      controles={<SeletorVisao visao={visao} />}
-    />
-  );
-
-  if (visao === "foco") {
-    const divida = resumirDivida(pendentesTotaisRaw ?? [], hojeIso);
-
-    const mesNomeFormatter = new Intl.DateTimeFormat(intlLocale, { month: "long", timeZone: "UTC" });
-    const pontoAnterior = evolucao.at(-2);
-    const emDiaAnterior =
-      pontoAnterior && pontoAnterior.emDia !== null
-        ? {
-            percentual: pontoAnterior.emDia,
-            mesLabel: mesNomeFormatter.format(new Date(`${pontoAnterior.mes}-01T00:00:00Z`)),
-          }
-        : null;
-
-    return (
-      <DeslizarMes anteriorHref={anteriorHref} seguinteHref={seguinteHref}>
-        <PainelFoco
-          cabecalho={cabecalho}
-          mes={mesSelecionado}
-          mesLabel={mesLabel}
-          tasaVes={cotacaoBcv?.tasa_ves ?? null}
-          recaudacao={recaudacao}
-          cobrancasEmitidas={ativas.length}
-          pendentes={{ quantidade: pendentes.length, valor: valorEmAberto }}
-          emAtraso={{ quantidade: emAtraso.length, valor: valorEmAtrasoComEncargos }}
-          diferencaRedondeo={diferencaRedondeo}
-          emDiaAnterior={emDiaAnterior}
-          entradas={resumoEntradas}
-          divida={divida}
-          pendencias={linhasPendentes.map(({ cobranca: c, encargos }) => ({
-            id: c.id,
-            unidadeId: c.unidade?.id ?? null,
-            unidade: c.unidade?.identificacao ?? null,
-            origem: c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao,
-            vencimento: c.data_vencimento,
-            fimCarencia:
-              c.dias_graca > 0 && c.data_vencimento < hojeIso ? somarDias(c.data_vencimento, c.dias_graca) : null,
-            diasAtraso: encargos.diasAtraso,
-            total: encargos.valorTotalComEncargos,
-          }))}
-          evolucao={evolucao}
-          mesesEvolucao={MESES_EVOLUCAO}
-        />
-      </DeslizarMes>
-    );
-  }
+  const mesNomeFormatter = new Intl.DateTimeFormat(intlLocale, { month: "long", timeZone: "UTC" });
+  const pontoAnterior = evolucao.at(-2);
+  const emDiaAnterior =
+    pontoAnterior && pontoAnterior.emDia !== null
+      ? {
+          percentual: pontoAnterior.emDia,
+          mesLabel: mesNomeFormatter.format(new Date(`${pontoAnterior.mes}-01T00:00:00Z`)),
+        }
+      : null;
 
   return (
-    <DeslizarMes anteriorHref={anteriorHref} seguinteHref={seguinteHref}>
-      <div className="flex flex-col gap-6">
-        {cabecalho}
-  
-        {cotacaoDesatualizada && (
-          <div
-            role="alert"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/50 px-4 py-3 text-sm"
-          >
-            <div className="flex items-start gap-2">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
-              <p>
-                {cotacaoBcv
-                  ? t("staleRate", { date: formatDate(cotacaoBcv.data_cotacao) })
-                  : t("missingRate")}
-              </p>
-            </div>
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/cotacao-bcv" />}>
-              {t("updateRate")}
-            </Button>
-          </div>
-        )}
-  
-        {taxasSemEmissao.length > 0 && (
-          <div
-            role="alert"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm"
-          >
-            <div className="flex items-start gap-2">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <p>
-                {t("feesNotIssued", {
-                  count: taxasSemEmissao.length,
-                  month: mesDeHojeLabel,
-                  names: taxasSemEmissao.map((taxa) => taxa.titulo).join(", "),
-                })}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              nativeButton={false}
-              render={
-                <Link
-                  href={taxasSemEmissao.length === 1 ? `/taxas-condominio/${taxasSemEmissao[0].id}` : "/taxas-condominio"}
-                />
-              }
-            >
-              {t("goToFees")}
-            </Button>
-          </div>
-        )}
-  
-        <DeudaTotal
-          cobrancas={pendentesTotaisRaw ?? []}
-          hojeIso={hojeIso}
-          tasaVes={cotacaoBcv?.tasa_ves ?? null}
-        />
-  
-        <EntradasDoMes usd={resumoEntradas.usd} ves={resumoEntradas.ves} mes={mesSelecionado}>
-          <QuitacaoDoMes quitacao={resumoEntradas.quitacao} />
-        </EntradasDoMes>
-  
-        <section className="flex flex-col gap-3">
-          <div>
-            <h2 className="text-base font-medium">{t("billingTitle")}</h2>
-            <p className="text-sm text-muted-foreground">{t("billingDescription")}</p>
-          </div>
-  
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Card size="sm">
-              <CardHeader>
-                <CardDescription>{t("issuedThisMonth")}</CardDescription>
-                <CardTitle className="text-xl">{formatUsd(valorEmitido)}</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  {t("chargesCount", { count: ativas.length })}
-                  {diferencaRedondeo !== 0 &&
-                    ` · ${t("issuedRounding", { diff: formatDiferenca(diferencaRedondeo) })}`}
-                </p>
-              </CardHeader>
-            </Card>
-            <Card size="sm">
-              <CardHeader>
-                <CardDescription>{t("settledThisMonth")}</CardDescription>
-                <CardTitle className="text-xl">{formatUsd(valorArrecadado)}</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  {t("settledSplit", {
-                    payment: formatUsd(valorQuitadoComPagamento),
-                    credit: formatUsd(valorQuitadoComCredito),
-                  })}
-                </p>
-              </CardHeader>
-            </Card>
-            <Card size="sm">
-              <CardHeader>
-                <CardDescription>{t("pending")}</CardDescription>
-                <CardTitle className="text-xl">{pendentes.length}</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  {t("openAmount", { value: formatUsd(valorEmAberto) })}
-                </p>
-              </CardHeader>
-            </Card>
-            <Card size="sm">
-              <CardHeader>
-                <CardDescription>{t("overdue")}</CardDescription>
-                <CardTitle className="text-xl text-destructive">{emAtraso.length}</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  {t("withCharges", { value: formatUsd(valorEmAtrasoComEncargos) })}
-                </p>
-              </CardHeader>
-            </Card>
-          </div>
-  
-          <RecaudacaoDoMes recaudacao={recaudacao} unidadesAtivas={unidadesAtivas} />
-        </section>
-  
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
-          <Card size="sm" className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle>{t("evolutionTitle")}</CardTitle>
-              <CardDescription>{t("evolutionDescription", { count: MESES_EVOLUCAO })}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EvolucaoArrecadacaoChart
-                dados={evolucao}
-                labels={{ emitido: t("chartIssued"), quitado: t("chartSettled"), emDia: t("chartOnTime") }}
-              />
-            </CardContent>
-            <CardFooter className="items-start gap-2 text-xs text-muted-foreground">
-              <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
-              <p>{t("evolutionNote")}</p>
-            </CardFooter>
-          </Card>
-  
-          <Card size="sm" className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>{t("pendingChargesTitle")}</CardTitle>
-              <CardDescription>
-                {t("pendingChargesDescription")}
-                {pendentes.length > 0 && ` · ${t("chargesCount", { count: pendentes.length })}`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendentes.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("noPendingCharges")}</p>
-              ) : (
-                // lista completa com rolagem: cortar sem aviso fazia o card mostrar menos cobranças
-                // do que o contador "Pendientes"
-                <ul className="-mr-2 flex max-h-96 flex-col gap-3 overflow-y-auto pr-2">
-                  {linhasPendentes.map(({ cobranca: c, encargos }) => (
-                    <li key={c.id} className="flex items-center justify-between gap-2 text-sm">
-                      <div className="min-w-0">
-                        <p className="truncate">
-                          <span className="font-medium">{c.unidade?.identificacao ?? t("unitRemoved")}</span>
-                          <span className="text-muted-foreground">
-                            {" · "}
-                            {c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao}
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {t("dueOn", { date: formatDate(c.data_vencimento) })}
-                          {/* os dias de atraso contam do fim da carência, não do vencimento */}
-                          {c.dias_graca > 0 &&
-                            ` · ${t("graceUntil", { date: formatDate(somarDias(c.data_vencimento, c.dias_graca)) })}`}
-                          {encargos.diasAtraso > 0 && (
-                            <span className="text-destructive">
-                              {" "}
-                              · {tStatus("daysOverdue", { count: encargos.diasAtraso })}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <div className="text-right">
-                          {/* saldo devedor (+ encargos se vencida), não o valor original: um abono
-                              parcial já reduziu o que falta pagar */}
-                          <span className="font-medium">{formatUsd(encargos.valorTotalComEncargos)}</span>
-                          {cotacaoBcv && (
-                            <p className="text-xs text-muted-foreground">
-                              {formatVes(encargos.valorTotalComEncargos, cotacaoBcv.tasa_ves)}
-                            </p>
-                          )}
-                        </div>
-                        <Badge variant={statusVariant[c.status]}>{tStatus(c.status)}</Badge>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-  
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Button
-            variant="outline"
-            className="h-auto justify-start gap-3 p-4"
-            nativeButton={false}
-            render={<Link href="/unidades" />}
-          >
-            <Building2 className="size-5 shrink-0" />
-            <div className="text-left">
-              <p className="text-sm font-medium">{t("shortcutUnidades")}</p>
-              <p className="text-xs text-muted-foreground">{t("shortcutUnidadesDescription")}</p>
-            </div>
-          </Button>
-          <Button
-            variant="outline"
-            className="h-auto justify-start gap-3 p-4"
-            nativeButton={false}
-            render={<Link href="/taxas-condominio" />}
-          >
-            <Receipt className="size-5 shrink-0" />
-            <div className="text-left">
-              <p className="text-sm font-medium">{t("shortcutTaxas")}</p>
-              <p className="text-xs text-muted-foreground">{t("shortcutTaxasDescription")}</p>
-            </div>
-          </Button>
-          <Button
-            variant="outline"
-            className="h-auto justify-start gap-3 p-4"
-            nativeButton={false}
-            render={<Link href="/rateios-extraordinarios" />}
-          >
-            <HardHat className="size-5 shrink-0" />
-            <div className="text-left">
-              <p className="text-sm font-medium">{t("shortcutRateios")}</p>
-              <p className="text-xs text-muted-foreground">{t("shortcutRateiosDescription")}</p>
-            </div>
-          </Button>
-        </div>
-      </div>
+    <DeslizarMes
+      anteriorHref={hrefDoMes("/", mesAdjacente(ano, mes, -1))}
+      seguinteHref={hrefDoMes("/", mesAdjacente(ano, mes, 1))}
+    >
+      <PainelFoco
+        anoMes={{ ano, mes }}
+        mes={mesSelecionado}
+        mesLabel={mesLabel}
+        tasaVes={cotacaoBcv?.tasa_ves ?? null}
+        recaudacao={recaudacao}
+        cobrancasEmitidas={ativas.length}
+        pendentes={{ quantidade: pendentes.length, valor: valorEmAberto }}
+        emAtraso={{ quantidade: emAtraso.length, valor: valorEmAtrasoComEncargos }}
+        diferencaRedondeo={diferencaRedondeo}
+        emDiaAnterior={emDiaAnterior}
+        entradas={resumoEntradas}
+        divida={divida}
+        pendencias={linhasPendentes.map(({ cobranca: c, encargos }) => ({
+          id: c.id,
+          unidadeId: c.unidade?.id ?? null,
+          unidade: c.unidade?.identificacao ?? null,
+          origem: c.taxa?.titulo ?? c.despesa?.titulo ?? c.descricao,
+          vencimento: c.data_vencimento,
+          fimCarencia:
+            c.dias_graca > 0 && c.data_vencimento < hojeIso ? somarDias(c.data_vencimento, c.dias_graca) : null,
+          diasAtraso: encargos.diasAtraso,
+          total: encargos.valorTotalComEncargos,
+        }))}
+        evolucao={evolucao}
+        mesesEvolucao={MESES_EVOLUCAO}
+      />
     </DeslizarMes>
   );
 }

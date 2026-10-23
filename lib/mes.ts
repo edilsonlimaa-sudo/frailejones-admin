@@ -25,3 +25,8 @@ export function mesAdjacente(ano: number, mes: number, delta: number): AnoMes {
   const data = new Date(Date.UTC(ano, mes - 1 + delta, 1));
   return { ano: data.getUTCFullYear(), mes: data.getUTCMonth() + 1 };
 }
+
+// rota de um mês: "/?mes=2026-10", "/liquidacoes?mes=2026-10"
+export function hrefDoMes(basePath: string, { ano, mes }: AnoMes): string {
+  return `${basePath}?mes=${formatMes(ano, mes)}`;
+}
