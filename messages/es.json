@@ -1056,7 +1056,7 @@
   "acordosPage": {
     "title": "Acuerdos de pago",
     "empty": "No hay acuerdos de pago registrados. Para registrar uno, abra la unidad y vaya a la pestaña Acuerdos.",
-    "emptyFilter": "No hay acuerdos en esta situación.",
+    "emptyFilter": "Ningún acuerdo con esos filtros.",
     "filterLabel": "Filtrar por situación",
     "filter": {
       "todos": "Todos ({count})",
@@ -1078,7 +1078,8 @@
       "remaining": "falta pagar",
       "nothingLeft": "Saldado"
     },
-    "barSummary": "{active, plural, one {# acuerdo vigente} other {# acuerdos vigentes}} · {value} por cobrar"
+    "barSummary": "{active, plural, one {# acuerdo vigente} other {# acuerdos vigentes}} · {value} por cobrar",
+    "searchPlaceholder": "Buscar por unidad o propietario"
   },
   "acordoDetail": {
     "title": "Acuerdo de pago · {unit}",

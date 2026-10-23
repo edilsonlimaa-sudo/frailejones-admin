@@ -12,6 +12,8 @@ import type { AcordoPagamento } from "@/lib/types/acordos";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { AvatarIniciais } from "@/components/admin/avatar-iniciais";
 import { BarraResumo } from "@/components/admin/barra-resumo";
 import { classesDoChip } from "@/components/admin/chip";
 
@@ -43,8 +45,19 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
   // abre nos vigentes: são os que pedem acompanhamento
   const [filtro, setFiltro] = useState<Filtro>(acordos.some((a) => a.resumo.situacao === "vigente") ? "vigente" : "todos");
 
+  const [busca, setBusca] = useState("");
+
   const contagem = (f: Filtro) => (f === "todos" ? acordos.length : acordos.filter((a) => a.resumo.situacao === f).length);
-  const listados = filtro === "todos" ? acordos : acordos.filter((a) => a.resumo.situacao === filtro);
+  const termo = busca.trim().toLocaleLowerCase();
+  const listados = acordos
+    .filter((a) => filtro === "todos" || a.resumo.situacao === filtro)
+    .filter(
+      (a) =>
+        !termo ||
+        [a.unidade?.identificacao, a.unidade?.proprietario?.nome, a.observacao].some((campo) =>
+          campo?.toLocaleLowerCase().includes(termo),
+        ),
+    );
   const vigentes = acordos.filter((a) => a.resumo.situacao === "vigente");
   const somaVigentes = (valor: (r: ResumoAcordo) => number) => vigentes.reduce((acc, a) => acc + valor(a.resumo), 0);
 
@@ -54,6 +67,16 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
         titulo={t("title")}
         resumo={t("barSummary", { active: vigentes.length, value: formatUsd(somaVigentes((r) => r.falta)) })}
       >
+        <div className="pb-3">
+          <Input
+            type="search"
+            placeholder={t("searchPlaceholder")}
+            aria-label={t("searchPlaceholder")}
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="h-10 bg-card"
+          />
+        </div>
         {/* filtro por situação, com a contagem de cada uma, preso junto com o resumo */}
         <div
           role="group"
@@ -134,8 +157,11 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
                             <span className="font-medium">—</span>
                           )}
                           {acordo.unidade?.proprietario && (
-                            <span className="truncate text-sm text-muted-foreground">
-                              {acordo.unidade.proprietario.nome}
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <AvatarIniciais nome={acordo.unidade.proprietario.nome} className="size-5 text-[9px]" />
+                              <span className="truncate text-sm text-muted-foreground">
+                                {acordo.unidade.proprietario.nome}
+                              </span>
                             </span>
                           )}
                           <Badge variant={VARIANTE_SITUACAO[r.situacao]}>{tAcordos(`status.${r.situacao}`)}</Badge>
