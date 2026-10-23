@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDownIcon, Building2, MoreHorizontalIcon, PlusIcon, XIcon } from "lucide-react";
+import { ArrowUpDownIcon, Building2, MoreHorizontalIcon, PlusIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -30,6 +30,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -74,8 +76,6 @@ const corDaSituacao: Record<SituacaoConta, string> = {
 };
 
 // colunas da grade (desktop): unidade | proprietário | situação | dívida | ações
-const COLUNAS = "sm:grid sm:grid-cols-[5.5rem_minmax(0,1fr)_minmax(0,11rem)_14rem_2.25rem] sm:items-center sm:gap-4";
-
 export function UnidadesManager({
   unidades,
   proprietarios,
@@ -200,23 +200,6 @@ export function UnidadesManager({
       return desempate;
     });
 
-  const cabecalhoOrdenavel = (coluna: OrdemUnidades, rotulo: string, alinhamento = "") => (
-    <button
-      type="button"
-      onClick={() => trocarOrdem(coluna)}
-      aria-pressed={ordem === coluna}
-      aria-label={t("sortBy", { column: rotulo })}
-      className={cn(
-        "inline-flex items-center gap-1 hover:text-foreground",
-        ordem === coluna && "text-foreground",
-        alinhamento,
-      )}
-    >
-      {rotulo}
-      {ordem === coluna && <ArrowDownIcon className={cn("size-3", coluna === "unidad" && "rotate-180")} />}
-    </button>
-  );
-
   return (
     <div className="flex flex-col gap-4">
       {/* "header duplo": título, busca e filtros ficam presos abaixo do header enquanto a lista rola.
@@ -249,6 +232,19 @@ export function UnidadesManager({
             aria-label={t("searchPlaceholder")}
             className="bg-card"
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button size="icon" variant="outline" aria-label={t("sortLabel")} />}>
+              <ArrowUpDownIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{t("sortLabel")}</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={ordem} onValueChange={(valor) => trocarOrdem(valor as OrdemUnidades)}>
+                <DropdownMenuRadioItem value="unidad">{t("identification")}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="atraso">{t("columns.situation")}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="deuda">{t("columns.debt")}</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button size="icon" variant="outline" aria-label={t("newUnit")} onClick={openCreateDialog} className="md:hidden">
             <PlusIcon />
           </Button>
@@ -283,150 +279,139 @@ export function UnidadesManager({
         </div>
       </BarraFixa>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          {proprietarioFiltrado && (
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-muted-foreground">{t("ownerFilter")}</span>
-              <Badge variant="secondary">{proprietarioFiltrado}</Badge>
-              <Button size="xs" variant="ghost" onClick={() => trocarProprietario(null)}>
-                <XIcon />
-                {t("clearOwnerFilter")}
-              </Button>
-            </div>
-          )}
+      {proprietarioFiltrado && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">{t("ownerFilter")}</span>
+          <Badge variant="secondary">{proprietarioFiltrado}</Badge>
+          <Button size="xs" variant="ghost" onClick={() => trocarProprietario(null)}>
+            <XIcon />
+            {t("clearOwnerFilter")}
+          </Button>
+        </div>
+      )}
 
-          {unidadesList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("noUnits")}</p>
-          ) : visiveis.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("noSearchResults")}</p>
-          ) : (
-            <div className="rounded-lg border">
-              <div className={cn("hidden border-b px-3 py-2 text-xs font-medium text-muted-foreground", COLUNAS)}>
-                {cabecalhoOrdenavel("unidad", t("identification"))}
-                <span>{t("owner")}</span>
-                {cabecalhoOrdenavel("atraso", t("columns.situation"))}
-                {cabecalhoOrdenavel("deuda", t("columns.debt"), "justify-self-end")}
-                <span />
-              </div>
-              <ul className="divide-y">
-                {visiveis.map((unidade) => {
-                  const s = situacaoDe(unidade);
-                  const outrasDoDono = unidadesPorProprietario.get(unidade.proprietario_id) ?? 0;
-                  const temHistorico = (cobrancasPorUnidade[unidade.id] ?? 0) > 0;
-                  return (
-                    // a linha toda leva ao detalhe; botões internos param a propagação do clique
-                    <li
-                      key={unidade.id}
-                      onClick={() => router.push(`/unidades/${unidade.id}`)}
-                      className={cn(
-                        "relative flex cursor-pointer flex-col gap-2 px-3 py-3 transition-colors hover:bg-muted/50",
-                        COLUNAS,
-                      )}
-                    >
-                      {/* no celular o menu ⋯ fica no canto (absolute), então reserva espaço à direita */}
-                      <div className="flex items-center gap-3 pr-10 sm:contents">
-                        <Link
-                          href={`/unidades/${unidade.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="shrink-0 font-medium whitespace-nowrap hover:underline"
+      {unidadesList.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("noUnits")}</p>
+      ) : visiveis.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("noSearchResults")}</p>
+      ) : (
+        // um card por unidade: identificação e dono em cima, situação e dívida embaixo
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {visiveis.map((unidade) => {
+            const s = situacaoDe(unidade);
+            const outrasDoDono = unidadesPorProprietario.get(unidade.proprietario_id) ?? 0;
+            const temHistorico = (cobrancasPorUnidade[unidade.id] ?? 0) > 0;
+            return (
+              <li key={unidade.id}>
+                {/* o card todo leva ao detalhe; botões internos param a propagação do clique */}
+                <Card
+                  size="sm"
+                  onClick={() => router.push(`/unidades/${unidade.id}`)}
+                  className="relative h-full cursor-pointer transition-[box-shadow,--tw-ring-color] hover:shadow-md hover:ring-primary/40"
+                >
+                  <CardContent className="flex h-full flex-col gap-4">
+                    {/* o menu ⋯ fica no canto (absolute): reserva espaço à direita */}
+                    <div className="min-w-0 pr-8">
+                      <Link
+                        href={`/unidades/${unidade.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-lg leading-tight font-semibold tracking-tight hover:underline"
+                      >
+                        {unidade.identificacao}
+                      </Link>
+                      <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                        <span className="truncate text-sm text-muted-foreground">{unidade.proprietario?.nome ?? "—"}</span>
+                        {outrasDoDono > 1 && (
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            className="shrink-0"
+                            aria-label={t("ownerUnitsAria", { count: outrasDoDono })}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              trocarProprietario(unidade.proprietario_id);
+                            }}
+                          >
+                            {t("ownerUnits", { count: outrasDoDono })}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-auto flex items-end justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-1.5 text-sm">
+                          <span className={cn("size-2 shrink-0 rounded-full", corDaSituacao[s.situacao])} />
+                          {t(`situation.${s.situacao}`)}
+                        </p>
+                        {s.atrasoDesde && (
+                          <p className="text-xs text-muted-foreground">
+                            {t("situationSince", { date: formatDate(s.atrasoDesde) })}
+                          </p>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p
+                          className={cn(
+                            "text-lg leading-tight font-semibold tabular-nums",
+                            s.situacao === "enAtraso" ? "text-destructive" : s.divida.total === 0 && "text-muted-foreground",
+                          )}
                         >
-                          {unidade.identificacao}
-                        </Link>
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="truncate text-sm">{unidade.proprietario?.nome ?? "—"}</span>
-                          {outrasDoDono > 1 && (
-                            <Button
-                              size="xs"
-                              variant="outline"
-                              className="shrink-0"
-                              aria-label={t("ownerUnitsAria", { count: outrasDoDono })}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                trocarProprietario(unidade.proprietario_id);
-                              }}
-                            >
-                              {t("ownerUnits", { count: outrasDoDono })}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start justify-between gap-3 sm:contents">
-                        <div className="min-w-0">
-                          <p className="flex items-center gap-1.5 text-sm">
-                            <span className={cn("size-2 shrink-0 rounded-full", corDaSituacao[s.situacao])} />
-                            {t(`situation.${s.situacao}`)}
+                          {s.divida.total > 0 ? formatUsd(s.divida.total) : "—"}
+                        </p>
+                        {s.vencidas > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {t("overdueSummary", { count: s.vencidas, days: s.maiorAtraso })}
                           </p>
-                          {s.atrasoDesde && (
-                            <p className="text-xs text-muted-foreground">
-                              {t("situationSince", { date: formatDate(s.atrasoDesde) })}
-                            </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p
-                            className={cn(
-                              "font-medium tabular-nums",
-                              s.situacao === "enAtraso" ? "text-destructive" : s.divida.total === 0 && "text-muted-foreground",
-                            )}
-                          >
-                            {s.divida.total > 0 ? formatUsd(s.divida.total) : "—"}
-                          </p>
-                          {s.vencidas > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              {t("overdueSummary", { count: s.vencidas, days: s.maiorAtraso })}
-                            </p>
-                          )}
-                        </div>
+                        )}
                       </div>
+                    </div>
+                  </CardContent>
 
-                      <div className="absolute top-2 right-2 sm:static" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />
-                            }
-                          >
-                            <MoreHorizontalIcon />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem render={<Link href={`/unidades/${unidade.id}`} />}>
-                              {t("viewDetails")}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditDialog(unidade)}>
-                              {tCommon("edit")}
-                            </DropdownMenuItem>
-                            {temHistorico ? (
-                              // visível mas desabilitado, com o motivo: o banco não deixa excluir
-                              // unidade com cobranças/pagamentos (o histórico financeiro se perderia)
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuGroup>
-                                  <DropdownMenuLabel className="max-w-60 whitespace-normal">
-                                    {t("deleteLockedReason")}
-                                  </DropdownMenuLabel>
-                                  <DropdownMenuItem disabled variant="destructive">
-                                    {tCommon("delete")}
-                                  </DropdownMenuItem>
-                                </DropdownMenuGroup>
-                              </>
-                            ) : (
-                              <DropdownMenuItem variant="destructive" onClick={() => setDeleteTarget(unidade)}>
+                  <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button variant="ghost" size="icon-sm" aria-label={tCommon("actions")} />
+                        }
+                      >
+                        <MoreHorizontalIcon />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem render={<Link href={`/unidades/${unidade.id}`} />}>
+                          {t("viewDetails")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEditDialog(unidade)}>
+                          {tCommon("edit")}
+                        </DropdownMenuItem>
+                        {temHistorico ? (
+                          // visível mas desabilitado, com o motivo: o banco não deixa excluir
+                          // unidade com cobranças/pagamentos (o histórico financeiro se perderia)
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuGroup>
+                              <DropdownMenuLabel className="max-w-60 whitespace-normal">
+                                {t("deleteLockedReason")}
+                              </DropdownMenuLabel>
+                              <DropdownMenuItem disabled variant="destructive">
                                 {tCommon("delete")}
                               </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                            </DropdownMenuGroup>
+                          </>
+                        ) : (
+                          <DropdownMenuItem variant="destructive" onClick={() => setDeleteTarget(unidade)}>
+                            {tCommon("delete")}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </Card>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       <UnidadeFormDialog
         open={formOpen}

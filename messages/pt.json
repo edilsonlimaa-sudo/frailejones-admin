@@ -239,7 +239,7 @@
     "ownerFilter": "Proprietário:",
     "clearOwnerFilter": "Limpar filtro",
     "deleteLockedReason": "Não é possível excluir: a unidade tem cobranças registradas e o histórico financeiro dela se perderia.",
-    "sortBy": "Ordenar por {column}"
+    "sortLabel": "Ordenar"
   },
   "unidadeDetail": {
     "tabs": {
