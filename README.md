@@ -96,10 +96,23 @@ reserva) e grava em `cotacao_bcv` (só quando a taxa muda). Ela é chamada por d
   não publicou o esperado, a função dorme 1h e tenta de novo (até 3 consultas). As funções são
   servidas em `/api/inngest`, fora da checagem de sessão do `proxy.ts`.
 
-Inngest em desenvolvimento: `INNGEST_DEV=1` no `.env.local` e, com o `npm run dev` de pé,
-`npm run inngest:dev` abre o Dev Server em http://localhost:8288, onde dá pra disparar a função à
+### Emissão mensal das cuotas pelo Inngest
+
+`lib/inngest/functions/emitir-cobrancas-do-mes.ts` roda todo dia 1 às 6h de Caracas e emite as
+cobranças do mês de cada cuota ativa, com unidades vinculadas, cuja competência ainda não foi
+fechada: o mesmo que o botão "Emitir cobranças do mês" faz, pela mesma função SQL
+(`emitir_cobrancas_taxa`). Competência já fechada é pulada, então rodar de novo não duplica nada.
+Cada cuota é um step próprio: se uma falhar, as outras são emitidas e a execução termina como falha
+com o motivo. A função grava sem usuário logado, por `lib/supabase/admin.ts`, que exige a chave
+secreta do projeto em `SUPABASE_SERVICE_ROLE_KEY` (variável de ambiente só do servidor, nunca
+`NEXT_PUBLIC_`).
+
+### Inngest: ambientes
+
+Em desenvolvimento: `INNGEST_DEV=1` no `.env.local` e, com o `npm run dev` de pé,
+`npm run inngest:dev` abre o Dev Server em http://localhost:8288, onde dá pra disparar as funções à
 mão. Em produção, a integração Inngest ↔ Vercel define `INNGEST_SIGNING_KEY` e `INNGEST_EVENT_KEY` e
-sincroniza o app a cada deploy.
+sincroniza o app a cada deploy; `SUPABASE_SERVICE_ROLE_KEY` precisa ser cadastrada na Vercel à mão.
 
 Os avisos de cotação atrasada (chip do header e painel) não usam calendário de feriados: se a fonte
 foi consultada hoje com sucesso, tudo o que ela publicou já está gravado e a cotação vigente é a
