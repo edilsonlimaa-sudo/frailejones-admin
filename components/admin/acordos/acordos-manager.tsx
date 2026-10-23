@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Handshake } from "lucide-react";
+import { Handshake, InboxIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import type { ResumoAcordo, SituacaoAcordo } from "@/lib/acordos";
@@ -12,10 +12,11 @@ import { formatUsd } from "@/lib/moeda";
 import type { AcordoPagamento } from "@/lib/types/acordos";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AvatarIniciais } from "@/components/admin/avatar-iniciais";
-import { BarraResumo } from "@/components/admin/barra-resumo";
+import { BarraFixa } from "@/components/admin/barra-fixa";
 import { classesDoChip } from "@/components/admin/chip";
 import { AnelProgresso } from "@/components/admin/painel/foco/anel-progresso";
 
@@ -56,6 +57,11 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
 
   const [busca, setBusca] = useState("");
 
+  const limparFiltros = () => {
+    setFiltro("todos");
+    setBusca("");
+  };
+
   const contagem = (f: Filtro) => (f === "todos" ? acordos.length : acordos.filter((a) => a.resumo.situacao === f).length);
   const termo = busca.trim().toLocaleLowerCase();
   const listados = acordos
@@ -72,15 +78,11 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <BarraResumo
-        titulo={t("title")}
-        resumo={t("barSummary", {
-          active: vigentes.length,
-          value: formatUsd(somaVigentes((r) => r.falta)),
-          frozen: formatUsd(somaVigentes((r) => r.jurosEvitados)),
-        })}
-      >
-        <div className="pb-3">
+      {/* "header duplo": busca em cima, chips de situação embaixo e, no fim da fila, o que falta
+          receber dos acordos vigentes (como a dívida total em Unidades) */}
+      <BarraFixa>
+        <h1 className="sr-only">{t("title")}</h1>
+        <div className="py-3">
           <Input
             type="search"
             placeholder={t("searchPlaceholder")}
@@ -90,7 +92,7 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
             className="h-10 bg-card"
           />
         </div>
-        {/* filtro por situação, com a contagem de cada uma, preso junto com o resumo */}
+        {/* filtro por situação, com a contagem de cada uma */}
         <div
           role="group"
           aria-label={t("filterLabel")}
@@ -107,15 +109,29 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
               {t(`filter.${f}`, { count: contagem(f) })}
             </button>
           ))}
+          <p className="ml-auto shrink-0 pl-2 text-xs whitespace-nowrap">
+            <span className="text-muted-foreground">{t("activeDebt")} </span>
+            <span className={cn("font-medium tabular-nums", somaVigentes((r) => r.falta) > 0 && "text-destructive")}>
+              {formatUsd(somaVigentes((r) => r.falta))}
+            </span>
+          </p>
         </div>
-      </BarraResumo>
+      </BarraFixa>
 
         {acordos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("empty")}</p>
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-10 text-center">
+            <InboxIcon className="size-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">{t("empty")}</p>
+          </div>
         ) : (
           <>
             {listados.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("emptyFilter")}</p>
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-10 text-center">
+                <p className="text-sm text-muted-foreground">{t("emptyFilter")}</p>
+                <Button variant="outline" size="sm" onClick={limparFiltros}>
+                  {t("clearFilters")}
+                </Button>
+              </div>
             ) : (
               // um card por acordo: unidade e dono em cima, progresso no meio, o que falta embaixo
               <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">

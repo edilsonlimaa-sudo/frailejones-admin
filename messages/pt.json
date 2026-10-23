@@ -1070,14 +1070,15 @@
       "brokenOn": "quebrado em {date}",
       "nothingLeft": "Quitado"
     },
-    "barSummary": "{active, plural, one {# acordo vigente} other {# acordos vigentes}} · {value} a receber · {frozen} de juros congelados",
     "searchPlaceholder": "Buscar por unidade ou proprietário",
     "card": {
       "paidLabel": "pago",
       "paidOf": "Pago {paid} de {total}",
       "remaining": "Faltam {value}",
       "frozen": "{value} de juros congelados"
-    }
+    },
+    "activeDebt": "A receber nos vigentes",
+    "clearFilters": "Limpar filtros"
   },
   "acordoDetail": {
     "title": "Acordo de pagamento · {unit}",

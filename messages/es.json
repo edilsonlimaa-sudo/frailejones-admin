@@ -1070,14 +1070,15 @@
       "brokenOn": "roto el {date}",
       "nothingLeft": "Saldado"
     },
-    "barSummary": "{active, plural, one {# acuerdo vigente} other {# acuerdos vigentes}} · {value} por cobrar · {frozen} de intereses congelados",
     "searchPlaceholder": "Buscar por unidad o propietario",
     "card": {
       "paidLabel": "pagado",
       "paidOf": "Pagado {paid} de {total}",
       "remaining": "Faltan {value}",
       "frozen": "{value} de intereses congelados"
-    }
+    },
+    "activeDebt": "Por cobrar en vigentes",
+    "clearFilters": "Limpiar filtros"
   },
   "acordoDetail": {
     "title": "Acuerdo de pago · {unit}",
