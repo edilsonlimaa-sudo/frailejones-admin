@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpDownIcon, Building2, House, MoreHorizontalIcon, PlusIcon, XIcon } from "lucide-react";
+import { ArrowUpDownIcon, House, MoreHorizontalIcon, PlusIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -46,7 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AvatarIniciais } from "@/components/admin/avatar-iniciais";
-import { BarraListagem } from "@/components/admin/barra-listagem";
+import { BarraFixa } from "@/components/admin/barra-fixa";
 import { classesDoChip } from "@/components/admin/chip";
 import { UnidadeFormDialog } from "@/components/admin/unidades/unidade-form-dialog";
 
@@ -211,19 +211,12 @@ export function UnidadesManager({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* "header duplo": título, busca e filtros ficam presos abaixo do header enquanto a lista rola */}
-      <BarraListagem
-        icone={Building2}
-        titulo={t("title")}
-        acao={
-          <Button onClick={openCreateDialog}>
-            <PlusIcon />
-            {t("newUnit")}
-          </Button>
-        }
-      >
-
-        <div className="flex items-center gap-2 pb-3">
+      {/* "header duplo": busca, ordenação, nova unidade e filtros ficam presos abaixo do header enquanto a
+          lista rola. O nome da tela já está no breadcrumb do header, então aqui não se repete (o h1 fica
+          só pra leitores de tela): a barra diz o que se faz na tela, não onde se está */}
+      <BarraFixa>
+        <h1 className="sr-only">{t("title")}</h1>
+        <div className="flex items-center gap-2 py-3">
           <Input
             type="search"
             placeholder={t("searchPlaceholder")}
@@ -245,6 +238,11 @@ export function UnidadesManager({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+          {/* no celular só o ícone, pra busca respirar */}
+          <Button onClick={openCreateDialog} aria-label={t("newUnit")} className="max-sm:size-10 max-sm:px-0">
+            <PlusIcon />
+            <span className="max-sm:sr-only">{t("newUnit")}</span>
+          </Button>
         </div>
 
         {/* resumo que também filtra: tocar numa situação mostra só as unidades nela. Na mesma fila,
@@ -276,7 +274,7 @@ export function UnidadesManager({
             </span>
           </p>
         </div>
-      </BarraListagem>
+      </BarraFixa>
 
       {proprietarioFiltrado && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
