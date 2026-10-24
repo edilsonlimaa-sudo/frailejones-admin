@@ -1065,7 +1065,8 @@
       "since": "Desde {date}",
       "charges": "{count, plural, one {# cobrança} other {# cobranças}}",
       "brokenOn": "quebrado em {date}",
-      "nothingLeft": "Quitado"
+      "nothingLeft": "Quitado",
+      "agreementsCount": "{count, plural, one {# acordo} other {# acordos}}"
     },
     "searchPlaceholder": "Buscar por unidade ou proprietário",
     "card": {

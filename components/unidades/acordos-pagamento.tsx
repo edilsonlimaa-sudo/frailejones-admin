@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronRightIcon, HandshakeIcon } from "lucide-react";
+import { HandshakeIcon, PlusIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
@@ -18,7 +18,8 @@ import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { AnelProgresso } from "@/components/admin/painel/foco/anel-progresso";
 import {
   Dialog,
   DialogContent,
@@ -72,55 +73,66 @@ type AcordosPagamentoProps = {
 // tem essa página, então mostra o detalhe de cada acordo direto na aba
 export function AcordosPagamento({ unidadeId, acordos, cobrancas, cotacoes, podeEditar }: AcordosPagamentoProps) {
   const t = useTranslations("acordos");
+  const tLista = useTranslations("acordosPage");
   const hojeIso = hojeCaracas();
   const [registrando, setRegistrando] = useState(false);
   const podeRegistrar = podeEditar && emAtrasoForaDeAcordo(cobrancas, hojeIso).length > 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex max-w-2xl flex-col gap-1.5">
-            <CardTitle>{t("title")}</CardTitle>
-            <CardDescription>{t("emptyHint")}</CardDescription>
-          </div>
-          {podeRegistrar && (
-            <Button size="sm" onClick={() => setRegistrando(true)}>
-              {t("new")}
-            </Button>
+    <div className="flex flex-col gap-4">
+      {/* cabeçalho enxuto: quantos acordos e a ação de registrar (só quando há cobrança em atraso fora
+          de acordo). O que um acordo faz fica explicado no estado vazio e na página do acordo */}
+      <div className="flex items-center justify-between gap-3 px-1">
+        <h3 className="text-base font-semibold">
+          {t("title")}
+          {acordos.length > 0 && (
+            <span className="font-normal text-muted-foreground">
+              {" · "}
+              {tLista("row.agreementsCount", { count: acordos.length })}
+            </span>
           )}
-        </div>
-      </CardHeader>
+        </h3>
+        {podeRegistrar && (
+          <Button size="sm" onClick={() => setRegistrando(true)}>
+            <PlusIcon />
+            {t("new")}
+          </Button>
+        )}
+      </div>
 
-      <CardContent className="flex flex-col gap-4">
-        {acordos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+      {acordos.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-10 text-center">
+          <HandshakeIcon className="size-8 text-muted-foreground" />
+          <p className="max-w-md text-sm text-muted-foreground">
             {podeEditar && !podeRegistrar ? t("emptyNoOverdue") : t("empty")}
           </p>
-        ) : podeEditar ? (
-          <ul className="divide-y rounded-lg border">
-            {acordos.map((acordo) => (
-              <LinhaAcordo
-                key={acordo.id}
-                acordo={acordo}
-                cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
-                hojeIso={hojeIso}
-              />
-            ))}
-          </ul>
-        ) : (
-          acordos.map((acordo) => (
-            <section key={acordo.id} className="rounded-xl border p-4">
+          <p className="max-w-md text-xs text-muted-foreground">{t("emptyHint")}</p>
+        </div>
+      ) : podeEditar ? (
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {acordos.map((acordo) => (
+            <CardAcordo
+              key={acordo.id}
+              acordo={acordo}
+              cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
+              hojeIso={hojeIso}
+            />
+          ))}
+        </ul>
+      ) : (
+        acordos.map((acordo) => (
+          <Card key={acordo.id} size="sm">
+            <CardContent>
               <DetalheAcordo
                 acordo={acordo}
                 cobrancas={cobrancas.filter((c) => c.acordo?.id === acordo.id)}
                 cotacoes={cotacoes}
                 podeEditar={false}
               />
-            </section>
-          ))
-        )}
-      </CardContent>
+            </CardContent>
+          </Card>
+        ))
+      )}
 
       {podeEditar && (
         <Dialog open={registrando} onOpenChange={setRegistrando}>
@@ -137,12 +149,13 @@ export function AcordosPagamento({ unidadeId, acordos, cobrancas, cotacoes, pode
           </DialogContent>
         </Dialog>
       )}
-    </Card>
+    </div>
   );
 }
 
-// um acordo na aba da unidade: situação, cobranças, quanto já foi pago e quanto falta; abre a página
-function LinhaAcordo({
+// um acordo na aba da unidade, no mesmo card da listagem de acordos: selo na cor da situação, desde
+// quando vale, andamento com anel e o que falta; o card todo abre a página do acordo
+function CardAcordo({
   acordo,
   cobrancas,
   hojeIso,
@@ -153,47 +166,74 @@ function LinhaAcordo({
 }) {
   const t = useTranslations("acordos");
   const tLista = useTranslations("acordosPage");
+  const router = useRouter();
   const { formatDate } = useFormatos();
   const r = resumirAcordo(acordo, cobrancas, hojeIso);
 
   return (
     <li>
-      <Link
-        href={`/acordos/${acordo.id}`}
-        className="flex flex-col gap-3 px-3 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-6"
+      <Card
+        size="sm"
+        onClick={() => router.push(`/acordos/${acordo.id}`)}
+        className="h-full cursor-pointer transition-[box-shadow,--tw-ring-color] hover:shadow-md hover:ring-primary/40"
       >
-        <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-2 font-medium">
-            {t("since", { date: formatDate(acordo.data_inicio) })}
-            <Badge variant={VARIANTE_SITUACAO[r.situacao]}>{t(`status.${r.situacao}`)}</Badge>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {tLista("row.charges", { count: r.cobrancas })}
-            {acordo.quebrado_em && ` · ${tLista("row.brokenOn", { date: formatDate(acordo.quebrado_em) })}`}
-          </p>
-          {acordo.observacao && <p className="mt-0.5 truncate text-xs text-muted-foreground italic">{acordo.observacao}</p>}
-        </div>
-        <div className="flex flex-col gap-1.5 sm:w-56">
-          <div className="h-2 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-primary" style={{ width: `${r.progresso}%` }} />
+        <CardContent className="flex h-full flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", TOM_SITUACAO[r.situacao])}>
+              <HandshakeIcon className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={`/acordos/${acordo.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-lg leading-tight font-bold tracking-tight hover:underline"
+                >
+                  {t("since", { date: formatDate(acordo.data_inicio) })}
+                </Link>
+                <Badge variant={VARIANTE_SITUACAO[r.situacao]}>{t(`status.${r.situacao}`)}</Badge>
+              </p>
+              {acordo.observacao && (
+                <p className="mt-1 truncate text-xs text-muted-foreground italic">{acordo.observacao}</p>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {tLista("row.paid", { value: formatUsd(r.pago), pct: Math.round(r.progresso) })}
-          </p>
-        </div>
-        <div className="flex items-center justify-between gap-3 sm:w-44 sm:justify-end">
-          <div className="sm:text-right">
-            <p className={cn("font-medium tabular-nums", r.falta > 0 && "text-destructive")}>
-              {r.falta > 0 ? formatUsd(r.falta) : tLista("row.nothingLeft")}
-            </p>
-            {r.falta > 0 && <p className="text-xs text-muted-foreground">{tLista("row.remaining")}</p>}
+
+          <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
+            <AnelProgresso percentual={r.progresso} rotulo={tLista("card.paidLabel")} tamanho={56} espessura={6} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">
+                {tLista("card.paidOf", { paid: formatUsd(r.pago), total: formatUsd(r.pago + r.falta) })}
+              </p>
+              <p className={cn("text-xs", r.falta > 0 ? "text-destructive" : "text-primary")}>
+                {r.falta > 0 ? tLista("card.remaining", { value: formatUsd(r.falta) }) : tLista("row.nothingLeft")}
+              </p>
+              {acordo.quebrado_em && (
+                <p className="text-xs text-muted-foreground">{tLista("row.brokenOn", { date: formatDate(acordo.quebrado_em) })}</p>
+              )}
+            </div>
           </div>
-          <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
-        </div>
-      </Link>
+
+          <div className="mt-auto flex items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground">
+            <span>{tLista("row.charges", { count: r.cobrancas })}</span>
+            {r.jurosEvitados > 0 && (
+              <span className="shrink-0 font-medium text-primary tabular-nums">
+                {tLista("card.frozen", { value: formatUsd(r.jurosEvitados) })}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </li>
   );
 }
+
+// selo do card e do detalhe, na cor da situação do acordo
+const TOM_SITUACAO = {
+  vigente: "bg-primary/10 text-primary",
+  cumprido: "bg-muted text-muted-foreground",
+  quebrado: "bg-destructive/10 text-destructive",
+} as const;
 
 const VARIANTE_SITUACAO = {
   vigente: "default",
@@ -228,15 +268,19 @@ export function DetalheAcordo({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="flex flex-wrap items-center gap-2 font-medium">
-            <HandshakeIcon className="size-4 text-muted-foreground" />
-            {t("since", { date: formatDate(acordo.data_inicio) })}
-            <Badge variant={VARIANTE_SITUACAO[situacao]}>{t(`status.${situacao}`)}</Badge>
-          </h3>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", TOM_SITUACAO[situacao])}>
+              <HandshakeIcon className="size-5" />
+            </span>
+            <h3 className="flex flex-wrap items-center gap-2 text-lg leading-tight font-bold tracking-tight">
+              {t("since", { date: formatDate(acordo.data_inicio) })}
+              <Badge variant={VARIANTE_SITUACAO[situacao]}>{t(`status.${situacao}`)}</Badge>
+            </h3>
+          </div>
           {podeEditar && situacao === "vigente" && (
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setQuebrando(true)}>
+            <Button size="sm" variant="outline" className="text-destructive" onClick={() => setQuebrando(true)}>
               {t("break")}
             </Button>
           )}
@@ -254,29 +298,26 @@ export function DetalheAcordo({
         )}
       </div>
 
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Metrica rotulo={t("detail.debtAtStart")} valor={formatUsd(devidoNoInicio)} />
-        <Metrica rotulo={t("detail.paid")} valor={formatUsd(pago)} />
-        <Metrica
-          rotulo={t("detail.remaining")}
-          valor={formatUsd(falta)}
-          className={falta > 0 ? "text-destructive" : undefined}
-        />
-        {situacao === "vigente" && (
+      {/* o andamento: anel com o % pago e os números ao lado */}
+      <div className="flex items-center gap-4 rounded-xl bg-muted/40 p-3">
+        <AnelProgresso percentual={progresso} rotulo={t("detail.paid")} tamanho={72} espessura={8} />
+        <dl className="grid min-w-0 flex-1 grid-cols-2 gap-3">
+          <Metrica rotulo={t("detail.debtAtStart")} valor={formatUsd(devidoNoInicio)} />
+          <Metrica rotulo={t("detail.paid")} valor={formatUsd(pago)} />
           <Metrica
-            rotulo={t("detail.interestAvoided")}
-            valor={formatUsd(evitados)}
-            dica={t("detail.interestAvoidedHint")}
-            className="text-primary"
+            rotulo={t("detail.remaining")}
+            valor={formatUsd(falta)}
+            className={falta > 0 ? "text-destructive" : "text-primary"}
           />
-        )}
-      </dl>
-
-      <div className="flex flex-col gap-1.5">
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
-          <div className="h-full rounded-full bg-primary" style={{ width: `${progresso}%` }} />
-        </div>
-        <p className="text-xs text-muted-foreground">{t("detail.progress", { pct: Math.round(progresso) })}</p>
+          {situacao === "vigente" && (
+            <Metrica
+              rotulo={t("detail.interestAvoided")}
+              valor={formatUsd(evitados)}
+              dica={t("detail.interestAvoidedHint")}
+              className="text-primary"
+            />
+          )}
+        </dl>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -315,7 +356,7 @@ function Metrica({
   return (
     <div>
       <dt className="text-xs text-muted-foreground">{rotulo}</dt>
-      <dd className={cn("text-lg font-medium tabular-nums", className)}>{valor}</dd>
+      <dd className={cn("font-semibold tabular-nums", className)}>{valor}</dd>
       {dica && <dd className="text-xs text-muted-foreground">{dica}</dd>}
     </div>
   );

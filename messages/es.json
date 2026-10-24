@@ -1065,7 +1065,8 @@
       "since": "Desde el {date}",
       "charges": "{count, plural, one {# cobro} other {# cobros}}",
       "brokenOn": "roto el {date}",
-      "nothingLeft": "Saldado"
+      "nothingLeft": "Saldado",
+      "agreementsCount": "{count, plural, one {# acuerdo} other {# acuerdos}}"
     },
     "searchPlaceholder": "Buscar por unidad o propietario",
     "card": {
