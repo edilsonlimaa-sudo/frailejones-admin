@@ -23,7 +23,7 @@ export default async function AcordosPage() {
   const { data, error } = await supabase
     .from("acordos_pagamento")
     .select(
-      "id, unidade_id, data_inicio, observacao, quebrado_em, created_at, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), cobrancas(status, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento)))",
+      "id, unidade_id, data_inicio, observacao, valor_parcela_usd, quebrado_em, created_at, unidade:unidades(id, identificacao, proprietario:proprietarios(nome)), cobrancas(status, valor_usd, valor_credito_abatido_usd, data_vencimento, dias_graca, pct_multa_atraso, pct_juros_diario, metodo_encargos, pct_juros_mensal, criterio_mes, pagamento_cobrancas(valor_principal_abatido_usd, valor_juros_pago_usd, pagamento:pagamentos(data_pagamento)))",
     )
     .order("data_inicio", { ascending: false })
     .returns<AcordoRow[]>();

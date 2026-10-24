@@ -1019,16 +1019,22 @@
     "break": "Quebrar acordo",
     "form": {
       "title": "Registrar acordo de pagamento",
-      "description": "Congela os juros das cobranças em atraso desta unidade a partir da data de início. Multa e juros acumulados até essa data continuam devidos, e as cobranças emitidas depois seguem a regra normal.",
+      "description": "Congela os juros das cobranças escolhidas a partir da data de início. O acumulado até essa data continua devido.",
       "startLabel": "Data de início",
       "noteLabel": "Observação",
       "notePlaceholder": "Ex: paga $ 50 por mês além da cuota",
-      "preview": "{count, plural, one {# cobrança em atraso entra} other {# cobranças em atraso entram}} no acordo · {value} em aberto hoje",
+      "preview": "{count, plural, one {# cobrança} other {# cobranças}} · {value} em aberto hoje",
       "noCharges": "Não há cobranças em atraso nessa data para incluir no acordo.",
       "submit": "Registrar acordo",
       "success": "Acordo registrado.",
       "error": "Erro ao registrar o acordo.",
-      "dueOn": "venceu em {date}"
+      "dueOn": "venceu em {date}",
+      "amountLabel": "Valor acordado por mês (USD)",
+      "amountHint": "Opcional. Quanto se comprometeu a pagar por mês; não é cobrado automaticamente.",
+      "chargesLabel": "Cobranças que entram no acordo",
+      "selectAll": "Marcar todas",
+      "selectNone": "Desmarcar todas",
+      "noneSelected": "Escolha ao menos uma cobrança."
     },
     "breakForm": {
       "title": "Quebrar acordo de pagamento",
@@ -1047,7 +1053,8 @@
       "interestAvoided": "Juros congelados",
       "interestAvoidedHint": "o que já teria acumulado sem o acordo",
       "progress": "{pct}% da dívida do acordo já foi paga",
-      "chargesTitle": "{count, plural, one {# cobrança no acordo} other {# cobranças no acordo}}"
+      "chargesTitle": "{count, plural, one {# cobrança no acordo} other {# cobranças no acordo}}",
+      "installment": "Parcela acordada por mês"
     }
   },
   "acordosPage": {
@@ -1073,7 +1080,8 @@
       "paidLabel": "pago",
       "paidOf": "Pago {paid} de {total}",
       "remaining": "Faltam {value}",
-      "frozen": "{value} de juros congelados"
+      "frozen": "{value} de juros congelados",
+      "installment": "{value} por mês acordado"
     },
     "activeDebt": "A receber nos vigentes",
     "clearFilters": "Limpar filtros"

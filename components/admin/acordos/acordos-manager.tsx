@@ -194,6 +194,11 @@ export function AcordosManager({ acordos }: { acordos: AcordoListado[] }) {
                           <p className={cn("text-xs", r.falta > 0 ? "text-destructive" : "text-primary")}>
                             {r.falta > 0 ? t("card.remaining", { value: formatUsd(r.falta) }) : t("row.nothingLeft")}
                           </p>
+                          {acordo.valor_parcela_usd != null && (
+                            <p className="text-xs text-muted-foreground tabular-nums">
+                              {t("card.installment", { value: formatUsd(acordo.valor_parcela_usd) })}
+                            </p>
+                          )}
                           {acordo.quebrado_em && (
                             <p className="text-xs text-muted-foreground">
                               {t("row.brokenOn", { date: formatDate(acordo.quebrado_em) })}

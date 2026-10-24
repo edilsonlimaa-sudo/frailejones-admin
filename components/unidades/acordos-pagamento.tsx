@@ -18,6 +18,7 @@ import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { AnelProgresso } from "@/components/admin/painel/foco/anel-progresso";
 import {
@@ -136,7 +137,7 @@ export function AcordosPagamento({ unidadeId, acordos, cobrancas, cotacoes, pode
 
       {podeEditar && (
         <Dialog open={registrando} onOpenChange={setRegistrando}>
-          <DialogContent>
+          <DialogContent className="max-h-[90dvh] overflow-y-auto">
             {/* remount com estado limpo a cada abertura */}
             {registrando && (
               <RegistrarAcordo
@@ -208,6 +209,11 @@ function CardAcordo({
               <p className={cn("text-xs", r.falta > 0 ? "text-destructive" : "text-primary")}>
                 {r.falta > 0 ? tLista("card.remaining", { value: formatUsd(r.falta) }) : tLista("row.nothingLeft")}
               </p>
+              {acordo.valor_parcela_usd != null && (
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {tLista("card.installment", { value: formatUsd(acordo.valor_parcela_usd) })}
+                </p>
+              )}
               {acordo.quebrado_em && (
                 <p className="text-xs text-muted-foreground">{tLista("row.brokenOn", { date: formatDate(acordo.quebrado_em) })}</p>
               )}
@@ -309,6 +315,9 @@ export function DetalheAcordo({
             valor={formatUsd(falta)}
             className={falta > 0 ? "text-destructive" : "text-primary"}
           />
+          {acordo.valor_parcela_usd != null && (
+            <Metrica rotulo={t("detail.installment")} valor={formatUsd(acordo.valor_parcela_usd)} />
+          )}
           {situacao === "vigente" && (
             <Metrica
               rotulo={t("detail.interestAvoided")}
@@ -378,11 +387,26 @@ function RegistrarAcordo({
   const router = useRouter();
   const [dataInicio, setDataInicio] = useState(hojeIso);
   const [observacao, setObservacao] = useState("");
+  const [valorParcela, setValorParcela] = useState("");
+  // cobranças que o admin tirou do acordo (por padrão entram todas as elegíveis na data)
+  const [desmarcadas, setDesmarcadas] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { formatDate, formatMes } = useFormatos();
-  const entram = dataInicio ? emAtrasoForaDeAcordo(cobrancas, dataInicio) : [];
+  const elegiveis = dataInicio ? emAtrasoForaDeAcordo(cobrancas, dataInicio) : [];
+  const entram = elegiveis.filter((c) => !desmarcadas.has(c.id));
+  const totalEntram = entram.reduce((acc, c) => acc + faltaHoje(c, hojeIso), 0);
+  const valorParcelaNumero = valorParcela.trim() === "" ? null : Number(valorParcela);
+  const valorParcelaInvalido = valorParcelaNumero !== null && !(valorParcelaNumero > 0);
+
+  const alternarCobranca = (id: string, entra: boolean) =>
+    setDesmarcadas((atual) => {
+      const proximo = new Set(atual);
+      if (entra) proximo.delete(id);
+      else proximo.add(id);
+      return proximo;
+    });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -394,6 +418,8 @@ function RegistrarAcordo({
           p_unidade_id: unidadeId,
           p_data_inicio: dataInicio,
           p_observacao: observacao.trim() || null,
+          p_valor_parcela_usd: valorParcelaNumero,
+          p_cobranca_ids: entram.map((c) => c.id),
         })
         .single<{ id: string }>();
       if (rpcError) throw rpcError;
@@ -426,6 +452,21 @@ function RegistrarAcordo({
           />
         </div>
         <div className="grid gap-2">
+          <Label htmlFor="acordo_valor_parcela">{t("amountLabel")}</Label>
+          <Input
+            id="acordo_valor_parcela"
+            type="number"
+            inputMode="decimal"
+            min="0.01"
+            step="0.01"
+            placeholder="0,00"
+            value={valorParcela}
+            onChange={(e) => setValorParcela(e.target.value)}
+            aria-invalid={valorParcelaInvalido || undefined}
+          />
+          <p className="text-xs text-muted-foreground">{t("amountHint")}</p>
+        </div>
+        <div className="grid gap-2">
           <Label htmlFor="acordo_observacao">{t("noteLabel")}</Label>
           <Textarea
             id="acordo_observacao"
@@ -434,25 +475,49 @@ function RegistrarAcordo({
             onChange={(e) => setObservacao(e.target.value)}
           />
         </div>
-        {/* as cobranças que vão entrar: a lista fica fixa no acordo, as que vencerem depois ficam fora */}
-        <div className="flex flex-col gap-2 rounded-xl bg-muted px-3 py-2.5 text-xs">
-          <p className="font-medium">
-            {entram.length > 0
-              ? t("preview", { count: entram.length, value: formatUsd(entram.reduce((acc, c) => acc + faltaHoje(c, hojeIso), 0)) })
-              : t("noCharges")}
-          </p>
-          {entram.length > 0 && (
-            <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto">
-              {entram.map((c) => (
-                <li key={c.id} className="flex justify-between gap-3">
-                  <span className="min-w-0 truncate">
-                    {c.titulo_origem} · {formatMes(c.competencia)}
-                    <span className="text-muted-foreground"> · {t("dueOn", { date: formatDate(c.data_vencimento) })}</span>
-                  </span>
-                  <span className="shrink-0 tabular-nums">{formatUsd(faltaHoje(c, hojeIso))}</span>
-                </li>
-              ))}
+        {/* as cobranças que vão entrar: o admin escolhe entre as vencidas na data; a lista fica fixa
+            no acordo, as que vencerem depois ficam fora */}
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <Label>{t("chargesLabel")}</Label>
+            {elegiveis.length > 1 && (
+              <Button
+                type="button"
+                size="xs"
+                variant="ghost"
+                onClick={() => setDesmarcadas(desmarcadas.size > 0 ? new Set() : new Set(elegiveis.map((c) => c.id)))}
+              >
+                {desmarcadas.size > 0 ? t("selectAll") : t("selectNone")}
+              </Button>
+            )}
+          </div>
+          {elegiveis.length === 0 ? (
+            <p className="rounded-xl bg-muted px-3 py-2.5 text-xs text-muted-foreground">{t("noCharges")}</p>
+          ) : (
+            <ul className="flex max-h-56 flex-col divide-y overflow-y-auto rounded-xl border">
+              {elegiveis.map((c) => {
+                const entra = !desmarcadas.has(c.id);
+                return (
+                  <li key={c.id}>
+                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm has-[:focus-visible]:bg-muted/60">
+                      <Checkbox checked={entra} onCheckedChange={(valor) => alternarCobranca(c.id, valor === true)} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">
+                          {c.titulo_origem} · {formatMes(c.competencia)}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">{t("dueOn", { date: formatDate(c.data_vencimento) })}</span>
+                      </span>
+                      <span className="shrink-0 font-medium tabular-nums">{formatUsd(faltaHoje(c, hojeIso))}</span>
+                    </label>
+                  </li>
+                );
+              })}
             </ul>
+          )}
+          {elegiveis.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {entram.length > 0 ? t("preview", { count: entram.length, value: formatUsd(totalEntram) }) : t("noneSelected")}
+            </p>
           )}
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
@@ -460,7 +525,7 @@ function RegistrarAcordo({
           <Button type="button" variant="outline" onClick={onClose}>
             {tCommon("cancel")}
           </Button>
-          <Button type="submit" disabled={isSubmitting || entram.length === 0 || !dataInicio}>
+          <Button type="submit" disabled={isSubmitting || entram.length === 0 || !dataInicio || valorParcelaInvalido}>
             {isSubmitting ? tCommon("saving") : t("submit")}
           </Button>
         </DialogFooter>

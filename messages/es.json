@@ -1019,16 +1019,22 @@
     "break": "Romper acuerdo",
     "form": {
       "title": "Registrar acuerdo de pago",
-      "description": "Congela los intereses de los cobros vencidos de esta unidad a partir de la fecha de inicio. La multa y los intereses acumulados hasta esa fecha siguen debiéndose, y los cobros emitidos después siguen la regla normal.",
+      "description": "Congela los intereses de los cobros elegidos desde la fecha de inicio. Lo acumulado hasta esa fecha sigue debiéndose.",
       "startLabel": "Fecha de inicio",
       "noteLabel": "Observación",
       "notePlaceholder": "Ej: paga $ 50 al mes además de la cuota",
-      "preview": "{count, plural, one {# cobro vencido entra} other {# cobros vencidos entran}} en el acuerdo · {value} pendientes hoy",
+      "preview": "{count, plural, one {# cobro} other {# cobros}} · {value} pendientes hoy",
       "noCharges": "No hay cobros vencidos en esa fecha para incluir en el acuerdo.",
       "submit": "Registrar acuerdo",
       "success": "Acuerdo registrado.",
       "error": "Error al registrar el acuerdo.",
-      "dueOn": "venció el {date}"
+      "dueOn": "venció el {date}",
+      "amountLabel": "Valor acordado por mes (USD)",
+      "amountHint": "Opcional. Cuánto se comprometió a pagar cada mes; no se cobra automáticamente.",
+      "chargesLabel": "Cobros que entran en el acuerdo",
+      "selectAll": "Marcar todos",
+      "selectNone": "Desmarcar todos",
+      "noneSelected": "Elija al menos un cobro."
     },
     "breakForm": {
       "title": "Romper acuerdo de pago",
@@ -1047,7 +1053,8 @@
       "interestAvoided": "Intereses congelados",
       "interestAvoidedHint": "lo que ya habría acumulado sin el acuerdo",
       "progress": "{pct}% de la deuda del acuerdo ya fue pagada",
-      "chargesTitle": "{count, plural, one {# cobro en el acuerdo} other {# cobros en el acuerdo}}"
+      "chargesTitle": "{count, plural, one {# cobro en el acuerdo} other {# cobros en el acuerdo}}",
+      "installment": "Cuota acordada por mes"
     }
   },
   "acordosPage": {
@@ -1073,7 +1080,8 @@
       "paidLabel": "pagado",
       "paidOf": "Pagado {paid} de {total}",
       "remaining": "Faltan {value}",
-      "frozen": "{value} de intereses congelados"
+      "frozen": "{value} de intereses congelados",
+      "installment": "{value} por mes acordado"
     },
     "activeDebt": "Por cobrar en vigentes",
     "clearFilters": "Limpiar filtros"

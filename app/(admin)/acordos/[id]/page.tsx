@@ -33,7 +33,7 @@ export default async function AcordoDetailPage({ params }: { params: Promise<{ i
     supabase
       .from("acordos_pagamento")
       .select(
-        "id, unidade_id, data_inicio, observacao, quebrado_em, created_at, unidade:unidades(id, identificacao, proprietario:proprietarios(nome))",
+        "id, unidade_id, data_inicio, observacao, valor_parcela_usd, quebrado_em, created_at, unidade:unidades(id, identificacao, proprietario:proprietarios(nome))",
       )
       .eq("id", id)
       .maybeSingle<AcordoRow>(),

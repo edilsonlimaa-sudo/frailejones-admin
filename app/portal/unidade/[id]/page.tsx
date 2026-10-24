@@ -115,7 +115,7 @@ export default async function PortalUnidadePage({
     ),
     supabase
       .from("acordos_pagamento")
-      .select("id, unidade_id, data_inicio, observacao, quebrado_em, created_at")
+      .select("id, unidade_id, data_inicio, observacao, valor_parcela_usd, quebrado_em, created_at")
       .eq("unidade_id", id)
       .order("data_inicio", { ascending: false })
       .returns<AcordoPagamento[]>(),
