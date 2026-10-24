@@ -743,7 +743,6 @@
   },
   "estadoCuenta": {
     "title": "Estado de conta",
-    "description": "Situação da unidade até hoje, com multa e juros calculados hoje",
     "situation": {
       "alDia": "Em dia",
       "porVencer": "A vencer",
@@ -751,7 +750,8 @@
     },
     "debt": {
       "total": "Dívida total",
-      "split": "{principal} de cobranças + {charges} de multa e juros"
+      "principal": "Cobranças",
+      "charges": "Multa e juros"
     },
     "creditBalance": "Saldo a favor",
     "nextDue": "Próximo vencimento",
@@ -765,7 +765,6 @@
       "mas90": "Mais de 90 dias"
     },
     "timeline": {
-      "title": "Últimos {count} meses",
       "states": {
         "enDia": "Pago em dia",
         "conAtraso": "Pago com atraso",
@@ -775,12 +774,11 @@
       }
     },
     "behavior": {
-      "title": "Comportamento de pagamento (últimos {count} meses)",
       "onTime": "Pago em dia",
-      "averageDelay": "Atraso médio em pagamentos feitos",
+      "averageDelay": "Atraso médio",
       "days": "{count, plural, one {# dia} other {# dias}}",
       "noLatePayments": "Nenhum pagamento fora do prazo",
-      "latePaidCount": "em {count, plural, one {# cobrança paga} other {# cobranças pagas}} depois do prazo",
+      "latePaidCount": "em {count, plural, one {# cobrança} other {# cobranças}}",
       "chargesPaid": "Multa e juros pagos",
       "overdueUnpaid": "{count, plural, one {# cobrança vencida sem pagar} other {# cobranças vencidas sem pagar}}"
     },
@@ -788,7 +786,10 @@
       "title": "Composição da dívida",
       "charges": "{count, plural, one {# cobrança} other {# cobranças}}"
     },
-    "lastPaymentCount": "{count} pagamentos registrados nesse dia, um para cada cobrança quitada"
+    "lastPaymentCount": "{count} pagamentos, um por cobrança",
+    "history": {
+      "title": "Histórico de pagamento · últimos {count} meses"
+    }
   },
   "listaCobrancas": {
     "empty": "Nenhuma cobrança para esta unidade.",
