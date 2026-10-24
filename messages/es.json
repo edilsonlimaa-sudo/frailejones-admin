@@ -793,12 +793,6 @@
   "listaCobrancas": {
     "empty": "Ningún cobro para esta unidad.",
     "chargesCount": "{count, plural, one {# cobro} other {# cobros}}",
-    "filter": {
-      "label": "Filtrar cobros",
-      "todos": "Todos ({count})",
-      "pendientes": "Pendientes ({count})",
-      "pagados": "Pagados ({count})"
-    },
     "pending": {
       "title": "Pendientes",
       "empty": "Ningún cobro pendiente. La unidad está al día."

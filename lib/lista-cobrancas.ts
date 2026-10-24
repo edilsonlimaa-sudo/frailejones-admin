@@ -6,15 +6,6 @@ import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 // do histórico (pagas e canceladas), e cada parte agrupada pelo mês de competência. A situação de
 // cada cobrança vem de classificarCobranca, a mesma regra do estado de conta.
 
-export const FILTROS_COBRANCAS = ["todos", "pendientes", "pagados"] as const;
-export type FiltroCobrancas = (typeof FILTROS_COBRANCAS)[number];
-export const FILTRO_COBRANCAS_PADRAO: FiltroCobrancas = "todos";
-
-// valor vem da URL (?filtro=): qualquer coisa fora da lista cai no padrão
-export function resolverFiltroCobrancas(valor: string | string[] | undefined): FiltroCobrancas {
-  return FILTROS_COBRANCAS.find((f) => f === valor) ?? FILTRO_COBRANCAS_PADRAO;
-}
-
 // como a linha se identifica: na tela da unidade é a origem (taxa ou rateio); no detalhe de um
 // rateio é a unidade (com o dono e link pra ela)
 export type RotuloCobranca = {

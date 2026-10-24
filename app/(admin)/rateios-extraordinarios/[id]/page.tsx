@@ -13,7 +13,7 @@ import {
   SELECT_COBRANCA_DETALHADA,
   type CobrancaDetalhadaRow,
 } from "@/lib/cobrancas-detalhadas";
-import { organizarCobrancas, resolverFiltroCobrancas } from "@/lib/lista-cobrancas";
+import { organizarCobrancas } from "@/lib/lista-cobrancas";
 import { formatUsd } from "@/lib/moeda";
 import { diferencaArredondamento, formatDiferenca } from "@/lib/rateios";
 import { resumirProgresso, type SituacaoProgresso } from "@/lib/progresso-cobranca";
@@ -36,15 +36,8 @@ const situacaoVariant: Record<SituacaoProgresso, "default" | "outline" | "destru
   enCobro: "destructive",
 };
 
-export default async function RateioExtraordinarioDetalhePage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ filtro?: string | string[] }>;
-}) {
+export default async function RateioExtraordinarioDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const filtro = resolverFiltroCobrancas((await searchParams).filtro);
   const supabase = await createClient();
   const t = await getTranslations("common");
   const tRateio = await getTranslations("rateioExtraordinarioDetail");
@@ -229,7 +222,6 @@ export default async function RateioExtraordinarioDetalhePage({
         <CardContent>
           <ListaCobrancas
             organizadas={organizadas}
-            filtroInicial={filtro}
             podeLiquidar
             cotacaoAtual={cotacaoLista[0] ?? null}
             cotacoes={cotacaoLista}

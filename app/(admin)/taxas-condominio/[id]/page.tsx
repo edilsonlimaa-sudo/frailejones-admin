@@ -13,7 +13,7 @@ import {
   SELECT_COBRANCA_DETALHADA,
   type CobrancaDetalhadaRow,
 } from "@/lib/cobrancas-detalhadas";
-import { organizarCobrancas, resolverFiltroCobrancas } from "@/lib/lista-cobrancas";
+import { organizarCobrancas } from "@/lib/lista-cobrancas";
 import { formatMes, mesAdjacente, parseMes } from "@/lib/mes";
 import { resumirProgresso } from "@/lib/progresso-cobranca";
 import { resolverAbaTaxa, vencimentoDaCompetencia } from "@/lib/taxas";
@@ -32,10 +32,10 @@ export default async function TaxaCondominioDetalhePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ mes?: string; aba?: string | string[]; filtro?: string | string[] }>;
+  searchParams: Promise<{ mes?: string; aba?: string | string[] }>;
 }) {
   const { id } = await params;
-  const { mes: mesParam, aba, filtro } = await searchParams;
+  const { mes: mesParam, aba } = await searchParams;
   const supabase = await createClient();
   const t = await getTranslations("common");
   const tTaxa = await getTranslations("taxaCondominioDetail");
@@ -190,7 +190,6 @@ export default async function TaxaCondominioDetalhePage({
 
       <TaxaCondominioDetailTabs
         abaInicial={resolverAbaTaxa(aba)}
-        filtroInicial={resolverFiltroCobrancas(filtro)}
         taxa={taxa}
         mes={{
           label: mesLabelCapitalizado,

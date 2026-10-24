@@ -1,22 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronDownIcon, HardHat, Receipt } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
-import {
-  FILTRO_COBRANCAS_PADRAO,
-  type CobrancasOrganizadas,
-  type FiltroCobrancas,
-  type GrupoMes,
-  type ItemCobranca,
-} from "@/lib/lista-cobrancas";
+import type { CobrancasOrganizadas, GrupoMes, ItemCobranca } from "@/lib/lista-cobrancas";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { encontrarTasaNaData, formatUsd, formatVes, type CotacaoHistorico } from "@/lib/moeda";
 import { cn } from "@/lib/utils";
 import { TOP_ABAIXO_DA_BARRA, VIDRO } from "@/components/admin/barra-fixa";
-import { classesDoChip } from "@/components/admin/chip";
 import { LiquidarCobrancaDialog } from "@/components/admin/cobrancas/liquidar-cobranca-dialog";
 import { VerPagamentoDialog } from "@/components/admin/cobrancas/ver-pagamento-dialog";
 import { COR_ESTADO_COBRANCA } from "@/components/unidades/cores-estado";
@@ -25,13 +18,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-// Lista de cobranças de uma unidade (admin e portal): pendentes em cima, histórico recolhido
-// embaixo, tudo agrupado por mês, um card por cobrança. O filtro fica na URL (?filtro=), como as
-// abas da tela.
+// Lista de cobranças de uma unidade (admin e portal): pendentes em cima (o que exige ação, da
+// mais antiga pra mais nova), histórico recolhido embaixo (da mais recente pra mais antiga), tudo
+// agrupado por mês, um card por cobrança. As duas seções dispensam filtro.
 
 type ListaCobrancasProps = {
   organizadas: CobrancasOrganizadas;
-  filtroInicial: FiltroCobrancas;
   // só o admin liquida; o portal do proprietário só consulta
   podeLiquidar: boolean;
   cotacaoAtual: { id: string; tasa_ves: number } | null;
@@ -39,8 +31,8 @@ type ListaCobrancasProps = {
   // busca por título/subtítulo da linha (unidade ou dono): útil quando a lista tem uma linha por
   // unidade (rateio, mês de uma cuota), que num condomínio grande são centenas
   comBusca?: boolean;
-  // filtros e cabeçalhos de mês presos de vidro abaixo da barra fixa da página. Só quando a lista
-  // está direto na página (não dentro de um card, que corta o sticky e as margens negativas)
+  // cabeçalhos de mês presos de vidro abaixo da barra fixa da página. Só quando a lista está
+  // direto na página (não dentro de um card, que corta o sticky e as margens negativas)
   fixar?: boolean;
 };
 
@@ -68,7 +60,6 @@ const filtrarGrupos = (grupos: GrupoMes[], termo: string): GrupoMes[] =>
 
 export function ListaCobrancas({
   organizadas,
-  filtroInicial,
   podeLiquidar,
   cotacaoAtual,
   cotacoes,
@@ -76,90 +67,39 @@ export function ListaCobrancas({
   fixar = false,
 }: ListaCobrancasProps) {
   const t = useTranslations("listaCobrancas");
-  const [filtro, setFiltro] = useState(filtroInicial);
   const [busca, setBusca] = useState("");
   // com pendências o foco é cobrar: o histórico começa recolhido
   const [historialAberto, setHistorialAberto] = useState(organizadas.quantidade.pendientes === 0);
-  // altura da faixa de filtros, pros cabeçalhos de mês grudarem logo abaixo dela
-  const filtrosRef = useRef<HTMLDivElement>(null);
-  const [alturaFiltros, setAlturaFiltros] = useState(0);
   const termo = busca.trim().toLocaleLowerCase();
   const pendentes = filtrarGrupos(organizadas.pendentes, termo);
   const historial = filtrarGrupos(organizadas.historial, termo);
-
-  useEffect(() => {
-    const faixa = filtrosRef.current;
-    if (!fixar || !faixa) return;
-    const observador = new ResizeObserver(() => setAlturaFiltros(faixa.offsetHeight));
-    observador.observe(faixa);
-    return () => observador.disconnect();
-  }, [fixar]);
-
-  const trocarFiltro = (novo: FiltroCobrancas) => {
-    setFiltro(novo);
-    const url = new URL(window.location.href);
-    if (novo === FILTRO_COBRANCAS_PADRAO) url.searchParams.delete("filtro");
-    else url.searchParams.set("filtro", novo);
-    window.history.replaceState(null, "", url);
-  };
 
   if (organizadas.quantidade.todos === 0) {
     return <p className="text-sm text-muted-foreground">{t("empty")}</p>;
   }
 
-  const mostrarPendentes = filtro !== "pagados";
-  const mostrarHistorial = filtro !== "pendientes";
   // buscando, o resultado pode estar no histórico: abre pra não esconder o que foi encontrado
-  const historialVisivel = filtro === "pagados" || historialAberto || termo !== "";
+  const historialVisivel = historialAberto || termo !== "";
   const quantidadeHistorial = historial.reduce((acc, g) => acc + g.itens.length, 0);
   const grupoProps = { podeLiquidar, cotacaoAtual, cotacoes, fixar };
 
   return (
-    <div className="flex flex-col gap-6" style={{ "--filtros-altura": `${alturaFiltros}px` } as CSSProperties}>
-      {/* filtros (e busca), presos de vidro abaixo da barra fixa quando a lista é a própria página */}
-      <div
-        ref={filtrosRef}
-        style={fixar ? { top: TOP_ABAIXO_DA_BARRA } : undefined}
-        className={cn("flex flex-col gap-2", fixar && cn("sticky z-[6] -mx-4 px-4 py-2", VIDRO))}
-      >
-        {comBusca && (
-          <Input
-            type="search"
-            placeholder={t("searchPlaceholder")}
-            aria-label={t("searchPlaceholder")}
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className="h-10 bg-card"
-          />
-        )}
-        <div
-          role="group"
-          aria-label={t("filter.label")}
-          className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {(["todos", "pendientes", "pagados"] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              aria-pressed={filtro === f}
-              onClick={() => trocarFiltro(f)}
-              className={classesDoChip(filtro === f)}
-            >
-              {t(`filter.${f}`, { count: organizadas.quantidade[f] })}
-            </button>
-          ))}
-          {organizadas.totalPendente > 0 && (
-            <p className="ml-auto shrink-0 pl-2 text-xs whitespace-nowrap">
-              <span className="text-muted-foreground">{t("pending.title")} </span>
-              <span className="font-medium text-destructive tabular-nums">{formatUsd(organizadas.totalPendente)}</span>
-            </p>
-          )}
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      {comBusca && (
+        <Input
+          type="search"
+          placeholder={t("searchPlaceholder")}
+          aria-label={t("searchPlaceholder")}
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          className="h-10 bg-card"
+        />
+      )}
 
-      {mostrarPendentes && (
-        <section className="flex flex-col gap-3">
-          <h3 className="px-1 text-base font-semibold">
+      {/* o que exige ação: quantidade e total pendente no título da seção */}
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
+          <h3 className="text-base font-semibold">
             {t("pending.title")}
             {organizadas.quantidade.pendientes > 0 && (
               <span className="font-normal text-muted-foreground">
@@ -168,19 +108,22 @@ export function ListaCobrancas({
               </span>
             )}
           </h3>
-          {pendentes.length === 0 ? (
-            <p className="px-1 text-sm text-muted-foreground">{t("pending.empty")}</p>
-          ) : (
-            pendentes.map((grupo) => <GrupoDoMes key={grupo.mes} grupo={grupo} {...grupoProps} />)
+          {organizadas.totalPendente > 0 && (
+            <p className="text-sm font-semibold text-destructive tabular-nums">{formatUsd(organizadas.totalPendente)}</p>
           )}
-        </section>
-      )}
+        </div>
+        {pendentes.length === 0 ? (
+          <p className="px-1 text-sm text-muted-foreground">{t("pending.empty")}</p>
+        ) : (
+          pendentes.map((grupo) => <GrupoDoMes key={grupo.mes} grupo={grupo} {...grupoProps} />)
+        )}
+      </section>
 
-      {mostrarHistorial && (
-        <section className="flex flex-col gap-3">
+      {/* o histórico, recolhido enquanto há pendências; o botão diz quantas cobranças esconde */}
+      <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <h3 className="text-base font-semibold">{t("history.title")}</h3>
-            {filtro !== "pagados" && quantidadeHistorial > 0 && (
+            {quantidadeHistorial > 0 && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -197,8 +140,7 @@ export function ListaCobrancas({
           ) : (
             historialVisivel && historial.map((grupo) => <GrupoDoMes key={grupo.mes} grupo={grupo} {...grupoProps} />)
           )}
-        </section>
-      )}
+      </section>
     </div>
   );
 }
@@ -224,10 +166,10 @@ function GrupoDoMes({ grupo, podeLiquidar, cotacaoAtual, cotacoes, fixar }: Grup
   return (
     <div className="flex flex-col gap-3">
       {/* lista sem agrupar (detalhe de um rateio) vem num grupo só, sem mês. Com fixar, o mês gruda
-          abaixo dos filtros enquanto as cobranças dele rolam, e o mês seguinte o empurra */}
+          abaixo da barra enquanto as cobranças dele rolam, e o mês seguinte o empurra */}
       {grupo.mes && (
         <div
-          style={fixar ? { top: `calc(${TOP_ABAIXO_DA_BARRA} + var(--filtros-altura, 0px))` } : undefined}
+          style={fixar ? { top: TOP_ABAIXO_DA_BARRA } : undefined}
           className={cn(
             "flex items-baseline justify-between gap-2 px-1 text-sm",
             fixar && cn("sticky z-[5] -mx-4 px-5 py-2", VIDRO),

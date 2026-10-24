@@ -9,7 +9,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { createClient } from "@/lib/supabase/client";
 import { faltaHoje, resumirAcordo } from "@/lib/acordos";
-import { FILTRO_COBRANCAS_PADRAO, organizarCobrancas } from "@/lib/lista-cobrancas";
+import { organizarCobrancas } from "@/lib/lista-cobrancas";
 import { hojeCaracas } from "@/lib/fuso";
 import { INTL_LOCALE } from "@/lib/intl-locale";
 import { formatUsd, type CotacaoHistorico } from "@/lib/moeda";
@@ -284,7 +284,6 @@ export function DetalheAcordo({
         {/* a mesma lista da aba Cobros, com liquidar no admin */}
         <ListaCobrancas
           organizadas={organizarCobrancas(cobrancas, new Date())}
-          filtroInicial={FILTRO_COBRANCAS_PADRAO}
           podeLiquidar={podeEditar}
           cotacaoAtual={cotacoes[0] ?? null}
           cotacoes={cotacoes}

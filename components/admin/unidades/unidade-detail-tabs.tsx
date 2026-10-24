@@ -14,7 +14,7 @@ import { AcordosPagamento } from "@/components/unidades/acordos-pagamento";
 import { ExtratoCreditos, saldoDosCreditos } from "@/components/unidades/extrato-creditos";
 import { TabsNaUrl } from "@/components/tabs-na-url";
 import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
-import { organizarCobrancas, type FiltroCobrancas } from "@/lib/lista-cobrancas";
+import { organizarCobrancas } from "@/lib/lista-cobrancas";
 import { ABA_UNIDADE_PADRAO, type AbaUnidade } from "@/lib/abas-unidade";
 import { AbaChip, ListaAbasChips } from "@/components/admin/abas-chips";
 import { AvatarIniciais } from "@/components/admin/avatar-iniciais";
@@ -26,8 +26,6 @@ import { TabsContent } from "@/components/ui/tabs";
 type UnidadeDetailTabsProps = {
   // aba aberta ao carregar, vinda de ?aba= (recarregar a página não volta pra primeira)
   abaInicial: AbaUnidade;
-  // filtro da lista de cobranças, vindo de ?filtro=
-  filtroInicial: FiltroCobrancas;
   unidade: Omit<Unidade, "proprietario"> & { proprietario: Proprietario | null };
   cobrancas: CobrancaDaUnidade[];
   creditos: CreditoMovimentacao[];
@@ -38,7 +36,7 @@ type UnidadeDetailTabsProps = {
 // Ficha da unidade. A barra fixa (vidro) leva a volta, a identificação com o dono e as abas como
 // chips, então orientação e navegação ficam sempre à vista enquanto o conteúdo rola. As cobranças
 // são a aba principal; o estado de conta tem a sua; "datos" guarda o cadastro.
-export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobrancas, creditos, acordos, cotacoes }: UnidadeDetailTabsProps) {
+export function UnidadeDetailTabs({ abaInicial, unidade, cobrancas, creditos, acordos, cotacoes }: UnidadeDetailTabsProps) {
   const t = useTranslations("unidadeDetail");
   const tCommon = useTranslations("common");
   const tUnidades = useTranslations("unidades");
@@ -98,7 +96,6 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
         {/* direto na página (sem card): filtros e meses grudam abaixo da barra fixa */}
         <ListaCobrancas
           organizadas={organizarCobrancas(cobrancas, new Date())}
-          filtroInicial={filtroInicial}
           podeLiquidar={true}
           cotacaoAtual={cotacaoAtual}
           cotacoes={cotacoes}

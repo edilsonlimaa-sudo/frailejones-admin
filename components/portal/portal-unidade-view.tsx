@@ -12,7 +12,7 @@ import { AcordosPagamento } from "@/components/unidades/acordos-pagamento";
 import { ExtratoCreditos, saldoDosCreditos } from "@/components/unidades/extrato-creditos";
 import { TabsNaUrl } from "@/components/tabs-na-url";
 import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
-import { organizarCobrancas, type FiltroCobrancas } from "@/lib/lista-cobrancas";
+import { organizarCobrancas } from "@/lib/lista-cobrancas";
 import { ABA_UNIDADE_PADRAO, type AbaUnidade } from "@/lib/abas-unidade";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,8 +20,6 @@ import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 type PortalUnidadeViewProps = {
   // aba aberta ao carregar, vinda de ?aba= (recarregar a página não volta pra primeira)
   abaInicial: AbaUnidade;
-  // filtro da lista de cobranças, vindo de ?filtro=
-  filtroInicial: FiltroCobrancas;
   unidade: Omit<Unidade, "proprietario"> & { proprietario: Proprietario | null };
   cobrancas: CobrancaDaUnidade[];
   creditos: CreditoMovimentacao[];
@@ -31,7 +29,7 @@ type PortalUnidadeViewProps = {
 
 // versão só-leitura de UnidadeDetailTabs pro portal público do condômino: mesma UI/dados, mas
 // sem LiquidarCobrancaDialog (ação exclusiva do admin) — reusa os mesmos namespaces de i18n
-export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobrancas, creditos, acordos, cotacoes }: PortalUnidadeViewProps) {
+export function PortalUnidadeView({ abaInicial, unidade, cobrancas, creditos, acordos, cotacoes }: PortalUnidadeViewProps) {
   const t = useTranslations("unidadeDetail");
   const locale = useLocale();
   const dateTimeFormatter = new Intl.DateTimeFormat(INTL_LOCALE[locale as keyof typeof INTL_LOCALE], {
@@ -110,7 +108,6 @@ export function PortalUnidadeView({ abaInicial, filtroInicial, unidade, cobranca
           <CardContent>
             <ListaCobrancas
               organizadas={organizarCobrancas(cobrancas, new Date())}
-              filtroInicial={filtroInicial}
               podeLiquidar={false}
               cotacaoAtual={cotacaoAtual}
               cotacoes={cotacoes}

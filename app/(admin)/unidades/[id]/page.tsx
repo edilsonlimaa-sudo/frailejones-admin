@@ -14,7 +14,6 @@ import {
 } from "@/lib/cobrancas-detalhadas";
 import { UnidadeDetailTabs } from "@/components/admin/unidades/unidade-detail-tabs";
 import { resolverAbaUnidade } from "@/lib/abas-unidade";
-import { resolverFiltroCobrancas } from "@/lib/lista-cobrancas";
 
 // pagamento_cobrancas.pagamento_id é UNIQUE, então o embed reverso (a partir de pagamentos)
 // vem como objeto único (ou null), não array
@@ -33,12 +32,11 @@ export default async function UnidadeDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ aba?: string | string[]; filtro?: string | string[] }>;
+  searchParams: Promise<{ aba?: string | string[] }>;
 }) {
   const { id } = await params;
-  const { aba: abaParam, filtro: filtroParam } = await searchParams;
+  const { aba: abaParam } = await searchParams;
   const aba = resolverAbaUnidade(abaParam);
-  const filtro = resolverFiltroCobrancas(filtroParam);
   const supabase = await createClient();
   const t = await getTranslations("common");
 
@@ -136,7 +134,6 @@ export default async function UnidadeDetailPage({
   return (
     <UnidadeDetailTabs
       abaInicial={aba}
-      filtroInicial={filtro}
       unidade={unidade}
       cobrancas={cobrancas}
       creditos={creditos}

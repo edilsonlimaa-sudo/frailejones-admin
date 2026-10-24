@@ -2,7 +2,7 @@ import { ChevronLeftIcon, ChevronRightIcon, Receipt } from "lucide-react";
 import Link from "next/link";
 import { getTranslations, getLocale } from "next-intl/server";
 
-import type { CobrancasOrganizadas, FiltroCobrancas } from "@/lib/lista-cobrancas";
+import type { CobrancasOrganizadas } from "@/lib/lista-cobrancas";
 import { formatUsd, type CotacaoHistorico } from "@/lib/moeda";
 import type { ResumoProgresso, SituacaoProgresso } from "@/lib/progresso-cobranca";
 import { ABA_TAXA_PADRAO, type AbaTaxa } from "@/lib/taxas";
@@ -23,7 +23,6 @@ import { ResumoRegrasEncargos } from "@/components/admin/encargos/resumo-regras-
 
 type TaxaCondominioDetailTabsProps = {
   abaInicial: AbaTaxa;
-  filtroInicial: FiltroCobrancas;
   taxa: TaxaCondominio;
   mes: { label: string; competencia: string; dataVencimento: string; anteriorHref: string; seguinteHref: string };
   // cobranças emitidas no mês (uma por unidade), organizadas em pendentes/histórico
@@ -48,7 +47,6 @@ const situacaoVariant: Record<SituacaoProgresso, "default" | "outline" | "destru
 
 export async function TaxaCondominioDetailTabs({
   abaInicial,
-  filtroInicial,
   taxa,
   mes,
   organizadas,
@@ -200,7 +198,6 @@ export async function TaxaCondominioDetailTabs({
               <>
                 <ListaCobrancas
                   organizadas={organizadas}
-                  filtroInicial={filtroInicial}
                   podeLiquidar
                   cotacaoAtual={cotacoes[0] ?? null}
                   cotacoes={cotacoes}
