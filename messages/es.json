@@ -250,13 +250,13 @@
       "account": "Estado de cuenta"
     },
     "general": {
-      "title": "Datos de registro",
       "identification": "Identificación",
       "owner": "Propietario",
       "document": "Documento",
       "phone": "Teléfono (WhatsApp)",
       "email": "Correo electrónico",
-      "createdAt": "Creada el"
+      "createdAt": "Creada el",
+      "unit": "Unidad"
     },
     "charges": {
       "empty": "Ningún cobro para esta unidad.",

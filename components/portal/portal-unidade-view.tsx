@@ -1,14 +1,13 @@
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 
 import type { Proprietario, Unidade } from "@/lib/types/unidades";
 import type { CobrancaDaUnidade } from "@/lib/types/cobrancas";
 import type { CreditoMovimentacao } from "@/lib/types/creditos";
 import type { AcordoPagamento } from "@/lib/types/acordos";
 import type { CotacaoHistorico } from "@/lib/moeda";
-import { INTL_LOCALE } from "@/lib/intl-locale";
-import { FUSO_CARACAS } from "@/lib/fuso";
 import { EstadoDeCuenta } from "@/components/unidades/estado-de-cuenta";
 import { AcordosPagamento } from "@/components/unidades/acordos-pagamento";
+import { DatosUnidade } from "@/components/unidades/datos-unidade";
 import { ExtratoCreditos, saldoDosCreditos } from "@/components/unidades/extrato-creditos";
 import { TabsNaUrl } from "@/components/tabs-na-url";
 import { ListaCobrancas } from "@/components/unidades/lista-cobrancas";
@@ -31,12 +30,6 @@ type PortalUnidadeViewProps = {
 // sem LiquidarCobrancaDialog (ação exclusiva do admin) — reusa os mesmos namespaces de i18n
 export function PortalUnidadeView({ abaInicial, unidade, cobrancas, creditos, acordos, cotacoes }: PortalUnidadeViewProps) {
   const t = useTranslations("unidadeDetail");
-  const locale = useLocale();
-  const dateTimeFormatter = new Intl.DateTimeFormat(INTL_LOCALE[locale as keyof typeof INTL_LOCALE], {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: FUSO_CARACAS,
-  });
   const cotacaoAtual = cotacoes[0] ?? null;
 
   const saldoFavor = saldoDosCreditos(creditos);
@@ -65,39 +58,7 @@ export function PortalUnidadeView({ abaInicial, unidade, cobrancas, creditos, ac
       </TabsContent>
 
       <TabsContent value="geral">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("general.title")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <div>
-                <dt className="text-xs text-muted-foreground">{t("general.identification")}</dt>
-                <dd className="font-medium">{unidade.identificacao}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">{t("general.owner")}</dt>
-                <dd className="font-medium">{unidade.proprietario?.nome ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">{t("general.document")}</dt>
-                <dd className="font-medium">{unidade.proprietario?.documento_identidad ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">{t("general.phone")}</dt>
-                <dd className="font-medium">{unidade.proprietario?.telefone_whatsapp ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">{t("general.email")}</dt>
-                <dd className="font-medium">{unidade.proprietario?.email ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">{t("general.createdAt")}</dt>
-                <dd className="font-medium">{dateTimeFormatter.format(new Date(unidade.created_at))}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+        <DatosUnidade unidade={unidade} />
       </TabsContent>
 
       <TabsContent value="cobrancas">
