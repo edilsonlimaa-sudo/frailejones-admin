@@ -95,17 +95,15 @@ export function UnidadeDetailTabs({ abaInicial, filtroInicial, unidade, cobranca
       </BarraFixa>
 
       <TabsContent value="cobrancas">
-        <Card>
-          <CardContent>
-            <ListaCobrancas
-              organizadas={organizarCobrancas(cobrancas, new Date())}
-              filtroInicial={filtroInicial}
-              podeLiquidar={true}
-              cotacaoAtual={cotacaoAtual}
-              cotacoes={cotacoes}
-            />
-          </CardContent>
-        </Card>
+        {/* direto na página (sem card): filtros e meses grudam abaixo da barra fixa */}
+        <ListaCobrancas
+          organizadas={organizarCobrancas(cobrancas, new Date())}
+          filtroInicial={filtroInicial}
+          podeLiquidar={true}
+          cotacaoAtual={cotacaoAtual}
+          cotacoes={cotacoes}
+          fixar
+        />
       </TabsContent>
 
       <TabsContent value="estado">
