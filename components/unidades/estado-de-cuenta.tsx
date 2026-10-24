@@ -90,25 +90,28 @@ export function EstadoDeCuenta({ cobrancas, saldoFavor, tasaVes }: EstadoDeCuent
             >
               <IconeSituacao className="size-5" />
             </span>
+            {/* a etiqueta fica abaixo do valor, não ao lado: no celular ela espremia o número */}
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">{t("debt.total")}</p>
               <p
                 className={cn(
-                  "text-3xl leading-tight font-bold tracking-tight tabular-nums",
+                  "text-3xl leading-tight font-bold tracking-tight whitespace-nowrap tabular-nums",
                   divida.total > 0 && "text-destructive",
                 )}
               >
                 {formatUsd(divida.total)}
               </p>
               {divida.total > 0 && tasaVes && (
-                <p className="text-sm text-muted-foreground tabular-nums">{formatVes(divida.total, tasaVes)}</p>
+                <p className="text-sm whitespace-nowrap text-muted-foreground tabular-nums">
+                  {formatVes(divida.total, tasaVes)}
+                </p>
               )}
+              <Badge variant={situacaoVariant[estado.situacao]} className="mt-2">
+                {estado.situacao === "enAtraso" && estado.atrasoDesde
+                  ? t("situation.enAtraso", { date: formatDate(estado.atrasoDesde) })
+                  : t(`situation.${estado.situacao}`)}
+              </Badge>
             </div>
-            <Badge variant={situacaoVariant[estado.situacao]} className="shrink-0">
-              {estado.situacao === "enAtraso" && estado.atrasoDesde
-                ? t("situation.enAtraso", { date: formatDate(estado.atrasoDesde) })
-                : t(`situation.${estado.situacao}`)}
-            </Badge>
           </div>
 
           {/* do que a dívida é feita: cobros e multa/juros, numa barra só */}
